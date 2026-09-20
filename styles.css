@@ -1,0 +1,300 @@
+/*
+  ESTILOS Y PRESENTACIÓN
+  Diseño ergonómico para uso con ambos pulgares en smartphone.
+*/
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100vh;
+  padding: 4px;
+  overflow: hidden;
+}
+
+#hud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  max-width: 330px;
+  background-color: #0c0d12;
+  border: 1px solid #333333;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.hud-item span {
+  font-weight: bold;
+  color: #00b0ff;
+}
+
+#hud-gold { color: #ffd700 !important; }
+#hud-weapon { color: #ffff00 !important; }
+#hud-ammo { color: #ffb300 !important; }
+
+#game-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+#viewport {
+  background-color: #000000;
+  border: 2px solid #ffffff;
+  display: block;
+  max-height: 45vh;
+  object-fit: contain;
+}
+
+/* Modal flotante de tienda */
+#shop-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+#shop-modal.hidden {
+  display: none;
+}
+
+.shop-content {
+  background: #0f1015;
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  padding: 12px;
+  width: 85%;
+  max-width: 260px;
+  text-align: center;
+}
+
+.shop-content h3 {
+  font-size: 12px;
+  color: #ffd700;
+  margin-bottom: 4px;
+}
+
+.shop-desc {
+  font-size: 10px;
+  color: #aaaaaa;
+  margin-bottom: 8px;
+}
+
+.shop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 10px;
+  background: #181a20;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.shop-btn {
+  background: #ffd700;
+  color: #000000;
+  border: none;
+  font-family: monospace;
+  font-weight: bold;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.close-shop-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 5px;
+  background: #333333;
+  color: #ffffff;
+  border: 1px solid #555555;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+/* Registro de combate amplio */
+#log-container {
+  width: 100%;
+  max-width: 330px;
+  height: 62px;
+  background-color: #050505;
+  border: 1px solid #222222;
+  border-radius: 4px;
+  padding: 4px 6px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 2px 0;
+}
+
+#log-entries div {
+  margin-bottom: 2px;
+  color: #888888;
+}
+
+#log-entries div:last-child {
+  color: #00ff88;
+}
+
+/* Dock de control inferior */
+#control-dock {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 330px;
+  height: 115px;
+  padding: 0 6px;
+}
+
+/* Cruceta a la izquierda */
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  grid-template-rows: repeat(3, 32px);
+  gap: 3px;
+}
+
+.dpad-btn {
+  background: #181a20;
+  color: #ffffff;
+  border: 1px solid #3b4252;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dpad-btn:active {
+  background: #00b0ff;
+  color: #000000;
+}
+
+.dpad-btn.up {
+  border-color: #00b0ff;
+  color: #00b0ff;
+}
+
+/* Romboide de botones a la derecha (Grid 3x3 cruzado) */
+.diamond-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  grid-template-rows: repeat(3, 38px);
+  align-items: center;
+  justify-items: center;
+  width: 114px;
+  height: 114px;
+}
+
+.btn-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-slot.top { grid-column: 2; grid-row: 1; }
+.btn-slot.left { grid-column: 1; grid-row: 2; }
+.btn-slot.right { grid-column: 3; grid-row: 2; }
+.btn-slot.bottom { grid-column: 2; grid-row: 3; }
+
+.arcade-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  background: #111111;
+  color: #ffffff;
+}
+
+.btn-caption {
+  font-size: 8px;
+  color: #888888;
+  margin-top: 1px;
+}
+
+/* [D] Norte: Cambio de Arma */
+.btn-weapon {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+.btn-weapon:active {
+  background: #ffd700;
+  color: #000000;
+}
+
+/* [C] Oeste: Curar */
+.btn-heal {
+  border-color: #00e676;
+  color: #00e676;
+}
+.btn-heal:active {
+  background: #00e676;
+  color: #000000;
+}
+.btn-heal:disabled {
+  border-color: #333333;
+  color: #444444;
+}
+
+/* [B] Este: Paso Brumoso */
+.btn-misty {
+  border-color: #00e5ff;
+  color: #00e5ff;
+}
+.btn-misty:active {
+  background: #00e5ff;
+  color: #000000;
+}
+.btn-misty:disabled {
+  border-color: #333333;
+  color: #444444;
+}
+
+/* [A] Sur: Atacar */
+.btn-attack {
+  border-color: #ff3333;
+  color: #ff3333;
+}
+.btn-attack:active {
+  background: #ff3333;
+  color: #000000;
+}

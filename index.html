@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lior Kurogane - Dungeon Crawler</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PANEL SUPERIOR (HUD) -->
+  <header id="hud">
+    <div class="hud-item">PISO: <span id="hud-floor">1</span></div>
+    <div class="hud-item">DIR: <span id="hud-dir">Norte</span></div>
+    <div class="hud-item">HP: <span id="hud-hp">48</span>/48</div>
+    <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
+    <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
+    <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
+  </header>
+
+  <!-- LIENZO DE JUEGO Y MODAL DE TIENDA -->
+  <main id="game-container">
+    <canvas id="viewport" width="294" height="504"></canvas>
+
+    <!-- VENTANA FLOTANTE DE TIENDA -->
+    <div id="shop-modal" class="hidden">
+      <div class="shop-content">
+        <h3>✦ MERCADER DE SOMBRAS ✦</h3>
+        <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
+        
+        <div class="shop-item">
+          <span>Pistola: 4 balas</span>
+          <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
+        </div>
+        
+        <div class="shop-item">
+          <span>Mosquete: 2 balas</span>
+          <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+        </div>
+
+        <div class="shop-item">
+          <span>Poción de Vida (+1d8+5 HP)</span>
+          <button id="buy-potion" class="shop-btn">2 PO</button>
+        </div>
+
+        <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- CONSOLA DE REGISTROS AMPLIADA -->
+  <section id="log-container">
+    <div id="log-entries"></div>
+  </section>
+
+  <!-- CONTROLES: CRUCETA A LA IZQUIERDA Y ROMBO A LA DERECHA -->
+  <footer id="control-dock">
+    <!-- Cruceta direccional -->
+    <div class="dpad">
+      <div></div>
+      <button id="btn-forward" class="dpad-btn up">▲</button>
+      <div></div>
+      <button id="btn-left" class="dpad-btn left">◀</button>
+      <div class="dpad-center"></div>
+      <button id="btn-right" class="dpad-btn right">▶</button>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <!-- Romboide de 4 botones: D arriba, C izquierda, B derecha, A abajo -->
+    <div class="diamond-pad">
+      <div class="btn-slot top">
+        <button id="btn-d" class="arcade-btn btn-weapon">D</button>
+        <span class="btn-caption">ARMA</span>
+      </div>
+      <div class="btn-slot left">
+        <button id="btn-c" class="arcade-btn btn-heal">C</button>
+        <span class="btn-caption">CURAR</span>
+      </div>
+      <div class="btn-slot right">
+        <button id="btn-b" class="arcade-btn btn-misty">B</button>
+        <span class="btn-caption">BRUMA (<span id="misty-charges">2</span>)</span>
+      </div>
+      <div class="btn-slot bottom">
+        <button id="btn-a" class="arcade-btn btn-attack">A</button>
+        <span class="btn-caption">ATACAR</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="game.js"></script>
+</body>
+</html>
