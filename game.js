@@ -18,7 +18,6 @@ const TILE_EXIT = 3;
 const TILE_HEAL_FOUNTAIN = 4;
 const TILE_SHOP = 5;
 
-// El tamaño de celda de 42px se mantiene intacto
 const CAMERA_CONFIG = {
   cols: 7,
   rows: 12,
@@ -27,35 +26,44 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
+/**
+ * ARMAS DE LIOR
+ * Pistola: 3 casillas de alcance frontal con 3 de ancho (corredor e)
+ * Mosquete: 5 casillas de alcance frontal con 3 de ancho
+ * Espada: 1.5 radio circular
+ */
 const WEAPONS = {
   SWORD: {
     name: "Espada",
-    label: "Espada larga (c/c)",
+    label: "Espada (cuerpo a cuerpo 1.5)",
     bonus: 8,
     dieCount: 1,
     dieSides: 8,
     flatDmg: 5,
     range: 1.5,
+    isMelee: true,
     ammoType: null
   },
   PISTOL: {
     name: "Pistola",
-    label: "Pistola pacto (r3)",
+    label: "Pistola (frente 3x3)",
     bonus: 9,
     dieCount: 1,
     dieSides: 10,
     flatDmg: 6,
-    range: 3.5,
+    range: 3,
+    isMelee: false,
     ammoType: "pistol"
   },
   MUSKET: {
     name: "Mosquete",
-    label: "Mosquete pacto (r5)",
+    label: "Mosquete (frente 5x3)",
     bonus: 9,
     dieCount: 1,
     dieSides: 12,
     flatDmg: 6,
-    range: 5.5,
+    range: 5,
+    isMelee: false,
     ammoType: "musket"
   }
 };
@@ -148,7 +156,6 @@ class Player {
     return { x: this.x + v.x * steps, y: this.y + v.y * steps };
   }
 
-  // Posición directamente a espaldas de Lior
   getNextBackwardPos() {
     const v = DIR_VECTORS[this.direction];
     return { x: this.x - v.x, y: this.y - v.y };
@@ -194,10 +201,10 @@ class DungeonGenerator {
     const fromBoss = Math.max(0, this.targetBosses - 1);
     const netBasics = this.targetBasics - (this.targetBosses * 3);
     const fromBasics = netBasics >= 1 ? Math.floor(netBasics / 3) : 0;
-    this.maxHealFountains = fromBoss + fromBasics;
+    this.maxHealFountains = Math.max(2, fromBoss + fromBasics);
 
     this.populateEnemies();
-    this.placeSpecialTilesNearBosses();
+    this.placeSpecialTiles();
   }
 
   populateEnemies() {
@@ -258,36 +265,38 @@ class DungeonGenerator {
     }
   }
 
-  placeSpecialTilesNearBosses() {
-    const boss = this.dungeon.enemies.find(e => e.isBoss);
-    const anchorX = boss ? boss.x : Math.floor(this.dungeon.width / 2);
-    const anchorY = boss ? boss.y : Math.floor(this.dungeon.height / 2);
+  // DISPERSIÓN DE CURACIONES CON DISTANCIA MÍNIMA DE 5 CASILLAS ENTRE SÍ
+  placeSpecialTiles() {
+    const placedHealPositions = [];
 
-    let shopPlaced = false;
-    for (let i = 0; i < 150 && !shopPlaced; i++) {
-      const sx = anchorX + Math.floor(Math.random() * 11) - 5;
-      const sy = anchorY + Math.floor(Math.random() * 11) - 5;
-      if (!this.dungeon.isInsideBounds(sx, sy)) continue;
-      if (Math.hypot(sx - anchorX, sy - anchorY) > 5) continue;
+    // 1. Tienda (1 por piso, colocada en el tercio central)
+    for (let attempts = 0; attempts < 200; attempts++) {
+      const sx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
+      const sy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
       if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 4) continue;
+      if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2) continue;
       if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
 
       this.dungeon.setTile(sx, sy, TILE_SHOP);
-      shopPlaced = true;
+      break;
     }
 
-    let placedHeals = 0;
-    for (let i = 0; i < 200 && placedHeals < this.maxHealFountains; i++) {
-      const hx = anchorX + Math.floor(Math.random() * 11) - 5;
-      const hy = anchorY + Math.floor(Math.random() * 11) - 5;
-      if (!this.dungeon.isInsideBounds(hx, hy)) continue;
-      if (Math.hypot(hx - anchorX, hy - anchorY) > 5) continue;
+    // 2. Curaciones dispersas por todo el mapa sin agruparse a menos de 5 casillas
+    for (let attempts = 0; attempts < 600 && placedHealPositions.length < this.maxHealFountains; attempts++) {
+      const hx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
+      const hy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
+
       if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 4) continue;
+      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2) continue;
       if (this.dungeon.getTile(hx, hy) === TILE_SHOP) continue;
       if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === hx && c.y === hy))) continue;
 
+      // Verificación de distancia mínima de 5 casillas respecto a otros santuarios
+      const isTooCloseToAnotherHeal = placedHealPositions.some(pos => Math.hypot(hx - pos.x, hy - pos.y) < 5.0);
+      if (isTooCloseToAnotherHeal) continue;
+
       this.dungeon.setTile(hx, hy, TILE_HEAL_FOUNTAIN);
-      placedHeals++;
+      placedHealPositions.push({ x: hx, y: hy });
     }
   }
 
@@ -391,6 +400,27 @@ class VisibilitySystem {
         err += dx;
         y0 += sy;
       }
+    }
+  }
+
+  // Comprueba si un proyectil puede viajar en línea recta en el mundo sin topar con muros
+  static hasWorldLineOfSight(x0, y0, x1, y1, dungeon) {
+    let curX = x0;
+    let curY = y0;
+    const dx = Math.abs(x1 - curX);
+    const dy = Math.abs(y1 - curY);
+    const sx = curX < x1 ? 1 : -1;
+    const sy = curY < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    while (true) {
+      if (curX === x1 && curY === y1) return true;
+      if ((curX !== x0 || curY !== y0) && dungeon.getTile(curX, curY) === TILE_WALL) {
+        return false;
+      }
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; curX += sx; }
+      if (e2 < dx) { err += dx; curY += sy; }
     }
   }
 }
@@ -533,48 +563,85 @@ class Renderer {
 }
 
 class CombatSystem {
+  /**
+   * Determina si una coordenada de celda objetivo se encuentra dentro de la zona de fuego
+   */
+  static isCellInWeaponRange(player, targetX, targetY, weapon) {
+    const dx = targetX - player.x;
+    const dy = targetY - player.y;
+
+    // Espada: Ataque circular a 1.5 casillas a la redonda
+    if (weapon.isMelee) {
+      return Math.hypot(dx, dy) <= weapon.range;
+    }
+
+    // Armas de fuego: Pasillo frontal de ancho 3 (desfase lateral -1, 0, 1) y profundidad según el arma
+    let forward = 0;
+    let lateral = 0;
+
+    switch (player.direction) {
+      case 0: // Norte
+        forward = -dy;
+        lateral = dx;
+        break;
+      case 1: // Este
+        forward = dx;
+        lateral = dy;
+        break;
+      case 2: // Sur
+        forward = dy;
+        lateral = -dx;
+        break;
+      case 3: // Oeste
+        forward = -dx;
+        lateral = -dy;
+        break;
+    }
+
+    // Debe estar hacia adelante (entre 1 y el alcance máximo) y a lo sumo a 1 casilla de lado
+    return (forward >= 1 && forward <= weapon.range && Math.abs(lateral) <= 1);
+  }
+
   static executeAttack(game) {
     const { player, dungeon } = game;
 
-    // BLOQUEO POR MUERTE: no se puede atacar si Lior murió
     if (player.hp <= 0) {
-      game.log("Lior ha caído. Reinicia para volver a intentarlo.");
+      game.log("Lior ha caído. No puedes atacar.");
       return;
     }
 
     const weapon = player.equippedWeapon;
 
-    if (weapon.ammoType === "pistol" && player.ammoPistol <= 0) {
-      game.log("¡Sin balas de Pistola! Cambia de arma.");
-      return;
-    }
-    if (weapon.ammoType === "musket" && player.ammoMusket <= 0) {
-      game.log("¡Sin balas de Mosquete! Cambia de arma.");
-      return;
+    // Verificación y gasto estricto de munición
+    if (weapon.ammoType === "pistol") {
+      if (player.ammoPistol <= 0) {
+        game.log("¡Sin balas de Pistola! Cambia de arma.");
+        return;
+      }
+      player.ammoPistol--; // Se gasta la bala aunque no dé en nada
+    } else if (weapon.ammoType === "musket") {
+      if (player.ammoMusket <= 0) {
+        game.log("¡Sin balas de Mosquete! Cambia de arma.");
+        return;
+      }
+      player.ammoMusket--; // Se gasta la bala aunque no dé en nada
     }
 
+    // Búsqueda del enemigo más cercano dentro del corredor de fuego
     let target = null;
     let targetIndex = -1;
     let minDist = 999;
 
     dungeon.enemies.forEach((enemy, idx) => {
       enemy.cells.forEach(cell => {
-        const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
-        if (dist <= weapon.range) {
-          for (let sy = 0; sy < CAMERA_CONFIG.rows; sy++) {
-            for (let sx = 0; sx < CAMERA_CONFIG.cols; sx++) {
-              const wPos = CameraTransformer.screenToWorld(sx, sy, player);
-              if (wPos.x === cell.x && wPos.y === cell.y) {
-                if (VisibilitySystem.hasLineOfSight(
-                  CAMERA_CONFIG.playerScreenX, CAMERA_CONFIG.playerScreenY, sx, sy, dungeon, player
-                )) {
-                  if (dist < minDist) {
-                    minDist = dist;
-                    target = enemy;
-                    targetIndex = idx;
-                  }
-                }
-              }
+        if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
+          // Comprobar que no haya muros bloqueando la bala en línea recta
+          if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
+            const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+            if (dist < minDist) {
+              minDist = dist;
+              target = enemy;
+              targetIndex = idx;
             }
           }
         }
@@ -582,13 +649,16 @@ class CombatSystem {
     });
 
     if (!target) {
-      game.log(`Sin objetivos en rango (${weapon.range}) de tu ${weapon.name}.`);
+      if (!weapon.isMelee) {
+        game.log(`Disparas tu ${weapon.name} hacia adelante... ¡pero la bala se pierde sin impactar!`);
+      } else {
+        game.log("Blandes tu espada en círculo, pero no hay enemigos al alcance.");
+      }
+      game.updateHUD();
       return;
     }
 
-    if (weapon.ammoType === "pistol") player.ammoPistol--;
-    if (weapon.ammoType === "musket") player.ammoMusket--;
-
+    // Resolución de tirada
     const d20 = rollDie(20);
     const attackTotal = d20 + weapon.bonus;
     game.log(`${weapon.name}: [d20(${d20}) + ${weapon.bonus} = ${attackTotal}] vs CA ${target.ac}`);
@@ -597,7 +667,7 @@ class CombatSystem {
       let dmg = weapon.flatDmg;
       for (let i = 0; i < weapon.dieCount; i++) dmg += rollDie(weapon.dieSides);
       target.hp -= dmg;
-      game.log(`¡Impacto! Causas ${dmg} de daño. (HP: ${Math.max(0, target.hp)})`);
+      game.log(`¡Impacto! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
 
       if (target.hp <= 0) {
         let goldDrop = target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0);
@@ -609,7 +679,7 @@ class CombatSystem {
         return;
       }
     } else {
-      game.log("El ataque falló.");
+      game.log("El ataque no superó las defensas del enemigo.");
     }
 
     CombatSystem.enemyCounterAttack(game, target, minDist);
@@ -621,7 +691,6 @@ class CombatSystem {
     const { player } = game;
     const eD20 = rollDie(20);
 
-    // 1. Ataque cuerpo a cuerpo (adyacente a 1 casilla de cualquier parte de su cuerpo)
     if (dist <= 1.5) {
       const atkBonus = enemy.isBoss ? 6 : 4;
       const totalAtk = eD20 + atkBonus;
@@ -633,10 +702,7 @@ class CombatSystem {
       } else {
         game.log("Bloqueas el golpe con tu broquel.");
       }
-    } 
-    // 2. Ataque a distancia: el Jefe cubre 2 casillas extra desde su cuerpo (dist <= 2.5)
-    // Los enemigos básicos cubren hasta 3 casillas (dist <= 3.5)
-    else if ((enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
+    } else if ((enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
       const atkBonus = enemy.isBoss ? 5 : 3;
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} proyectil: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
@@ -866,7 +932,47 @@ class GameController {
     this.renderer.draw();
   }
 
-  // Avanzar al frente
+  // MOVIMIENTO ALEATORIO DE ENEMIGOS POR CADA PASO DE LIOR
+  stepEnemies() {
+    this.dungeon.enemies.forEach(enemy => {
+      // Elegir aleatoriamente entre quedarse quieto o moverse en cruz
+      const moves = [
+        { dx: 0, dy: -1 },
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 0 } // probabilidad de mantener posición
+      ];
+      const pick = moves[Math.floor(Math.random() * moves.length)];
+      if (pick.dx === 0 && pick.dy === 0) return;
+
+      const newCells = enemy.cells.map(c => ({ x: c.x + pick.dx, y: c.y + pick.dy }));
+
+      // Comprobar colisión con límites, muros y la posición de Lior
+      const canMove = newCells.every(c => {
+        if (!this.dungeon.isInsideBounds(c.x, c.y)) return false;
+        this.generator.ensureTileGenerated(c.x, c.y);
+        if (this.dungeon.getTile(c.x, c.y) === TILE_WALL) return false;
+        if (c.x === this.player.x && c.y === this.player.y) return false;
+        return true;
+      });
+
+      if (!canMove) return;
+
+      // Comprobar colisión con otros enemigos
+      const collidesWithOther = this.dungeon.enemies.some(other => {
+        if (other === enemy) return false;
+        return other.cells.some(oc => newCells.some(nc => nc.x === oc.x && nc.y === oc.y));
+      });
+
+      if (!collidesWithOther) {
+        enemy.x += pick.dx;
+        enemy.y += pick.dy;
+        enemy.cells = newCells;
+      }
+    });
+  }
+
   moveForward() {
     if (this.isShopOpen || this.player.hp <= 0) return;
 
@@ -893,10 +999,10 @@ class GameController {
     }
 
     this.player.moveForward();
+    this.stepEnemies(); // Los enemigos se desplazan 1 paso
     this.handleTileInteractions();
   }
 
-  // Retroceder un paso sin girar
   moveBackward() {
     if (this.isShopOpen || this.player.hp <= 0) return;
 
@@ -923,7 +1029,8 @@ class GameController {
     }
 
     this.player.moveBackward();
-    this.log(`Retrocedes un paso manteniendo la vista al ${CARDINALS[this.player.direction]}.`);
+    this.log(`Retrocedes un paso mirando al ${CARDINALS[this.player.direction]}.`);
+    this.stepEnemies(); // Los enemigos se desplazan 1 paso
     this.handleTileInteractions();
   }
 
@@ -952,13 +1059,11 @@ class GameController {
   }
 
   bindEvents() {
-    // Cruceta completa (▲, ◀, ▶, ▼)
     document.getElementById("btn-forward").addEventListener("click", () => this.moveForward());
     document.getElementById("btn-left").addEventListener("click", () => this.turnLeft());
     document.getElementById("btn-right").addEventListener("click", () => this.turnRight());
     document.getElementById("btn-backward").addEventListener("click", () => this.moveBackward());
 
-    // Romboide
     document.getElementById("btn-d").addEventListener("click", () => this.cycleWeapon());
     document.getElementById("btn-c").addEventListener("click", () => this.useLayOnHands());
     document.getElementById("btn-b").addEventListener("click", () => this.castMistyStep());
