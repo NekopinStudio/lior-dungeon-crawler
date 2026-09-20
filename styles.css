@@ -1,6 +1,7 @@
 /*
   ESTILOS Y PRESENTACIÓN
-  Diseño ergonómico para uso con ambos pulgares en smartphone.
+  Eliminamos espacios muertos: se quita flex: 1 del canvas y
+  se compacta la separación para que quepa en navegadores móviles.
 */
 * {
   box-sizing: border-box;
@@ -18,22 +19,25 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  height: 100vh;
-  padding: 4px;
+  /* Altura dinámica para descontar las barras de navegación del móvil */
+  height: 100dvh;
+  min-height: 100vh;
+  padding: 2px 4px;
   overflow: hidden;
+  justify-content: flex-start;
+  gap: 3px;
 }
 
 #hud {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
-  max-width: 330px;
+  max-width: 320px;
   background-color: #0c0d12;
   border: 1px solid #333333;
-  padding: 4px 6px;
+  padding: 3px 6px;
   border-radius: 4px;
   font-size: 11px;
 }
@@ -47,21 +51,22 @@ body {
 #hud-weapon { color: #ffff00 !important; }
 #hud-ammo { color: #ffb300 !important; }
 
+/* Contenedor pegado al HUD sin márgenes inflados */
 #game-container {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  flex: 1;
+  margin: 0;
+  padding: 0;
 }
 
+/* El canvas conserva exactamente sus dimensiones nativas (294x504 px) */
 #viewport {
   background-color: #000000;
   border: 2px solid #ffffff;
   display: block;
-  max-height: 45vh;
-  object-fit: contain;
 }
 
 /* Modal flotante de tienda */
@@ -139,19 +144,18 @@ body {
   cursor: pointer;
 }
 
-/* Registro de combate amplio */
+/* Registro de combate pegado al canvas */
 #log-container {
   width: 100%;
-  max-width: 330px;
-  height: 62px;
+  max-width: 320px;
+  height: 52px;
   background-color: #050505;
   border: 1px solid #222222;
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 3px 6px;
   overflow-y: auto;
-  font-size: 11px;
-  line-height: 1.35;
-  margin: 2px 0;
+  font-size: 10.5px;
+  line-height: 1.3;
 }
 
 #log-entries div {
@@ -163,23 +167,23 @@ body {
   color: #00ff88;
 }
 
-/* Dock de control inferior */
+/* Barra inferior de controles */
 #control-dock {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 330px;
-  height: 115px;
-  padding: 0 6px;
+  max-width: 320px;
+  height: 100px;
+  padding: 0 4px;
 }
 
-/* Cruceta a la izquierda */
+/* Cruceta con retroceso */
 .dpad {
   display: grid;
-  grid-template-columns: repeat(3, 36px);
-  grid-template-rows: repeat(3, 32px);
-  gap: 3px;
+  grid-template-columns: repeat(3, 34px);
+  grid-template-rows: repeat(3, 30px);
+  gap: 2px;
 }
 
 .dpad-btn {
@@ -206,15 +210,20 @@ body {
   color: #00b0ff;
 }
 
-/* Romboide de botones a la derecha (Grid 3x3 cruzado) */
+.dpad-btn.down {
+  border-color: #5e81ac;
+  color: #88c0d0;
+}
+
+/* Romboide de botones */
 .diamond-pad {
   display: grid;
-  grid-template-columns: repeat(3, 38px);
-  grid-template-rows: repeat(3, 38px);
+  grid-template-columns: repeat(3, 34px);
+  grid-template-rows: repeat(3, 34px);
   align-items: center;
   justify-items: center;
-  width: 114px;
-  height: 114px;
+  width: 102px;
+  height: 102px;
 }
 
 .btn-slot {
@@ -230,11 +239,11 @@ body {
 .btn-slot.bottom { grid-column: 2; grid-row: 3; }
 
 .arcade-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   font-family: monospace;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -246,12 +255,11 @@ body {
 }
 
 .btn-caption {
-  font-size: 8px;
+  font-size: 7.5px;
   color: #888888;
   margin-top: 1px;
 }
 
-/* [D] Norte: Cambio de Arma */
 .btn-weapon {
   border-color: #ffd700;
   color: #ffd700;
@@ -261,7 +269,6 @@ body {
   color: #000000;
 }
 
-/* [C] Oeste: Curar */
 .btn-heal {
   border-color: #00e676;
   color: #00e676;
@@ -275,7 +282,6 @@ body {
   color: #444444;
 }
 
-/* [B] Este: Paso Brumoso */
 .btn-misty {
   border-color: #00e5ff;
   color: #00e5ff;
@@ -289,7 +295,6 @@ body {
   color: #444444;
 }
 
-/* [A] Sur: Atacar */
 .btn-attack {
   border-color: #ff3333;
   color: #ff3333;
