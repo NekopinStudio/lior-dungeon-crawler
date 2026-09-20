@@ -1,13 +1,182 @@
 /**
- * CONSTANTES DE MAPA Y VECTORES CARDINALES
+ * MOTOR DE AUDIO SINTETIZADO (Web Audio API)
+ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
+    }
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+  }
+
+  playStep() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(90, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.05);
+
+    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.05);
+  }
+
+  playSword() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(750, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.12);
+  }
+
+  playShot(isMusket = false) {
+    this.init();
+    const bufferSize = this.ctx.sampleRate * (isMusket ? 0.25 : 0.16);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(isMusket ? 650 : 950, this.ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(isMusket ? 0.35 : 0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    noise.start();
+  }
+
+  playHurt() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  playHeal() {
+    this.init();
+    const notes = [330, 440, 554, 659];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + idx * 0.05);
+      osc.stop(this.ctx.currentTime + idx * 0.05 + 0.25);
+    });
+  }
+
+  playMisty() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(260, this.ctx.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.3);
+  }
+
+  playCoin() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.07);
+
+    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.25);
+  }
+
+  playDeath() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.7);
+
+    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.7);
+  }
+}
+
+const sounds = new SoundEngine();
+
+/**
+ * CONSTANTES DE MAPA Y VECTORES
  */
 const CARDINALS = ["Norte", "Este", "Sur", "Oeste"];
 
 const DIR_VECTORS = [
-  { x: 0, y: -1 }, // Norte
-  { x: 1, y: 0 },  // Este
-  { x: 0, y: 1 },  // Sur
-  { x: -1, y: 0 }  // Oeste
+  { x: 0, y: -1 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+  { x: -1, y: 0 }
 ];
 
 const TILE_OUT_OF_BOUNDS = -1;
@@ -26,13 +195,10 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
-/**
- * ARMAS DE LIOR
- */
 const WEAPONS = {
   SWORD: {
     name: "Espada",
-    label: "Espada (cuerpo a cuerpo 1.5)",
+    label: "Espada (c/c 1.5)",
     bonus: 8,
     dieCount: 1,
     dieSides: 8,
@@ -196,7 +362,6 @@ class DungeonGenerator {
     this.placeSpecialTiles();
   }
 
-  // Genera las casillas que componen el cuerpo de una entidad según su tamaño
   generateCells(originX, originY, size) {
     const cells = [];
     for (let dy = 0; dy < size; dy++) {
@@ -208,7 +373,6 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
-    // 1. Instanciación del Mega Boss cada 10 pisos (4x4)
     if (this.floorNumber % 10 === 0) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
@@ -223,7 +387,7 @@ class DungeonGenerator {
         this.dungeon.enemies.push({
           x: mx,
           y: my,
-          name: "MEGA BOSS DEVORADOR (4x4)",
+          name: "MEGA BOSS (4x4)",
           hp: 120,
           maxHp: 120,
           ac: 16,
@@ -236,9 +400,7 @@ class DungeonGenerator {
       }
     }
 
-    // 2. Población por ciclo estricto: 3 básicos, 1 jefe (2x2), 3 básicos, 1 jefe...
     let basicCounter = 0;
-
     for (let i = 0; i < this.totalEnemies; i++) {
       const isBoss = (basicCounter === 3);
       const enemySize = isBoss ? 2 : 1;
@@ -253,7 +415,6 @@ class DungeonGenerator {
 
         const candidateCells = this.generateCells(rx, ry, enemySize);
 
-        // Evitar superposición con cualquier otra unidad
         const collides = this.dungeon.enemies.some(existing =>
           existing.cells.some(c1 => candidateCells.some(c2 => c1.x === c2.x && c1.y === c2.y))
         );
@@ -272,7 +433,7 @@ class DungeonGenerator {
             size: 2,
             cells: candidateCells
           });
-          basicCounter = 0; // Reinicia el ciclo
+          basicCounter = 0;
         } else {
           this.dungeon.enemies.push({
             x: rx,
@@ -297,7 +458,6 @@ class DungeonGenerator {
     const placedHealPositions = [];
     const maxHeals = Math.max(2, Math.floor(this.dungeon.enemies.length / 3));
 
-    // Tienda
     for (let attempts = 0; attempts < 200; attempts++) {
       const sx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
       const sy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
@@ -309,7 +469,6 @@ class DungeonGenerator {
       break;
     }
 
-    // Curaciones dispersas con distancia mínima de 5 casillas
     for (let attempts = 0; attempts < 800 && placedHealPositions.length < maxHeals; attempts++) {
       const hx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
       const hy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
@@ -374,21 +533,13 @@ class CameraTransformer {
 
     switch (player.direction) {
       case 0:
-        worldX += lateralOffset;
-        worldY -= forwardOffset;
-        break;
+        worldX += lateralOffset; worldY -= forwardOffset; break;
       case 1:
-        worldX += forwardOffset;
-        worldY += lateralOffset;
-        break;
+        worldX += forwardOffset; worldY += lateralOffset; break;
       case 2:
-        worldX -= lateralOffset;
-        worldY += forwardOffset;
-        break;
+        worldX -= lateralOffset; worldY += forwardOffset; break;
       case 3:
-        worldX -= forwardOffset;
-        worldY -= lateralOffset;
-        break;
+        worldX -= forwardOffset; worldY -= lateralOffset; break;
     }
 
     return { x: worldX, y: worldY };
@@ -419,14 +570,8 @@ class VisibilitySystem {
       }
 
       const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        x0 += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y0 += sy;
-      }
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
     }
   }
 
@@ -533,7 +678,6 @@ class Renderer {
       }
     }
 
-    // Dibujado de enemigos
     this.dungeon.enemies.forEach(enemy => {
       enemy.cells.forEach(cell => {
         for (let sy = 0; sy < rows; sy++) {
@@ -548,9 +692,9 @@ class Renderer {
                 const py = sy * tileSize;
 
                 if (enemy.isMegaBoss) {
-                  ctx.fillStyle = "#800020"; // Borgoña oscuro
+                  ctx.fillStyle = "#800020";
                   ctx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-                  ctx.strokeStyle = "#ffd700"; // Borde dorado
+                  ctx.strokeStyle = "#ffd700";
                   ctx.lineWidth = 2;
                   ctx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
                 } else if (enemy.isBoss) {
@@ -574,7 +718,6 @@ class Renderer {
       });
     });
 
-    // Render de Lior
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
 
@@ -607,14 +750,10 @@ class CombatSystem {
     let lateral = 0;
 
     switch (player.direction) {
-      case 0:
-        forward = -dy; lateral = dx; break;
-      case 1:
-        forward = dx; lateral = dy; break;
-      case 2:
-        forward = dy; lateral = -dx; break;
-      case 3:
-        forward = -dx; lateral = -dy; break;
+      case 0: forward = -dy; lateral = dx; break;
+      case 1: forward = dx; lateral = dy; break;
+      case 2: forward = dy; lateral = -dx; break;
+      case 3: forward = -dx; lateral = -dy; break;
     }
 
     return (forward >= 1 && forward <= weapon.range && Math.abs(lateral) <= 1);
@@ -636,12 +775,16 @@ class CombatSystem {
         return;
       }
       player.ammoPistol--;
+      sounds.playShot(false);
     } else if (weapon.ammoType === "musket") {
       if (player.ammoMusket <= 0) {
         game.log("¡Sin balas de Mosquete! Cambia de arma.");
         return;
       }
       player.ammoMusket--;
+      sounds.playShot(true);
+    } else {
+      sounds.playSword();
     }
 
     let target = null;
@@ -684,6 +827,7 @@ class CombatSystem {
       game.log(`¡Impacto! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
 
       if (target.hp <= 0) {
+        sounds.playCoin();
         let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(4) : (Math.random() < 0.5 ? 1 : 0));
         player.gold += goldDrop;
         game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
@@ -705,25 +849,24 @@ class CombatSystem {
     const { player } = game;
     const eD20 = rollDie(20);
 
-    // 1. Cuerpo a cuerpo directo
     if (dist <= 1.5) {
       const atkBonus = enemy.isMegaBoss ? 8 : (enemy.isBoss ? 6 : 4);
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} c/c: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
       if (totalAtk >= player.ac) {
+        sounds.playHurt();
         const dmg = rollDie(enemy.isMegaBoss ? 12 : (enemy.isBoss ? 10 : 6)) + (enemy.isMegaBoss ? 6 : (enemy.isBoss ? 4 : 2));
         player.hp = Math.max(0, player.hp - dmg);
         game.log(`¡Recibes ${dmg} de daño cuerpo a cuerpo!`);
       } else {
         game.log("Bloqueas el golpe con tu broquel.");
       }
-    } 
-    // 2. Ataque a distancia: Mega Boss hasta 3.5 casillas, Boss regular hasta 2.5 casillas
-    else if ((enemy.isMegaBoss && dist <= 3.5) || (enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
+    } else if ((enemy.isMegaBoss && dist <= 3.5) || (enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
       const atkBonus = enemy.isMegaBoss ? 7 : (enemy.isBoss ? 5 : 3);
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} proyectil: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
       if (totalAtk >= player.ac) {
+        sounds.playHurt();
         const dmg = rollDie(enemy.isMegaBoss ? 10 : (enemy.isBoss ? 8 : 4)) + (enemy.isMegaBoss ? 4 : 2);
         player.hp = Math.max(0, player.hp - dmg);
         game.log(`¡Impacto de proyectil enemigo! -${dmg} HP.`);
@@ -733,6 +876,7 @@ class CombatSystem {
     }
 
     if (player.hp <= 0) {
+      sounds.playDeath();
       game.log("¡Lior ha caído en combate! Fin de la partida.");
     }
   }
@@ -813,6 +957,7 @@ class GameController {
     this.isShopOpen = true;
     this.shopModal.classList.remove("hidden");
     this.updateHUD();
+    sounds.playCoin();
     this.log("Entraste a la tienda del Mercader de Sombras.");
   }
 
@@ -827,6 +972,7 @@ class GameController {
       if (this.player.gold >= 1) {
         this.player.gold -= 1;
         this.player.ammoPistol += 4;
+        sounds.playCoin();
         this.log("Compraste 4 balas de Pistola por 1 PO.");
         this.updateHUD();
       } else {
@@ -838,6 +984,7 @@ class GameController {
       if (this.player.gold >= 1) {
         this.player.gold -= 1;
         this.player.ammoMusket += 2;
+        sounds.playCoin();
         this.log("Compraste 2 balas de Mosquete por 1 PO.");
         this.updateHUD();
       } else {
@@ -852,6 +999,7 @@ class GameController {
           return;
         }
         this.player.gold -= 2;
+        sounds.playHeal();
         const heal = rollDie(8) + 5;
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
         this.log(`Poción bebida: +${heal} HP restaurados.`);
@@ -869,6 +1017,7 @@ class GameController {
   castMistyStep() {
     if (this.isShopOpen || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
 
+    sounds.playMisty();
     this.log("Invocas Paso Brumoso...");
     this.player.mistyStepCharges--;
 
@@ -885,6 +1034,7 @@ class GameController {
       if (!this.dungeon.isInsideBounds(cx, cy)) {
         this.log("¡Caíste al abismo exterior!");
         this.player.hp = 0;
+        sounds.playDeath();
         this.updateHUD();
         this.renderer.draw();
         return;
@@ -925,6 +1075,7 @@ class GameController {
   useLayOnHands() {
     if (this.isShopOpen || this.player.hp <= 0) return;
     if (this.player.useLayOnHands()) {
+      sounds.playHeal();
       this.log("Manos Curativas: +6 HP.");
       this.updateHUD();
     } else {
@@ -935,6 +1086,7 @@ class GameController {
   cycleWeapon() {
     if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.cycleWeapon();
+    sounds.playStep();
     this.log(`Equipada: ${this.player.equippedWeapon.label}`);
     this.updateHUD();
   }
@@ -942,6 +1094,7 @@ class GameController {
   turnLeft() {
     if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.turnLeft();
+    sounds.playStep();
     this.log(`Giras a la izquierda. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
     this.renderer.draw();
@@ -950,15 +1103,14 @@ class GameController {
   turnRight() {
     if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.turnRight();
+    sounds.playStep();
     this.log(`Giras a la derecha. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
     this.renderer.draw();
   }
 
-  // MOVIMIENTO ESTRICTO: PROHIBIDO QUEDARSE EN EL MISMO LUGAR
   stepEnemies() {
     this.dungeon.enemies.forEach(enemy => {
-      // 4 direcciones cardinales forzosas (sin la opción 0, 0)
       const directions = [
         { dx: 0, dy: -1 },
         { dx: 1, dy: 0 },
@@ -966,15 +1118,11 @@ class GameController {
         { dx: -1, dy: 0 }
       ];
 
-      // Barajar aleatoriamente las opciones
       directions.sort(() => Math.random() - 0.5);
-
-      let moved = false;
 
       for (const dir of directions) {
         const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
 
-        // Validar que toda la silueta caiga en casillas válidas
         const isValid = candidateCells.every(c => {
           if (!this.dungeon.isInsideBounds(c.x, c.y)) return false;
           this.generator.ensureTileGenerated(c.x, c.y);
@@ -985,7 +1133,6 @@ class GameController {
 
         if (!isValid) continue;
 
-        // Comprobar colisión con otras unidades
         const collidesWithOther = this.dungeon.enemies.some(other => {
           if (other === enemy) return false;
           return other.cells.some(oc => candidateCells.some(nc => nc.x === oc.x && nc.y === oc.y));
@@ -995,8 +1142,7 @@ class GameController {
           enemy.x += dir.dx;
           enemy.y += dir.dy;
           enemy.cells = candidateCells;
-          moved = true;
-          break; // Movimiento exitoso
+          break;
         }
       }
     });
@@ -1028,6 +1174,7 @@ class GameController {
     }
 
     this.player.moveForward();
+    sounds.playStep();
     this.stepEnemies();
     this.handleTileInteractions();
   }
@@ -1058,6 +1205,7 @@ class GameController {
     }
 
     this.player.moveBackward();
+    sounds.playStep();
     this.log(`Retrocedes un paso mirando al ${CARDINALS[this.player.direction]}.`);
     this.stepEnemies();
     this.handleTileInteractions();
@@ -1067,6 +1215,7 @@ class GameController {
     if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_HEAL_FOUNTAIN) {
       const heal = rollDie(6);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+      sounds.playHeal();
       this.log(`Santuario de vida: +${heal} HP restaurados.`);
       this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     }
@@ -1078,6 +1227,7 @@ class GameController {
     this.updateHUD();
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
+      sounds.playCoin();
       this.log("¡Salida alcanzada! Descendiendo...");
       this.floor++;
       setTimeout(() => this.initDungeonFloor(), 700);
