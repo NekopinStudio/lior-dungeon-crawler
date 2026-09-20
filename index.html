@@ -18,7 +18,7 @@
     <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
   </header>
 
-  <!-- LIENZO DE JUEGO Y MODAL DE TIENDA -->
+  <!-- LIENZO DE JUEGO (42px por celda se mantiene intacto: 294x504 px) -->
   <main id="game-container">
     <canvas id="viewport" width="294" height="504"></canvas>
 
@@ -48,14 +48,14 @@
     </div>
   </main>
 
-  <!-- CONSOLA DE REGISTROS AMPLIADA -->
+  <!-- CONSOLA DE REGISTROS -->
   <section id="log-container">
     <div id="log-entries"></div>
   </section>
 
-  <!-- CONTROLES: CRUCETA A LA IZQUIERDA Y ROMBO A LA DERECHA -->
+  <!-- CONTROLES: CRUCETA CON RETROCESO Y ROMBO DE BOTONES -->
   <footer id="control-dock">
-    <!-- Cruceta direccional -->
+    <!-- Cruceta direccional con botón de retroceso (abajo) -->
     <div class="dpad">
       <div></div>
       <button id="btn-forward" class="dpad-btn up">▲</button>
@@ -64,11 +64,11 @@
       <div class="dpad-center"></div>
       <button id="btn-right" class="dpad-btn right">▶</button>
       <div></div>
-      <div></div>
+      <button id="btn-backward" class="dpad-btn down">▼</button>
       <div></div>
     </div>
 
-    <!-- Romboide de 4 botones: D arriba, C izquierda, B derecha, A abajo -->
+    <!-- Romboide de botones: D arriba, C oeste, B este, A sur -->
     <div class="diamond-pad">
       <div class="btn-slot top">
         <button id="btn-d" class="arcade-btn btn-weapon">D</button>
