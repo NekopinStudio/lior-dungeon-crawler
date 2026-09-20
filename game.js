@@ -454,32 +454,81 @@ class DungeonGenerator {
     }
   }
 
+  /**
+   * REGLAS DE COLOCACIÓN ESPACIAL DE TIENDAS Y CURACIONES:
+   * 1. Tiendas = (Total Jefes - 1). En un radio de 5 casillas de donde arranca el jefe.
+   *    Separadas entre sí al menos 3 casillas (si hay jefes contiguos, solo 1 tienda).
+   * 2. Curaciones = 1 por cada 4 enemigos.
+   *    Separadas entre sí al menos 5 casillas a la redonda obligatorias.
+   */
   placeSpecialTiles() {
-    const placedHealPositions = [];
-    const maxHeals = Math.max(2, Math.floor(this.dungeon.enemies.length / 3));
+    // Lista de jefes en el terreno
+    const bosses = this.dungeon.enemies.filter(e => e.isBoss);
+    const targetShops = Math.max(0, bosses.length - 1);
+    const placedShopPositions = [];
 
-    for (let attempts = 0; attempts < 200; attempts++) {
-      const sx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
-      const sy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
-      if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 4) continue;
-      if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2) continue;
-      if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
+    // Agrupar jefes contiguos (a menos de 5 casillas de distancia)
+    // Para que un grupo de jefes cercanos solo genere 1 tienda compartida
+    const bossClusters = [];
+    bosses.forEach(boss => {
+      const existingCluster = bossClusters.find(cluster =>
+        cluster.some(b => Math.hypot(b.x - boss.x, b.y - boss.y) <= 5.0)
+      );
+      if (existingCluster) {
+        existingCluster.push(boss);
+      } else {
+        bossClusters.push([boss]);
+      }
+    });
 
-      this.dungeon.setTile(sx, sy, TILE_SHOP);
-      break;
+    // Colocar tiendas: radio <= 5 casillas del jefe y >= 3 casillas entre tiendas
+    for (let c = 0; c < bossClusters.length && placedShopPositions.length < targetShops; c++) {
+      const anchorBoss = bossClusters[c][0];
+      let placed = false;
+
+      for (let attempts = 0; attempts < 300 && !placed; attempts++) {
+        // Desfase entre -5 y +5 casillas
+        const ox = Math.floor(Math.random() * 11) - 5;
+        const oy = Math.floor(Math.random() * 11) - 5;
+        const distToBoss = Math.hypot(ox, oy);
+
+        if (distToBoss > 5.0) continue; // Máximo 5 casillas a la redonda del jefe
+
+        const sx = anchorBoss.x + ox;
+        const sy = anchorBoss.y + oy;
+
+        if (!this.dungeon.isInsideBounds(sx, sy)) continue;
+        if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 3.5) continue;
+        if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2.0) continue;
+        if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
+
+        // Separación mínima de 3 casillas entre tiendas
+        const tooCloseToOtherShop = placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3.0);
+        if (tooCloseToOtherShop) continue;
+
+        this.dungeon.setTile(sx, sy, TILE_SHOP);
+        placedShopPositions.push({ x: sx, y: sy });
+        placed = true;
+      }
     }
 
-    for (let attempts = 0; attempts < 800 && placedHealPositions.length < maxHeals; attempts++) {
+    // Curaciones: 1 por cada 4 enemigos en el calabozo
+    const targetHeals = Math.floor(this.dungeon.enemies.length / 4);
+    const placedHealPositions = [];
+
+    // Separación mínima obligatoria de 5 casillas de radio entre cada curación
+    for (let attempts = 0; attempts < 1500 && placedHealPositions.length < targetHeals; attempts++) {
       const hx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
       const hy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
 
-      if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 4) continue;
-      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2) continue;
+      if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 3.5) continue;
+      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2.0) continue;
       if (this.dungeon.getTile(hx, hy) === TILE_SHOP) continue;
       if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === hx && c.y === hy))) continue;
 
-      const tooClose = placedHealPositions.some(pos => Math.hypot(hx - pos.x, hy - pos.y) < 5.0);
-      if (tooClose) continue;
+      // Radio mínimo de 5 casillas respecto a cualquier otra curación ya colocada
+      const tooCloseToAnotherHeal = placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5.0);
+      if (tooCloseToAnotherHeal) continue;
 
       this.dungeon.setTile(hx, hy, TILE_HEAL_FOUNTAIN);
       placedHealPositions.push({ x: hx, y: hy });
