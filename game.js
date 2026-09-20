@@ -10,15 +10,15 @@ const DIR_VECTORS = [
   { x: -1, y: 0 }  // Oeste
 ];
 
-// Tipos de celda lógicos
 const TILE_OUT_OF_BOUNDS = -1;
 const TILE_FLOOR = 0;
 const TILE_WALL = 1;
 const TILE_ENTRANCE = 2;
 const TILE_EXIT = 3;
-const TILE_HEAL_FOUNTAIN = 4; // Punto de curación independiente (+)
-const TILE_SHOP = 5;          // Tienda del mercader (T)
+const TILE_HEAL_FOUNTAIN = 4;
+const TILE_SHOP = 5;
 
+// El tamaño de celda de 42px se mantiene intacto
 const CAMERA_CONFIG = {
   cols: 7,
   rows: 12,
@@ -27,9 +27,6 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
-/**
- * ARMAS DE LIOR
- */
 const WEAPONS = {
   SWORD: {
     name: "Espada",
@@ -76,9 +73,6 @@ function getRandomDungeonDimensions(min = 10, max = 70) {
   return { width: w, height: h };
 }
 
-/**
- * CLASE DUNGEON
- */
 class Dungeon {
   constructor(width, height) {
     this.width = width;
@@ -123,9 +117,6 @@ class Dungeon {
   }
 }
 
-/**
- * CLASE PLAYER (Lior Kurogane)
- */
 class Player {
   constructor(startX, startY) {
     this.x = startX;
@@ -157,10 +148,22 @@ class Player {
     return { x: this.x + v.x * steps, y: this.y + v.y * steps };
   }
 
+  // Posición directamente a espaldas de Lior
+  getNextBackwardPos() {
+    const v = DIR_VECTORS[this.direction];
+    return { x: this.x - v.x, y: this.y - v.y };
+  }
+
   moveForward() {
     const next = this.getNextForwardPos(1);
     this.x = next.x;
     this.y = next.y;
+  }
+
+  moveBackward() {
+    const prev = this.getNextBackwardPos();
+    this.x = prev.x;
+    this.y = prev.y;
   }
 
   cycleWeapon() {
@@ -177,9 +180,6 @@ class Player {
   }
 }
 
-/**
- * CLASE DUNGEON_GENERATOR
- */
 class DungeonGenerator {
   constructor(dungeon) {
     this.dungeon = dungeon;
@@ -328,9 +328,6 @@ class DungeonGenerator {
   }
 }
 
-/**
- * TRANSFORMACIÓN DE CÁMARA
- */
 class CameraTransformer {
   static screenToWorld(screenX, screenY, player) {
     const lateralOffset = screenX - CAMERA_CONFIG.playerScreenX;
@@ -362,9 +359,6 @@ class CameraTransformer {
   }
 }
 
-/**
- * SISTEMA DE VISIBILIDAD (BRESENHAM)
- */
 class VisibilitySystem {
   static hasLineOfSight(screenX0, screenY0, screenX1, screenY1, dungeon, player) {
     let x0 = screenX0;
@@ -401,9 +395,6 @@ class VisibilitySystem {
   }
 }
 
-/**
- * CLASE RENDERER
- */
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
     this.canvas = canvas;
@@ -486,7 +477,7 @@ class Renderer {
       }
     }
 
-    // Render de enemigos
+    // Dibujado de enemigos
     this.dungeon.enemies.forEach(enemy => {
       enemy.cells.forEach(cell => {
         for (let sy = 0; sy < rows; sy++) {
@@ -525,26 +516,32 @@ class Renderer {
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
 
-    ctx.fillStyle = "#00b0ff";
+    ctx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
     ctx.beginPath();
     ctx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(liorPx, liorPy);
-    ctx.lineTo(liorPx, liorPy - tileSize * 0.65);
-    ctx.stroke();
+    if (this.player.hp > 0) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(liorPx, liorPy);
+      ctx.lineTo(liorPx, liorPy - tileSize * 0.65);
+      ctx.stroke();
+    }
   }
 }
 
-/**
- * SISTEMA DE COMBATE
- */
 class CombatSystem {
   static executeAttack(game) {
     const { player, dungeon } = game;
+
+    // BLOQUEO POR MUERTE: no se puede atacar si Lior murió
+    if (player.hp <= 0) {
+      game.log("Lior ha caído. Reinicia para volver a intentarlo.");
+      return;
+    }
+
     const weapon = player.equippedWeapon;
 
     if (weapon.ammoType === "pistol" && player.ammoPistol <= 0) {
@@ -624,6 +621,7 @@ class CombatSystem {
     const { player } = game;
     const eD20 = rollDie(20);
 
+    // 1. Ataque cuerpo a cuerpo (adyacente a 1 casilla de cualquier parte de su cuerpo)
     if (dist <= 1.5) {
       const atkBonus = enemy.isBoss ? 6 : 4;
       const totalAtk = eD20 + atkBonus;
@@ -635,7 +633,10 @@ class CombatSystem {
       } else {
         game.log("Bloqueas el golpe con tu broquel.");
       }
-    } else if (dist <= 3.5) {
+    } 
+    // 2. Ataque a distancia: el Jefe cubre 2 casillas extra desde su cuerpo (dist <= 2.5)
+    // Los enemigos básicos cubren hasta 3 casillas (dist <= 3.5)
+    else if ((enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
       const atkBonus = enemy.isBoss ? 5 : 3;
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} proyectil: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
@@ -649,14 +650,11 @@ class CombatSystem {
     }
 
     if (player.hp <= 0) {
-      game.log("Lior ha caído en combate...");
+      game.log("¡Lior ha caído en combate! Fin de la partida.");
     }
   }
 }
 
-/**
- * CONTROLADOR PRINCIPAL DEL JUEGO
- */
 class GameController {
   constructor() {
     this.floor = 1;
@@ -714,10 +712,10 @@ class GameController {
     document.getElementById("misty-charges").textContent = this.player.mistyStepCharges;
 
     const mistyBtn = document.getElementById("btn-b");
-    mistyBtn.disabled = this.player.mistyStepCharges <= 0;
+    mistyBtn.disabled = this.player.mistyStepCharges <= 0 || this.player.hp <= 0;
 
     const layBtn = document.getElementById("btn-c");
-    layBtn.disabled = this.player.hasUsedLayOnHands;
+    layBtn.disabled = this.player.hasUsedLayOnHands || this.player.hp <= 0;
 
     document.getElementById("shop-gold-display").textContent = this.player.gold;
   }
@@ -836,7 +834,7 @@ class GameController {
   }
 
   useLayOnHands() {
-    if (this.isShopOpen) return;
+    if (this.isShopOpen || this.player.hp <= 0) return;
     if (this.player.useLayOnHands()) {
       this.log("Manos Curativas: +6 HP.");
       this.updateHUD();
@@ -846,14 +844,14 @@ class GameController {
   }
 
   cycleWeapon() {
-    if (this.isShopOpen) return;
+    if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.cycleWeapon();
     this.log(`Equipada: ${this.player.equippedWeapon.label}`);
     this.updateHUD();
   }
 
   turnLeft() {
-    if (this.isShopOpen) return;
+    if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.turnLeft();
     this.log(`Giras a la izquierda. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
@@ -861,13 +859,14 @@ class GameController {
   }
 
   turnRight() {
-    if (this.isShopOpen) return;
+    if (this.isShopOpen || this.player.hp <= 0) return;
     this.player.turnRight();
     this.log(`Giras a la derecha. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
     this.renderer.draw();
   }
 
+  // Avanzar al frente
   moveForward() {
     if (this.isShopOpen || this.player.hp <= 0) return;
 
@@ -894,8 +893,41 @@ class GameController {
     }
 
     this.player.moveForward();
+    this.handleTileInteractions();
+  }
 
-    // 1. Interacción con Punto de Curación (+)
+  // Retroceder un paso sin girar
+  moveBackward() {
+    if (this.isShopOpen || this.player.hp <= 0) return;
+
+    const prev = this.player.getNextBackwardPos();
+
+    if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
+      this.log("Un muro exterior detiene tu retroceso.");
+      return;
+    }
+
+    this.generator.ensureTileGenerated(prev.x, prev.y);
+
+    if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
+      this.log("Un muro a tu espalda te impide retroceder.");
+      return;
+    }
+
+    const enemyBlocking = this.dungeon.enemies.some(e =>
+      e.cells.some(c => c.x === prev.x && c.y === prev.y)
+    );
+    if (enemyBlocking) {
+      this.log("Un enemigo te bloquea el paso por la espalda.");
+      return;
+    }
+
+    this.player.moveBackward();
+    this.log(`Retrocedes un paso manteniendo la vista al ${CARDINALS[this.player.direction]}.`);
+    this.handleTileInteractions();
+  }
+
+  handleTileInteractions() {
     if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_HEAL_FOUNTAIN) {
       const heal = rollDie(6);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
@@ -903,7 +935,6 @@ class GameController {
       this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     }
 
-    // 2. Interacción con Tienda (T)
     if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_SHOP) {
       this.openShop();
     }
@@ -921,12 +952,13 @@ class GameController {
   }
 
   bindEvents() {
-    // Cruceta
+    // Cruceta completa (▲, ◀, ▶, ▼)
+    document.getElementById("btn-forward").addEventListener("click", () => this.moveForward());
     document.getElementById("btn-left").addEventListener("click", () => this.turnLeft());
     document.getElementById("btn-right").addEventListener("click", () => this.turnRight());
-    document.getElementById("btn-forward").addEventListener("click", () => this.moveForward());
+    document.getElementById("btn-backward").addEventListener("click", () => this.moveBackward());
 
-    // Romboide de botones: D, C, B, A
+    // Romboide
     document.getElementById("btn-d").addEventListener("click", () => this.cycleWeapon());
     document.getElementById("btn-c").addEventListener("click", () => this.useLayOnHands());
     document.getElementById("btn-b").addEventListener("click", () => this.castMistyStep());
@@ -935,7 +967,6 @@ class GameController {
       CombatSystem.executeAttack(this);
     });
 
-    // Teclado físico
     window.addEventListener("keydown", (e) => {
       if (this.isShopOpen && e.key !== "Escape") return;
 
@@ -954,6 +985,11 @@ class GameController {
         case "w":
         case "W":
           this.moveForward();
+          break;
+        case "ArrowDown":
+        case "s":
+        case "S":
+          this.moveBackward();
           break;
         case "j":
         case "J":
