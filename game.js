@@ -271,7 +271,6 @@ class Dungeon {
     this.revealed = new Set();
     this.enemies = [];
 
-    // Entrada y salida incrustadas en el perímetro
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
   }
@@ -312,7 +311,7 @@ class Player {
   constructor(startX, startY) {
     this.x = startX;
     this.y = startY;
-    this.direction = 0; // Norte
+    this.direction = 0;
     this.maxHp = 61;
     this.hp = 61;
     this.ac = 10;
@@ -376,7 +375,6 @@ class DungeonGenerator {
     this.floorNumber = floorNumber;
     this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
 
-    // Balance: Cantidad de enemigos basada en area / 20
     const area = dungeon.width * dungeon.height;
     this.totalEnemies = Math.max(2, Math.floor(area / 20));
 
@@ -413,12 +411,13 @@ class DungeonGenerator {
           name: "MEGA BOSS (4x4)",
           hp: 16, maxHp: 16,
           ac: 12 + this.tier,
-          visionRange: 4,     // Rango de visión
-          attackRange: 3,     // Rango de ataque (visión - 1)
+          visionRange: 4,
+          attackRange: 3,
           isMegaBoss: true,
           isBoss: true,
           size: 4,
-          cells: bossCells
+          cells: bossCells,
+          fearCooldown: 0
         });
         megaBossPlaced = true;
       }
@@ -452,12 +451,13 @@ class DungeonGenerator {
             name: "Minijefe Intermedio (2x2)",
             hp: 8, maxHp: 8,
             ac: 10 + this.tier,
-            visionRange: 3,   // Rango de visión
-            attackRange: 2,   // Rango de ataque (visión - 1)
+            visionRange: 3,
+            attackRange: 2,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
-            cells: candidateCells
+            cells: candidateCells,
+            fearCooldown: 0
           });
           sequenceCounter = 0;
         } else {
@@ -468,12 +468,13 @@ class DungeonGenerator {
             name: "Sombra Hostil",
             hp: 2, maxHp: 2,
             ac: 8 + this.tier,
-            visionRange: 2,   // Rango de visión y detección de manada
-            attackRange: 1,   // Rango de ataque (visión - 1 = c/c)
+            visionRange: 2,
+            attackRange: 1,
             isMegaBoss: false,
             isBoss: false,
             size: 1,
-            cells: candidateCells
+            cells: candidateCells,
+            fearCooldown: 0
           });
           sequenceCounter++;
         }
@@ -667,7 +668,7 @@ class VisibilitySystem {
 
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; curY += sy; } // Correctamente vinculado a curY
+      if (e2 < dx) { err += dx; curY += sy; }
     }
   }
 }
@@ -816,7 +817,6 @@ class Renderer {
       }
     }
 
-    // Renderizado optimizado: O(1) directo de mundo a pantalla
     this.dungeon.enemies.forEach(enemy => {
       if (!enemy.cells) return;
       enemy.cells.forEach(cell => {
@@ -844,7 +844,7 @@ class Renderer {
             } else {
               const cx = px + tileSize / 2;
               const cy = py + tileSize / 2;
-              targetCtx.fillStyle = "#ff3333";
+              targetCtx.fillStyle = enemy.fearCooldown > 0 ? "#ff99bb" : "#ff3333";
               targetCtx.beginPath();
               targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
               targetCtx.fill();
@@ -854,7 +854,6 @@ class Renderer {
       });
     });
 
-    // Lior (Avatar fijo)
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
 
@@ -943,6 +942,8 @@ class CombatSystem {
       sounds.playSword();
     }
 
+    let deadMiniBosses = [];
+
     if (weapon.isMelee) {
       const targetsHit = [];
 
@@ -979,7 +980,12 @@ class CombatSystem {
 
         const deadEnemyIds = new Set();
         targetsHit.forEach(e => {
-          if (e.hp <= 0) deadEnemyIds.add(e.id);
+          if (e.hp <= 0) {
+            deadEnemyIds.add(e.id);
+            if (e.isBoss && !e.isMegaBoss) {
+              deadMiniBosses.push(e);
+            }
+          }
         });
 
         if (deadEnemyIds.size > 0) {
@@ -1031,12 +1037,30 @@ class CombatSystem {
             let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
             player.gold += goldDrop;
             game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
+            if (target.isBoss && !target.isMegaBoss) {
+              deadMiniBosses.push(target);
+            }
             dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
           }
         } else {
           game.log(`El disparo rebotó [${attackTotal} vs CA ${target.ac}] contra ${target.name}.`);
         }
       }
+    }
+
+    // Pánico: si un Minijefe muere, las sombras a distancia <= 2 huyen durante 2 acciones
+    if (deadMiniBosses.length > 0) {
+      deadMiniBosses.forEach(mb => {
+        dungeon.enemies.forEach(other => {
+          if (!other.isBoss) {
+            const d = Math.hypot(other.x - mb.x, other.y - mb.y);
+            if (d <= 2.2) {
+              other.fearCooldown = 2;
+            }
+          }
+        });
+      });
+      game.log("¡El líder cayó! Sus esbirros cercanos entran en pánico y huyen durante 2 turnos.");
     }
 
     game.processEnemiesTurn();
@@ -1051,6 +1075,7 @@ class GameController {
     this.canvas = document.getElementById("viewport");
     this.shopModal = document.getElementById("shop-modal");
     this.isShopOpen = false;
+    this.megaBossEmptyTurns = 0;
 
     this.initDungeonFloor();
     this.bindEvents();
@@ -1077,6 +1102,7 @@ class GameController {
     const { width, height } = getRandomDungeonDimensions(7, 50);
     this.dungeon = new Dungeon(width, height);
     this.generator = new DungeonGenerator(this.dungeon, this.floor);
+    this.megaBossEmptyTurns = 0;
 
     if (!this.player) {
       this.player = new Player(this.dungeon.entrance.x, this.dungeon.entrance.y);
@@ -1300,19 +1326,80 @@ class GameController {
     this.renderer.animateTurn(1);
   }
 
+  spawnMegaBossAdds(megaBoss) {
+    const addsToSpawn = rollDie(6);
+    this.log(`¡El Mega Boss ruge y convoca a [1d6 = ${addsToSpawn}] Sombras de refuerzo!`);
+    let spawned = 0;
+
+    for (let dy = -3; dy <= 6 && spawned < addsToSpawn; dy++) {
+      for (let dx = -3; dx <= 6 && spawned < addsToSpawn; dx++) {
+        const sx = megaBoss.x + dx;
+        const sy = megaBoss.y + dy;
+
+        if (!this.dungeon.isInsideBounds(sx, sy)) continue;
+        this.generator.ensureTileGenerated(sx, sy);
+        if (this.dungeon.getTile(sx, sy) === TILE_WALL) continue;
+        if (sx === this.player.x && sy === this.player.y) continue;
+
+        const isOccupied = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === sx && c.y === sy));
+        if (isOccupied) continue;
+
+        this.dungeon.enemies.push({
+          id: Math.random().toString(36).substring(2, 9),
+          x: sx, y: sy,
+          startX: sx, startY: sy,
+          name: "Sombra Invocada",
+          hp: 2, maxHp: 2,
+          ac: 8 + this.tier,
+          visionRange: 3,
+          attackRange: 1,
+          isMegaBoss: false,
+          isBoss: false,
+          size: 1,
+          cells: [{ x: sx, y: sy }],
+          fearCooldown: 0
+        });
+        spawned++;
+      }
+    }
+  }
+
   processEnemiesTurn() {
     if (this.player.hp <= 0) return;
 
     try {
+      // 1. GESTIÓN DEL MEGA BOSS (Invocación si no hay enemigos tras 1 turno de gracia)
+      const megaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
+      if (megaBoss) {
+        const otherEnemiesCount = this.dungeon.enemies.filter(e => !e.isMegaBoss).length;
+        if (otherEnemiesCount === 0) {
+          this.megaBossEmptyTurns++;
+          if (this.megaBossEmptyTurns > 1) {
+            this.spawnMegaBossAdds(megaBoss);
+            this.megaBossEmptyTurns = 0;
+          }
+        } else {
+          this.megaBossEmptyTurns = 0;
+        }
+      }
+
+      // Precalcular grupos: identificar qué sombras tienen compañeros cerca o están con un Minijefe
+      const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
+
       this.dungeon.enemies.forEach(enemy => {
         if (this.player.hp <= 0) return;
         if (!enemy.cells || enemy.cells.length === 0) return;
 
+        // Reducir temporizador de miedo por caída de líder
+        if (enemy.fearCooldown > 0) {
+          enemy.fearCooldown--;
+        }
+
         const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
         const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
-        // 1. ATAQUE: Si está dentro de su rango de ataque (visión - 1) y tiene línea de visión
-        if (hasLOS && distToPlayer <= enemy.attackRange) {
+        // COMBATE: Si tiene rango de ataque y línea de visión directa
+        if (hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0) {
           const eD20 = rollDie(20);
           const hitMod = this.hitBonus;
           const dmgMod = this.dmgBonus;
@@ -1342,23 +1429,7 @@ class GameController {
           return;
         }
 
-        // 2. MOVIMIENTO / TÁCTICA DE MANADA
-        let shouldFlee = false;
-
-        // Si es una Sombra básica (1x1) y detecta a Lior en su rango de visión (<= 2 casillas)
-        if (!enemy.isBoss && distToPlayer <= enemy.visionRange) {
-          // Evaluar si tiene al menos a otro aliado a <= 2 casillas de distancia
-          const hasAllyNearby = this.dungeon.enemies.some(other => {
-            if (other === enemy || !other.cells) return false;
-            return Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 2.0;
-          });
-
-          // Si está solo, huye aterrado de Lior
-          if (!hasAllyNearby) {
-            shouldFlee = true;
-          }
-        }
-
+        // LÓGICA DE MOVIMIENTO E IA
         const directions = [
           { dx: 0, dy: -1 },
           { dx: 1, dy: 0 },
@@ -1366,24 +1437,59 @@ class GameController {
           { dx: -1, dy: 0 }
         ];
 
-        if (shouldFlee) {
-          // HUIDA: Maximiza la distancia respecto a Lior
-          directions.sort((a, b) => {
-            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
-            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
-            return distB - distA; // Mayor distancia primero
-          });
-        } else {
-          // ACERCAMIENTO: Solo si Lior entra en su rango de visión (Jefes o sombras en manada)
-          if (distToPlayer > enemy.visionRange) return;
+        let mode = "patrol"; // "patrol", "chase", "flee"
 
-          directions.sort((a, b) => {
-            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
-            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
-            return distA - distB; // Menor distancia primero
-          });
+        if (enemy.fearCooldown > 0) {
+          // En pánico total tras la muerte de su jefe
+          mode = "flee";
+        } else if (enemy.isBoss) {
+          // Los jefes avanzan si ven a Lior
+          if (distToPlayer <= enemy.visionRange) {
+            mode = "chase";
+          }
+        } else {
+          // Sombra básica: evaluar si está escoltando a un Minijefe
+          const escortingMiniBoss = miniBosses.find(mb => Math.hypot(mb.x - enemy.x, mb.y - enemy.y) <= 1.8);
+
+          if (escortingMiniBoss && Math.hypot(escortingMiniBoss.x - this.player.x, escortingMiniBoss.y - this.player.y) <= escortingMiniBoss.visionRange) {
+            // El Minijefe ve a Lior: sus escoltas cargan con él
+            mode = "chase";
+          } else if (distToPlayer <= enemy.visionRange) {
+            // Sombra detecta a Lior: busca compañeros a <= 2 casillas
+            const hasAllyNearby = this.dungeon.enemies.some(other => {
+              if (other === enemy || !other.cells) return false;
+              return Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 2.2;
+            });
+
+            if (hasAllyNearby) {
+              // En grupo: cargan contra Lior
+              mode = "chase";
+            } else {
+              // Solitaria: huye
+              mode = "flee";
+            }
+          }
         }
 
+        // Ordenar direcciones según el modo
+        if (mode === "flee") {
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distB - distA; // Maximizar distancia
+          });
+        } else if (mode === "chase") {
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distA - distB; // Reducir distancia
+          });
+        } else {
+          // Patrulla aleatoria fuera de rango
+          directions.sort(() => Math.random() - 0.5);
+        }
+
+        // Intentar moverse en la mejor dirección válida
         for (const dir of directions) {
           const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
 
