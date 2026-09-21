@@ -195,16 +195,13 @@ class SoundEngine {
 
 const sounds = new SoundEngine();
 
-/**
- * CONSTANTES DE MAPA Y VECTORES
- */
 const CARDINALS = ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"];
 
 const DIR_VECTORS = [
-  { x: 0, y: -1 }, // N
-  { x: 1, y: 0 },  // E
-  { x: 0, y: 1 },  // S
-  { x: -1, y: 0 }  // W
+  { x: 0, y: -1 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+  { x: -1, y: 0 }
 ];
 
 const TILE_OUT_OF_BOUNDS = -1;
@@ -227,7 +224,6 @@ const WEAPONS = {
   SWORD: {
     name: "Espada",
     label: "Espada (área c/c 1.5)",
-    bonus: 8,
     minDmg: 1,
     maxDmg: 2,
     range: 1.5,
@@ -237,7 +233,6 @@ const WEAPONS = {
   PISTOL: {
     name: "Pistola",
     label: "Pistola (frente 3x3)",
-    bonus: 9,
     minDmg: 1,
     maxDmg: 4,
     range: 3,
@@ -247,7 +242,6 @@ const WEAPONS = {
   MUSKET: {
     name: "Mosquete",
     label: "Mosquete (frente 5x3)",
-    bonus: 9,
     minDmg: 1,
     maxDmg: 6,
     range: 5,
@@ -320,7 +314,7 @@ class Player {
     this.direction = 0;
     this.maxHp = 61;
     this.hp = 61;
-    this.ac = 16;
+    this.ac = 10;
     this.gold = 0;
 
     this.ammoPistol = 10;
@@ -380,6 +374,9 @@ class DungeonGenerator {
     this.dungeon = dungeon;
     this.floorNumber = floorNumber;
 
+    // Escala de nivel (bloques de 10 pisos del 1 al 10)
+    this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
+
     const area = dungeon.width * dungeon.height;
     this.totalEnemies = Math.max(3, Math.floor(area / 10));
 
@@ -398,6 +395,7 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
+    // Mega Boss (4x4, rango 4, CA 12 + tier)
     if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
@@ -415,7 +413,8 @@ class DungeonGenerator {
           startX: mx, startY: my,
           name: "MEGA BOSS (4x4)",
           hp: 16, maxHp: 16,
-          ac: 16,
+          ac: 12 + this.tier,
+          range: 4,
           isMegaBoss: true,
           isBoss: true,
           size: 4,
@@ -452,7 +451,8 @@ class DungeonGenerator {
             startX: rx, startY: ry,
             name: "Minijefe Intermedio (2x2)",
             hp: 8, maxHp: 8,
-            ac: 14,
+            ac: 10 + this.tier,
+            range: 3,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
@@ -466,7 +466,8 @@ class DungeonGenerator {
             startX: rx, startY: ry,
             name: "Sombra Hostil",
             hp: 2, maxHp: 2,
-            ac: 12,
+            ac: 8 + this.tier,
+            range: 2,
             isMegaBoss: false,
             isBoss: false,
             size: 1,
@@ -631,14 +632,11 @@ class VisibilitySystem {
       }
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; curY += sy; }
+      if (e2 < dx) { err += dx; y0 += sy; }
     }
   }
 }
 
-/**
- * RENDERER CON GIRO SUAVE
- */
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
     this.canvas = canvas;
@@ -842,16 +840,27 @@ class Renderer {
   }
 }
 
-/**
- * SISTEMA DE COMBATE ESTABLE Y PROTEGIDO CONTRA CRASHES
- */
 class CombatSystem {
+  static getMinDistToPlayer(player, enemy) {
+    let minDist = 999;
+    enemy.cells.forEach(cell => {
+      const d = Math.hypot(cell.x - player.x, cell.y - player.y);
+      if (d < minDist) minDist = d;
+    });
+    return minDist;
+  }
+
+  static canEnemySeePlayer(player, dungeon, enemy) {
+    return enemy.cells.some(cell =>
+      VisibilitySystem.hasWorldLineOfSight(cell.x, cell.y, player.x, player.y, dungeon)
+    );
+  }
+
   static isCellInWeaponRange(player, targetX, targetY, weapon) {
     const dx = targetX - player.x;
     const dy = targetY - player.y;
 
     if (weapon.isMelee) {
-      // Reconoce ortogonales y diagonales inmediatas (hasta 1.5 casillas de radio)
       return Math.hypot(dx, dy) <= weapon.range;
     }
 
@@ -877,6 +886,8 @@ class CombatSystem {
     }
 
     const weapon = player.equippedWeapon;
+    const hitBonus = game.hitBonus;
+    const dmgBonus = game.dmgBonus;
 
     if (weapon.ammoType === "pistol") {
       if (player.ammoPistol <= 0) {
@@ -896,12 +907,10 @@ class CombatSystem {
       sounds.playSword();
     }
 
-    // COMBATE CUERPO A CUERPO (ESPADA ÁREA CIRCULAR 1.5)
     if (weapon.isMelee) {
       const targetsHit = [];
 
       dungeon.enemies.forEach(enemy => {
-        // Un enemigo es alcanzado si AL MENOS UNA de sus celdas está adyacente a Lior
         const touchesPlayer = enemy.cells.some(cell => {
           const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
           return dist <= 1.5;
@@ -914,147 +923,87 @@ class CombatSystem {
 
       if (targetsHit.length === 0) {
         game.log("Blandes tu espada en círculo, pero no hay enemigos al alcance.");
-        game.updateHUD();
-        game.renderer.draw();
-        return;
-      }
+      } else {
+        game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) adyacente(s).`);
 
-      game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) adyacente(s).`);
+        targetsHit.forEach(target => {
+          const d20 = rollDie(20);
+          const attackTotal = d20 + hitBonus;
 
-      targetsHit.forEach(target => {
-        const d20 = rollDie(20);
-        const attackTotal = d20 + weapon.bonus;
-
-        if (d20 === 20 || attackTotal >= target.ac) {
-          const dmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
-          target.hp -= dmg;
-          game.log(`> Impactas a ${target.name} por ${dmg} de daño. (HP: ${Math.max(0, target.hp)})`);
-        } else {
-          game.log(`> Tu espada rebota en la defensa de ${target.name}.`);
-        }
-      });
-
-      // Limpieza segura de bajas
-      const deadEnemyIds = new Set();
-      targetsHit.forEach(e => {
-        if (e.hp <= 0) deadEnemyIds.add(e.id);
-      });
-
-      if (deadEnemyIds.size > 0) {
-        sounds.playCoin();
-        dungeon.enemies = dungeon.enemies.filter(e => {
-          if (deadEnemyIds.has(e.id)) {
-            let goldDrop = e.isMegaBoss ? 10 : (e.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-            player.gold += goldDrop;
-            game.log(`¡${e.name} destruido! Botín: +${goldDrop} PO.`);
-            return false;
+          if (d20 === 20 || attackTotal >= target.ac) {
+            const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
+            const totalDmg = baseDmg + dmgBonus;
+            target.hp -= totalDmg;
+            game.log(`> Impacto [d20(${d20})+${hitBonus}=${attackTotal} vs CA ${target.ac}]: ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+          } else {
+            game.log(`> Tu espada rebota en la defensa de ${target.name} [${attackTotal} vs CA ${target.ac}].`);
           }
-          return true;
         });
-      }
 
-      // Contraataque seguro solo de los supervivientes
-      const survivors = targetsHit.filter(e => e.hp > 0);
-      survivors.forEach(survivor => {
-        if (player.hp > 0) {
-          CombatSystem.enemyCounterAttack(game, survivor, 1.0);
-        }
-      });
+        const deadEnemyIds = new Set();
+        targetsHit.forEach(e => {
+          if (e.hp <= 0) deadEnemyIds.add(e.id);
+        });
 
-      game.updateHUD();
-      game.renderer.draw();
-      return;
-    }
-
-    // ARMAS A DISTANCIA
-    let target = null;
-    let minDist = 999;
-
-    dungeon.enemies.forEach(enemy => {
-      enemy.cells.forEach(cell => {
-        if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
-          if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
-            const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
-            if (dist < minDist) {
-              minDist = dist;
-              target = enemy;
+        if (deadEnemyIds.size > 0) {
+          sounds.playCoin();
+          dungeon.enemies = dungeon.enemies.filter(e => {
+            if (deadEnemyIds.has(e.id)) {
+              let goldDrop = e.isMegaBoss ? 10 : (e.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+              player.gold += goldDrop;
+              game.log(`¡${e.name} abatido! Botín: +${goldDrop} PO.`);
+              return false;
             }
-          }
+            return true;
+          });
         }
-      });
-    });
-
-    if (!target) {
-      game.log(`Disparas tu ${weapon.name}... pero la bala no encuentra blanco.`);
-      game.updateHUD();
-      game.renderer.draw();
-      return;
-    }
-
-    const d20 = rollDie(20);
-    const attackTotal = d20 + weapon.bonus;
-    game.log(`${weapon.name}: [d20(${d20}) + ${weapon.bonus} = ${attackTotal}] vs CA ${target.ac}`);
-
-    if (d20 === 20 || attackTotal >= target.ac) {
-      const dmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
-      target.hp -= dmg;
-      game.log(`¡Impacto! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
-
-      if (target.hp <= 0) {
-        sounds.playCoin();
-        let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-        player.gold += goldDrop;
-        game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
-        dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
-        game.updateHUD();
-        game.renderer.draw();
-        return;
       }
     } else {
-      game.log("El proyectil no logró penetrar la defensa.");
+      let target = null;
+      let minDist = 999;
+
+      dungeon.enemies.forEach(enemy => {
+        enemy.cells.forEach(cell => {
+          if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
+            if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
+              const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+              if (dist < minDist) {
+                minDist = dist;
+                target = enemy;
+              }
+            }
+          }
+        });
+      });
+
+      if (!target) {
+        game.log(`Disparas tu ${weapon.name}... pero la bala se pierde sin impactar.`);
+      } else {
+        const d20 = rollDie(20);
+        const attackTotal = d20 + hitBonus;
+
+        if (d20 === 20 || attackTotal >= target.ac) {
+          const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
+          const totalDmg = baseDmg + dmgBonus;
+          target.hp -= totalDmg;
+          game.log(`¡Impacto [d20(${d20})+${hitBonus}=${attackTotal} vs CA ${target.ac}]! ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+
+          if (target.hp <= 0) {
+            sounds.playCoin();
+            let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+            player.gold += goldDrop;
+            game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
+            dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
+          }
+        } else {
+          game.log(`El disparo rebotó [${attackTotal} vs CA ${target.ac}] contra ${target.name}.`);
+        }
+      }
     }
 
-    CombatSystem.enemyCounterAttack(game, target, minDist);
+    game.processEnemiesTurn();
     game.updateHUD();
     game.renderer.draw();
-  }
-
-  static enemyCounterAttack(game, enemy, dist) {
-    const { player } = game;
-    if (player.hp <= 0) return;
-
-    const eD20 = rollDie(20);
-
-    if (dist <= 1.5) {
-      const atkBonus = enemy.isMegaBoss ? 6 : (enemy.isBoss ? 5 : 3);
-      const totalAtk = eD20 + atkBonus;
-      game.log(`${enemy.name} c/c: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
-      if (totalAtk >= player.ac) {
-        sounds.playHurt();
-        const dmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
-        player.hp = Math.max(0, player.hp - dmg);
-        game.log(`¡Recibes ${dmg} de daño!`);
-      } else {
-        game.log("Bloqueas el golpe con tu broquel.");
-      }
-    } else if ((enemy.isMegaBoss && dist <= 3.5) || (enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
-      const atkBonus = enemy.isMegaBoss ? 5 : (enemy.isBoss ? 4 : 2);
-      const totalAtk = eD20 + atkBonus;
-      game.log(`${enemy.name} proyectil: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
-      if (totalAtk >= player.ac) {
-        sounds.playHurt();
-        const dmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
-        player.hp = Math.max(0, player.hp - dmg);
-        game.log(`¡Proyectil hostil impacta! -${dmg} HP.`);
-      } else {
-        game.log("El proyectil se estrella en la pared.");
-      }
-    }
-
-    if (player.hp <= 0) {
-      sounds.playDeath();
-      game.log("¡Lior ha caído en combate! Fin de la partida.");
-    }
   }
 }
 
@@ -1068,6 +1017,23 @@ class GameController {
     this.initDungeonFloor();
     this.bindEvents();
     this.bindShopEvents();
+  }
+
+  // Cálculos de escalado dinámico por nivel
+  get tier() {
+    return Math.min(10, Math.floor((this.floor - 1) / 10) + 1);
+  }
+
+  get playerAC() {
+    return 9 + this.tier; // Piso 1-10: 10, Piso 11-20: 11 ... Piso 91-100: 20
+  }
+
+  get hitBonus() {
+    return this.tier; // +1 a +10
+  }
+
+  get dmgBonus() {
+    return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99)); // +1 a +20
   }
 
   initDungeonFloor() {
@@ -1084,6 +1050,8 @@ class GameController {
       this.player.mistyStepCharges = 2;
     }
 
+    this.player.ac = this.playerAC;
+
     if (!this.renderer) {
       this.renderer = new Renderer(this.canvas, this.dungeon, this.player, this.generator);
     } else {
@@ -1095,9 +1063,9 @@ class GameController {
 
     const megaBossPresent = this.dungeon.enemies.some(e => e.isMegaBoss);
     const bossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
-    let desc = `Piso ${this.floor}: ${width}x${height}. Enemigos: ${this.dungeon.enemies.length}`;
+    let desc = `Piso ${this.floor} (Tier ${this.tier}): ${width}x${height}. CA Lior: ${this.player.ac}, Impacto: +${this.hitBonus}, Daño: +${this.dmgBonus}.`;
     if (megaBossPresent) desc += " (¡MEGA BOSS 4x4!)";
-    if (bossCount > 0) desc += ` [${bossCount} Minijefes 2x2]`;
+    if (bossCount > 0) desc += ` [${bossCount} Minijefes]`;
 
     this.log(desc);
     this.renderer.draw();
@@ -1295,8 +1263,55 @@ class GameController {
     this.renderer.animateTurn(1);
   }
 
-  stepEnemies() {
+  /**
+   * IA REACTIVA: Solo reaccionan si Lior está a su alcance (Normal 2, Boss 3, Mega Boss 4)
+   */
+  processEnemiesTurn() {
+    if (this.player.hp <= 0) return;
+
     this.dungeon.enemies.forEach(enemy => {
+      if (this.player.hp <= 0) return;
+
+      const dist = CombatSystem.getMinDistToPlayer(this.player, enemy);
+      const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+
+      // Si Lior está fuera de su rango definido, no reaccionan
+      if (dist > enemy.range) {
+        return;
+      }
+
+      // CASO A: En rango y con línea de visión despejada -> Atacan
+      if (hasLOS) {
+        const eD20 = rollDie(20);
+        const hitMod = this.hitBonus;
+        const dmgMod = this.dmgBonus;
+        const totalAtk = eD20 + hitMod;
+
+        if (dist <= 1.5) {
+          if (totalAtk >= this.player.ac) {
+            sounds.playHurt();
+            const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
+            const totalDmg = baseDmg + dmgMod;
+            this.player.hp = Math.max(0, this.player.hp - totalDmg);
+            this.log(`${enemy.name} c/c: [${totalAtk} vs CA ${this.player.ac}] ¡${totalDmg} daño recibido!`);
+          } else {
+            this.log(`${enemy.name} c/c falla contra tu coraza [${totalAtk} vs CA ${this.player.ac}].`);
+          }
+        } else {
+          if (totalAtk >= this.player.ac) {
+            sounds.playHurt();
+            const baseDmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
+            const totalDmg = baseDmg + dmgMod;
+            this.player.hp = Math.max(0, this.player.hp - totalDmg);
+            this.log(`${enemy.name} proyectil: [${totalAtk} vs CA ${this.player.ac}] ¡Impacto de ${totalDmg} daño!`);
+          } else {
+            this.log(`${enemy.name} proyectil desviado [${totalAtk} vs CA ${this.player.ac}].`);
+          }
+        }
+        return;
+      }
+
+      // CASO B: Está dentro del rango pero obstruido por muro -> Da un paso para rodearlo
       const directions = [
         { dx: 0, dy: -1 },
         { dx: 1, dy: 0 },
@@ -1304,7 +1319,11 @@ class GameController {
         { dx: -1, dy: 0 }
       ];
 
-      directions.sort(() => Math.random() - 0.5);
+      directions.sort((a, b) => {
+        const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+        const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+        return distA - distB;
+      });
 
       for (const dir of directions) {
         const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
@@ -1332,6 +1351,11 @@ class GameController {
         }
       }
     });
+
+    if (this.player.hp <= 0) {
+      sounds.playDeath();
+      this.log("¡Lior ha caído en combate! Fin de la partida.");
+    }
   }
 
   moveForward() {
@@ -1361,7 +1385,7 @@ class GameController {
 
     this.player.moveForward();
     sounds.playStep();
-    this.stepEnemies();
+    this.processEnemiesTurn();
     this.handleTileInteractions();
   }
 
@@ -1393,7 +1417,7 @@ class GameController {
     this.player.moveBackward();
     sounds.playStep();
     this.log(`Retrocedes un paso mirando al ${CARDINALS[this.player.direction]}.`);
-    this.stepEnemies();
+    this.processEnemiesTurn();
     this.handleTileInteractions();
   }
 
