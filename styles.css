@@ -23,9 +23,9 @@ body {
 }
 
 /* =========================================================
-   PANTALLA DE LANZAMIENTO (DESBLOQUEO DE AUDIO)
+   PANTALLA DE SPLASH / LOGO INTRO (FADE IN -> STAY -> FADE OUT)
 ========================================================= */
-#start-screen {
+#splash-screen {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -36,110 +36,52 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 0.4s ease;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
 }
 
-#start-screen.hidden {
-  display: none;
-}
-
-.start-card {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-title {
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: 4px;
-  color: #00b0ff;
-}
-
-.brand-sub {
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: #64748b;
-  margin-bottom: 16px;
-}
-
-.start-btn {
-  padding: 14px 28px;
-  background: #00b0ff;
-  color: #000000;
-  border: none;
-  border-radius: 999px;
-  font-family: monospace;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  cursor: pointer;
-  box-shadow: 0 0 20px rgba(0, 176, 255, 0.4);
-}
-
-.start-btn:active {
-  transform: scale(0.96);
-  background: #ffffff;
-}
-
-/* =========================================================
-   CINEMÁTICA DE VIDEO (AJUSTE VERTICAL Y RECORTE LATERAL)
-========================================================= */
-#intro-container {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  background-color: #000000;
-  z-index: 99999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  transition: opacity 0.5s ease;
-}
-
-#intro-container.hidden {
-  display: none;
-}
-
-#intro-container.fade-out {
+#splash-screen.hidden {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 
-#intro-video {
+.splash-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
-  display: block;
 }
 
-#skip-intro-btn {
-  position: absolute;
-  bottom: 24px;
-  right: 20px;
-  background: rgba(15, 16, 20, 0.75);
-  color: #ffffff;
-  border: 1px solid #4a5568;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-family: monospace;
-  font-size: 11px;
-  font-weight: bold;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 10;
+#splash-logo {
+  max-width: 260px;
+  width: 70%;
+  height: auto;
+  opacity: 0;
+  transform: scale(0.95);
+  animation: logoSequence 3.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-#skip-intro-btn:active {
-  background: #00b0ff;
-  color: #000000;
+/* Animación completa: Fade In (0-25%) -> Stay (25-75%) -> Fade Out (75-100%) */
+@keyframes logoSequence {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
 }
 
 /* =========================================================
@@ -172,7 +114,7 @@ body {
 .door-open { color: #00e676 !important; }
 
 /* =========================================================
-   LIENZO PRINCIPAL Y TIENDA
+   LIENZO PRINCIPAL Y MODAL DE TIENDA
 ========================================================= */
 #game-container {
   position: relative;

@@ -8,19 +8,11 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE LANZAMIENTO / AUTORIZACIÓN DE AUDIO -->
-  <div id="start-screen">
-    <div class="start-card">
-      <h1 class="brand-title">NEKOPIN</h1>
-      <p class="brand-sub">ESTUDIO CREATIVO</p>
-      <button id="btn-start-game" class="start-btn">▶ INICIAR JUEGO</button>
+  <!-- PANTALLA DE SPLASH / INTRO: LOGO NEKOPIN GAMES -->
+  <div id="splash-screen">
+    <div class="splash-content">
+      <img id="splash-logo" src="nekopinGames.png" alt="Nekopin Games">
     </div>
-  </div>
-
-  <!-- CONTENEDOR CINEMÁTICO CON ENLACE DIRECTO A GOOGLE DRIVE -->
-  <div id="intro-container" class="hidden">
-    <video id="intro-video" src="https://drive.google.com/uc?export=download&id=1u0fSEUjiQKpZg-Ovh7Zdv8eXMozWW7WG" playsinline crossorigin="anonymous"></video>
-    <button id="skip-intro-btn">OMITIR &gt;&gt;</button>
   </div>
 
   <!-- PANEL SUPERIOR (HUD) -->
@@ -71,6 +63,7 @@
 
   <!-- CONTROLES MÓVILES (+50%) -->
   <footer id="control-dock">
+    <!-- Cruceta direccional (Izquierda) -->
     <div class="dpad">
       <div></div>
       <button id="btn-forward" class="dpad-btn up">▲</button>
@@ -83,6 +76,7 @@
       <div></div>
     </div>
 
+    <!-- Romboide de botones arcade (Derecha) -->
     <div class="diamond-pad">
       <div class="btn-slot top">
         <button id="btn-d" class="arcade-btn btn-weapon">D</button>

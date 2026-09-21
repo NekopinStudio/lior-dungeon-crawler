@@ -16,6 +16,25 @@ class SoundEngine {
     }
   }
 
+  playLogoJingle() {
+    this.init();
+    const chordNotes = [261.63, 329.63, 392.00, 523.25]; // Acorde Do Mayor
+    chordNotes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.08, this.ctx.currentTime + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.6);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + idx * 0.08);
+      osc.stop(this.ctx.currentTime + idx * 0.08 + 0.6);
+    });
+  }
+
   playStep() {
     this.init();
     const osc = this.ctx.createOscillator();
@@ -292,7 +311,7 @@ class Player {
   constructor(startX, startY) {
     this.x = startX;
     this.y = startY;
-    this.direction = 0;
+    this.direction = 0; // 0: N, 1: E, 2: S, 3: W
     this.maxHp = 61;
     this.hp = 61;
     this.ac = 16;
@@ -373,6 +392,7 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
+    // Mega Boss cada 10 pisos (4x4, 16 HP)
     if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
@@ -399,6 +419,7 @@ class DungeonGenerator {
       }
     }
 
+    // Progresión en el mismo piso: 3 básicos -> el 4.º es minijefe (2x2, 8 HP), etc.
     let sequenceCounter = 0;
     for (let i = 0; i < this.totalEnemies; i++) {
       const isBoss = (sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6);
@@ -452,6 +473,7 @@ class DungeonGenerator {
   }
 
   placeSpecialTiles() {
+    // 1 Tienda por cada 3 minijefes, a <= 5 casillas de donde arranca el minijefe
     const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const targetShops = Math.floor(miniBosses.length / 3);
     const placedShopPositions = [];
@@ -482,6 +504,7 @@ class DungeonGenerator {
       }
     }
 
+    // 1 Curación verde (+) por cada 5 criaturas
     const targetHeals = Math.floor(this.dungeon.enemies.length / 5);
     const placedHealPositions = [];
 
@@ -1441,49 +1464,43 @@ class GameController {
   }
 }
 
-// CONTROLADOR DE INICIO CON ENLACE DE DRIVE Y AUDIO HABILITADO
+// CONTROLADOR DE INTRODUCCIÓN CON EL LOGO OFICIAL
 window.addEventListener("DOMContentLoaded", () => {
-  const startScreen = document.getElementById("start-screen");
-  const startBtn = document.getElementById("btn-start-game");
-  const introContainer = document.getElementById("intro-container");
-  const introVideo = document.getElementById("intro-video");
-  const skipBtn = document.getElementById("skip-intro-btn");
+  const splashScreen = document.getElementById("splash-screen");
+  let gameStarted = false;
 
-  let gameInitialized = false;
+  function startGame() {
+    if (gameStarted) return;
+    gameStarted = true;
 
-  function launchGame() {
-    if (gameInitialized) return;
-    gameInitialized = true;
-
-    introContainer.classList.add("fade-out");
+    splashScreen.classList.add("hidden");
 
     setTimeout(() => {
-      introVideo.pause();
-      introVideo.src = "";
-      introContainer.style.display = "none";
-    }, 550);
+      splashScreen.style.display = "none";
+    }, 850);
 
     new GameController();
   }
 
-  startBtn.addEventListener("click", () => {
-    startScreen.classList.add("hidden");
-
-    introContainer.classList.remove("hidden");
-    introVideo.muted = false;
-    introVideo.volume = 1.0;
-
+  // Desbloqueo del motor de audio al primer toque/interacción en cualquier pantalla
+  const unlockAudio = () => {
     sounds.init();
+    document.removeEventListener("touchstart", unlockAudio);
+    document.removeEventListener("click", unlockAudio);
+  };
+  document.addEventListener("touchstart", unlockAudio, { passive: true });
+  document.addEventListener("click", unlockAudio, { passive: true });
 
-    introVideo.play().catch(err => {
-      console.warn("Reproducción adaptada:", err);
-      introVideo.muted = true;
-      introVideo.play();
-    });
+  // Disparo del jingle sutil a los 400ms
+  setTimeout(() => {
+    sounds.playLogoJingle();
+  }, 400);
 
-    introVideo.addEventListener("ended", launchGame);
-    setTimeout(launchGame, 10200);
-  });
+  // La secuencia de CSS dura 3.2s; a los 3.3s se retira la pantalla y arranca el juego
+  setTimeout(() => {
+    startGame();
+  }, 3300);
 
-  skipBtn.addEventListener("click", launchGame);
+  // También se puede tocar la pantalla para saltar el logo de inmediato
+  splashScreen.addEventListener("click", startGame);
 });
