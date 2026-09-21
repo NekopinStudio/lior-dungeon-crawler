@@ -11,14 +11,15 @@ class SoundEngine {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
     }
-    if (this.ctx.state === "suspended") {
+    if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume();
     }
   }
 
   playLogoJingle() {
     this.init();
-    const chordNotes = [261.63, 329.63, 392.00, 523.25]; // Acorde Do Mayor
+    if (!this.ctx) return;
+    const chordNotes = [261.63, 329.63, 392.00, 523.25];
     chordNotes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
@@ -37,6 +38,7 @@ class SoundEngine {
 
   playStep() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "triangle";
@@ -54,6 +56,7 @@ class SoundEngine {
 
   playSword() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sine";
@@ -71,7 +74,8 @@ class SoundEngine {
 
   playShot(isMusket = false) {
     this.init();
-    const bufferSize = this.ctx.sampleRate * (isMusket ? 0.25 : 0.16);
+    if (!this.ctx) return;
+    const bufferSize = Math.floor(this.ctx.sampleRate * (isMusket ? 0.25 : 0.16));
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -98,6 +102,7 @@ class SoundEngine {
 
   playHurt() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sawtooth";
@@ -115,6 +120,7 @@ class SoundEngine {
 
   playHeal() {
     this.init();
+    if (!this.ctx) return;
     const notes = [330, 440, 554, 659];
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
@@ -134,6 +140,7 @@ class SoundEngine {
 
   playMisty() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sine";
@@ -151,6 +158,7 @@ class SoundEngine {
 
   playCoin() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sine";
@@ -168,6 +176,7 @@ class SoundEngine {
 
   playDeath() {
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sawtooth";
@@ -214,9 +223,6 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
-/**
- * CONFIGURACIÓN DE ARMAS
- */
 const WEAPONS = {
   SWORD: {
     name: "Espada",
@@ -311,7 +317,7 @@ class Player {
   constructor(startX, startY) {
     this.x = startX;
     this.y = startY;
-    this.direction = 0; // 0: N, 1: E, 2: S, 3: W
+    this.direction = 0;
     this.maxHp = 61;
     this.hp = 61;
     this.ac = 16;
@@ -392,7 +398,6 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
-    // Mega Boss cada 10 pisos (4x4, 16 HP)
     if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
@@ -405,6 +410,7 @@ class DungeonGenerator {
         const bossCells = this.generateCells(mx, my, 4);
 
         this.dungeon.enemies.push({
+          id: Math.random().toString(36).substring(2, 9),
           x: mx, y: my,
           startX: mx, startY: my,
           name: "MEGA BOSS (4x4)",
@@ -419,7 +425,6 @@ class DungeonGenerator {
       }
     }
 
-    // Progresión en el mismo piso: 3 básicos -> el 4.º es minijefe (2x2, 8 HP), etc.
     let sequenceCounter = 0;
     for (let i = 0; i < this.totalEnemies; i++) {
       const isBoss = (sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6);
@@ -442,6 +447,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           this.dungeon.enemies.push({
+            id: Math.random().toString(36).substring(2, 9),
             x: rx, y: ry,
             startX: rx, startY: ry,
             name: "Minijefe Intermedio (2x2)",
@@ -455,6 +461,7 @@ class DungeonGenerator {
           sequenceCounter = 0;
         } else {
           this.dungeon.enemies.push({
+            id: Math.random().toString(36).substring(2, 9),
             x: rx, y: ry,
             startX: rx, startY: ry,
             name: "Sombra Hostil",
@@ -473,7 +480,6 @@ class DungeonGenerator {
   }
 
   placeSpecialTiles() {
-    // 1 Tienda por cada 3 minijefes, a <= 5 casillas de donde arranca el minijefe
     const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const targetShops = Math.floor(miniBosses.length / 3);
     const placedShopPositions = [];
@@ -504,7 +510,6 @@ class DungeonGenerator {
       }
     }
 
-    // 1 Curación verde (+) por cada 5 criaturas
     const targetHeals = Math.floor(this.dungeon.enemies.length / 5);
     const placedHealPositions = [];
 
@@ -626,13 +631,13 @@ class VisibilitySystem {
       }
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; y0 += sy; }
+      if (e2 < dx) { err += dx; curY += sy; }
     }
   }
 }
 
 /**
- * RENDERER CON ANIMACIÓN DE GIRO SUAVE (PANEO)
+ * RENDERER CON GIRO SUAVE
  */
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
@@ -837,12 +842,16 @@ class Renderer {
   }
 }
 
+/**
+ * SISTEMA DE COMBATE ESTABLE Y PROTEGIDO CONTRA CRASHES
+ */
 class CombatSystem {
   static isCellInWeaponRange(player, targetX, targetY, weapon) {
     const dx = targetX - player.x;
     const dy = targetY - player.y;
 
     if (weapon.isMelee) {
+      // Reconoce ortogonales y diagonales inmediatas (hasta 1.5 casillas de radio)
       return Math.hypot(dx, dy) <= weapon.range;
     }
 
@@ -887,16 +896,18 @@ class CombatSystem {
       sounds.playSword();
     }
 
+    // COMBATE CUERPO A CUERPO (ESPADA ÁREA CIRCULAR 1.5)
     if (weapon.isMelee) {
       const targetsHit = [];
 
       dungeon.enemies.forEach(enemy => {
-        const inArea = enemy.cells.some(cell => {
+        // Un enemigo es alcanzado si AL MENOS UNA de sus celdas está adyacente a Lior
+        const touchesPlayer = enemy.cells.some(cell => {
           const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
-          return dist <= weapon.range && VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon);
+          return dist <= 1.5;
         });
 
-        if (inArea) {
+        if (touchesPlayer) {
           targetsHit.push(enemy);
         }
       });
@@ -904,10 +915,11 @@ class CombatSystem {
       if (targetsHit.length === 0) {
         game.log("Blandes tu espada en círculo, pero no hay enemigos al alcance.");
         game.updateHUD();
+        game.renderer.draw();
         return;
       }
 
-      game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) a la redonda.`);
+      game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) adyacente(s).`);
 
       targetsHit.forEach(target => {
         const d20 = rollDie(20);
@@ -918,23 +930,35 @@ class CombatSystem {
           target.hp -= dmg;
           game.log(`> Impactas a ${target.name} por ${dmg} de daño. (HP: ${Math.max(0, target.hp)})`);
         } else {
-          game.log(`> Tu golpe se desvía en la armadura de ${target.name}.`);
+          game.log(`> Tu espada rebota en la defensa de ${target.name}.`);
         }
       });
 
-      for (let i = dungeon.enemies.length - 1; i >= 0; i--) {
-        const enemy = dungeon.enemies[i];
-        if (enemy.hp <= 0) {
-          sounds.playCoin();
-          let goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-          player.gold += goldDrop;
-          game.log(`¡${enemy.name} abatido! Botín: +${goldDrop} PO.`);
-          dungeon.enemies.splice(i, 1);
-        }
+      // Limpieza segura de bajas
+      const deadEnemyIds = new Set();
+      targetsHit.forEach(e => {
+        if (e.hp <= 0) deadEnemyIds.add(e.id);
+      });
+
+      if (deadEnemyIds.size > 0) {
+        sounds.playCoin();
+        dungeon.enemies = dungeon.enemies.filter(e => {
+          if (deadEnemyIds.has(e.id)) {
+            let goldDrop = e.isMegaBoss ? 10 : (e.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+            player.gold += goldDrop;
+            game.log(`¡${e.name} destruido! Botín: +${goldDrop} PO.`);
+            return false;
+          }
+          return true;
+        });
       }
 
-      targetsHit.filter(t => t.hp > 0).forEach(survivor => {
-        CombatSystem.enemyCounterAttack(game, survivor, 1.0);
+      // Contraataque seguro solo de los supervivientes
+      const survivors = targetsHit.filter(e => e.hp > 0);
+      survivors.forEach(survivor => {
+        if (player.hp > 0) {
+          CombatSystem.enemyCounterAttack(game, survivor, 1.0);
+        }
       });
 
       game.updateHUD();
@@ -942,11 +966,11 @@ class CombatSystem {
       return;
     }
 
+    // ARMAS A DISTANCIA
     let target = null;
-    let targetIndex = -1;
     let minDist = 999;
 
-    dungeon.enemies.forEach((enemy, idx) => {
+    dungeon.enemies.forEach(enemy => {
       enemy.cells.forEach(cell => {
         if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
           if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
@@ -954,7 +978,6 @@ class CombatSystem {
             if (dist < minDist) {
               minDist = dist;
               target = enemy;
-              targetIndex = idx;
             }
           }
         }
@@ -962,8 +985,9 @@ class CombatSystem {
     });
 
     if (!target) {
-      game.log(`Disparas tu ${weapon.name}... pero la bala se pierde sin impactar.`);
+      game.log(`Disparas tu ${weapon.name}... pero la bala no encuentra blanco.`);
       game.updateHUD();
+      game.renderer.draw();
       return;
     }
 
@@ -974,20 +998,20 @@ class CombatSystem {
     if (d20 === 20 || attackTotal >= target.ac) {
       const dmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
       target.hp -= dmg;
-      game.log(`¡Impacto certero! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+      game.log(`¡Impacto! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
 
       if (target.hp <= 0) {
         sounds.playCoin();
         let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
         player.gold += goldDrop;
         game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
-        dungeon.enemies.splice(targetIndex, 1);
+        dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
         game.updateHUD();
         game.renderer.draw();
         return;
       }
     } else {
-      game.log("El proyectil rebota sin penetrar.");
+      game.log("El proyectil no logró penetrar la defensa.");
     }
 
     CombatSystem.enemyCounterAttack(game, target, minDist);
@@ -997,6 +1021,8 @@ class CombatSystem {
 
   static enemyCounterAttack(game, enemy, dist) {
     const { player } = game;
+    if (player.hp <= 0) return;
+
     const eD20 = rollDie(20);
 
     if (dist <= 1.5) {
@@ -1464,7 +1490,7 @@ class GameController {
   }
 }
 
-// CONTROLADOR DE INTRODUCCIÓN CON EL LOGO OFICIAL
+// CONTROLADOR DE SPLASH CON LOGO NEKOPIN GAMES
 window.addEventListener("DOMContentLoaded", () => {
   const splashScreen = document.getElementById("splash-screen");
   let gameStarted = false;
@@ -1482,7 +1508,6 @@ window.addEventListener("DOMContentLoaded", () => {
     new GameController();
   }
 
-  // Desbloqueo del motor de audio al primer toque/interacción en cualquier pantalla
   const unlockAudio = () => {
     sounds.init();
     document.removeEventListener("touchstart", unlockAudio);
@@ -1491,16 +1516,13 @@ window.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("touchstart", unlockAudio, { passive: true });
   document.addEventListener("click", unlockAudio, { passive: true });
 
-  // Disparo del jingle sutil a los 400ms
   setTimeout(() => {
     sounds.playLogoJingle();
   }, 400);
 
-  // La secuencia de CSS dura 3.2s; a los 3.3s se retira la pantalla y arranca el juego
   setTimeout(() => {
     startGame();
   }, 3300);
 
-  // También se puede tocar la pantalla para saltar el logo de inmediato
   splashScreen.addEventListener("click", startGame);
 });
