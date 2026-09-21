@@ -271,9 +271,9 @@ class Dungeon {
     this.revealed = new Set();
     this.enemies = [];
 
-    // Entrada y salida reubicadas hacia el interior para evitar el borde de muros
-    this.entrance = { x: 1, y: height - 2 };
-    this.exit = { x: width - 2, y: 1 };
+    // Entrada y salida incrustadas en el perímetro
+    this.entrance = { x: 1, y: height - 1 };
+    this.exit = { x: width - 2, y: 0 };
   }
 
   getKey(x, y) {
@@ -312,7 +312,7 @@ class Player {
   constructor(startX, startY) {
     this.x = startX;
     this.y = startY;
-    this.direction = 0;
+    this.direction = 0; // Norte
     this.maxHp = 61;
     this.hp = 61;
     this.ac = 10;
@@ -376,8 +376,9 @@ class DungeonGenerator {
     this.floorNumber = floorNumber;
     this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
 
+    // Balance: Cantidad de enemigos basada en area / 20
     const area = dungeon.width * dungeon.height;
-    this.totalEnemies = Math.max(3, Math.floor(area / 10));
+    this.totalEnemies = Math.max(2, Math.floor(area / 20));
 
     this.populateEnemies();
     this.placeSpecialTiles();
@@ -412,7 +413,8 @@ class DungeonGenerator {
           name: "MEGA BOSS (4x4)",
           hp: 16, maxHp: 16,
           ac: 12 + this.tier,
-          range: 4,
+          visionRange: 4,     // Rango de visión
+          attackRange: 3,     // Rango de ataque (visión - 1)
           isMegaBoss: true,
           isBoss: true,
           size: 4,
@@ -450,7 +452,8 @@ class DungeonGenerator {
             name: "Minijefe Intermedio (2x2)",
             hp: 8, maxHp: 8,
             ac: 10 + this.tier,
-            range: 3,
+            visionRange: 3,   // Rango de visión
+            attackRange: 2,   // Rango de ataque (visión - 1)
             isMegaBoss: false,
             isBoss: true,
             size: 2,
@@ -465,7 +468,8 @@ class DungeonGenerator {
             name: "Sombra Hostil",
             hp: 2, maxHp: 2,
             ac: 8 + this.tier,
-            range: 2,
+            visionRange: 2,   // Rango de visión y detección de manada
+            attackRange: 1,   // Rango de ataque (visión - 1 = c/c)
             isMegaBoss: false,
             isBoss: false,
             size: 1,
@@ -543,18 +547,17 @@ class DungeonGenerator {
       return;
     }
 
-    // Muro perimetral exterior estricto
-    if (x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1) {
-      this.dungeon.setTile(x, y, TILE_WALL);
+    if (x === this.dungeon.entrance.x && y === this.dungeon.entrance.y - 1) {
+      this.dungeon.setTile(x, y, TILE_FLOOR);
+      return;
+    }
+    if (x === this.dungeon.exit.x && y === this.dungeon.exit.y + 1) {
+      this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
     }
 
-    // Área libre garantizada en entrada y salida (radio de 2.2 casillas despejado)
-    const distToEntrance = Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y);
-    const distToExit = Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y);
-
-    if (distToEntrance <= 2.2 || distToExit <= 2.2) {
-      this.dungeon.setTile(x, y, TILE_FLOOR);
+    if (x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1) {
+      this.dungeon.setTile(x, y, TILE_WALL);
       return;
     }
 
@@ -585,6 +588,24 @@ class CameraTransformer {
 
     return { x: worldX, y: worldY };
   }
+
+  static worldToScreen(worldX, worldY, player) {
+    const dx = worldX - player.x;
+    const dy = worldY - player.y;
+    let forwardOffset = 0;
+    let lateralOffset = 0;
+
+    switch (player.direction) {
+      case 0: forwardOffset = -dy; lateralOffset = dx; break;
+      case 1: forwardOffset = dx; lateralOffset = dy; break;
+      case 2: forwardOffset = dy; lateralOffset = -dx; break;
+      case 3: forwardOffset = -dx; lateralOffset = -dy; break;
+    }
+
+    const screenX = CAMERA_CONFIG.playerScreenX + lateralOffset;
+    const screenY = CAMERA_CONFIG.playerScreenY - forwardOffset;
+    return { screenX, screenY };
+  }
 }
 
 class VisibilitySystem {
@@ -600,7 +621,13 @@ class VisibilitySystem {
     const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
 
+    const maxSteps = dx + dy + 2;
+    let steps = 0;
+
     while (true) {
+      steps++;
+      if (steps > maxSteps) return false;
+
       if (x0 === x1 && y0 === y1) return true;
 
       if (x0 !== screenX0 || y0 !== screenY0) {
@@ -625,14 +652,22 @@ class VisibilitySystem {
     const sy = curY < y1 ? 1 : -1;
     let err = dx - dy;
 
+    const maxSteps = dx + dy + 2;
+    let steps = 0;
+
     while (true) {
+      steps++;
+      if (steps > maxSteps) return false;
+
       if (curX === x1 && curY === y1) return true;
+
       if ((curX !== x0 || curY !== y0) && dungeon.getTile(curX, curY) === TILE_WALL) {
         return false;
       }
+
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; y0 += sy; }
+      if (e2 < dx) { err += dx; curY += sy; } // Correctamente vinculado a curY
     }
   }
 }
@@ -781,46 +816,45 @@ class Renderer {
       }
     }
 
+    // Renderizado optimizado: O(1) directo de mundo a pantalla
     this.dungeon.enemies.forEach(enemy => {
+      if (!enemy.cells) return;
       enemy.cells.forEach(cell => {
-        for (let sy = 0; sy < rows; sy++) {
-          for (let sx = 0; sx < cols; sx++) {
-            const wPos = CameraTransformer.screenToWorld(sx, sy, this.player);
-            if (wPos.x === cell.x && wPos.y === cell.y) {
-              const visible = VisibilitySystem.hasLineOfSight(
-                playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player
-              );
-              if (visible) {
-                const px = sx * tileSize;
-                const py = sy * tileSize;
+        const { screenX, screenY } = CameraTransformer.worldToScreen(cell.x, cell.y, this.player);
+        if (screenX >= 0 && screenX < cols && screenY >= 0 && screenY < rows) {
+          const visible = VisibilitySystem.hasLineOfSight(
+            playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
+          );
+          if (visible) {
+            const px = screenX * tileSize;
+            const py = screenY * tileSize;
 
-                if (enemy.isMegaBoss) {
-                  targetCtx.fillStyle = "#800020";
-                  targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-                  targetCtx.strokeStyle = "#ffd700";
-                  targetCtx.lineWidth = 2;
-                  targetCtx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-                } else if (enemy.isBoss) {
-                  targetCtx.fillStyle = "#cc0029";
-                  targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
-                  targetCtx.strokeStyle = "#ffffff";
-                  targetCtx.lineWidth = 1.5;
-                  targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
-                } else {
-                  const cx = px + tileSize / 2;
-                  const cy = py + tileSize / 2;
-                  targetCtx.fillStyle = "#ff3333";
-                  targetCtx.beginPath();
-                  targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
-                  targetCtx.fill();
-                }
-              }
+            if (enemy.isMegaBoss) {
+              targetCtx.fillStyle = "#800020";
+              targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
+              targetCtx.strokeStyle = "#ffd700";
+              targetCtx.lineWidth = 2;
+              targetCtx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
+            } else if (enemy.isBoss) {
+              targetCtx.fillStyle = "#cc0029";
+              targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+              targetCtx.strokeStyle = "#ffffff";
+              targetCtx.lineWidth = 1.5;
+              targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+            } else {
+              const cx = px + tileSize / 2;
+              const cy = py + tileSize / 2;
+              targetCtx.fillStyle = "#ff3333";
+              targetCtx.beginPath();
+              targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
+              targetCtx.fill();
             }
           }
         }
       });
     });
 
+    // Lior (Avatar fijo)
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
 
@@ -842,6 +876,7 @@ class Renderer {
 
 class CombatSystem {
   static getMinDistToPlayer(player, enemy) {
+    if (!enemy.cells || enemy.cells.length === 0) return 999;
     let minDist = 999;
     enemy.cells.forEach(cell => {
       const d = Math.hypot(cell.x - player.x, cell.y - player.y);
@@ -851,6 +886,7 @@ class CombatSystem {
   }
 
   static canEnemySeePlayer(player, dungeon, enemy) {
+    if (!enemy.cells) return false;
     return enemy.cells.some(cell =>
       VisibilitySystem.hasWorldLineOfSight(cell.x, cell.y, player.x, player.y, dungeon)
     );
@@ -911,6 +947,7 @@ class CombatSystem {
       const targetsHit = [];
 
       dungeon.enemies.forEach(enemy => {
+        if (!enemy.cells) return;
         const touchesPlayer = enemy.cells.some(cell => {
           const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
           return dist <= 1.5;
@@ -934,7 +971,7 @@ class CombatSystem {
             const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
             const totalDmg = baseDmg + dmgBonus;
             target.hp -= totalDmg;
-            game.log(`> Impacto [d20(${d20})+${hitBonus}=${attackTotal} vs CA ${target.ac}]: ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+            game.log(`> Impacto [${attackTotal} vs CA ${target.ac}]: ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
           } else {
             game.log(`> Tu espada rebota en la defensa de ${target.name} [${attackTotal} vs CA ${target.ac}].`);
           }
@@ -963,6 +1000,7 @@ class CombatSystem {
       let minDist = 999;
 
       dungeon.enemies.forEach(enemy => {
+        if (!enemy.cells) return;
         enemy.cells.forEach(cell => {
           if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
             if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
@@ -986,7 +1024,7 @@ class CombatSystem {
           const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
           const totalDmg = baseDmg + dmgBonus;
           target.hp -= totalDmg;
-          game.log(`¡Impacto [d20(${d20})+${hitBonus}=${attackTotal} vs CA ${target.ac}]! ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+          game.log(`¡Impacto [${attackTotal} vs CA ${target.ac}]! ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
 
           if (target.hp <= 0) {
             sounds.playCoin();
@@ -1265,85 +1303,116 @@ class GameController {
   processEnemiesTurn() {
     if (this.player.hp <= 0) return;
 
-    this.dungeon.enemies.forEach(enemy => {
-      if (this.player.hp <= 0) return;
+    try {
+      this.dungeon.enemies.forEach(enemy => {
+        if (this.player.hp <= 0) return;
+        if (!enemy.cells || enemy.cells.length === 0) return;
 
-      const dist = CombatSystem.getMinDistToPlayer(this.player, enemy);
-      const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+        const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
+        const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
-      if (dist > enemy.range) {
-        return;
-      }
+        // 1. ATAQUE: Si está dentro de su rango de ataque (visión - 1) y tiene línea de visión
+        if (hasLOS && distToPlayer <= enemy.attackRange) {
+          const eD20 = rollDie(20);
+          const hitMod = this.hitBonus;
+          const dmgMod = this.dmgBonus;
+          const totalAtk = eD20 + hitMod;
 
-      if (hasLOS) {
-        const eD20 = rollDie(20);
-        const hitMod = this.hitBonus;
-        const dmgMod = this.dmgBonus;
-        const totalAtk = eD20 + hitMod;
-
-        if (dist <= 1.5) {
-          if (totalAtk >= this.player.ac) {
-            sounds.playHurt();
-            const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
-            const totalDmg = baseDmg + dmgMod;
-            this.player.hp = Math.max(0, this.player.hp - totalDmg);
-            this.log(`${enemy.name} c/c: [${totalAtk} vs CA ${this.player.ac}] ¡${totalDmg} daño recibido!`);
+          if (distToPlayer <= 1.5) {
+            if (totalAtk >= this.player.ac) {
+              sounds.playHurt();
+              const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
+              const totalDmg = baseDmg + dmgMod;
+              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              this.log(`${enemy.name} c/c: [${totalAtk} vs CA ${this.player.ac}] ¡${totalDmg} daño recibido!`);
+            } else {
+              this.log(`${enemy.name} c/c falla contra tu coraza [${totalAtk} vs CA ${this.player.ac}].`);
+            }
           } else {
-            this.log(`${enemy.name} c/c falla contra tu coraza [${totalAtk} vs CA ${this.player.ac}].`);
+            if (totalAtk >= this.player.ac) {
+              sounds.playHurt();
+              const baseDmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
+              const totalDmg = baseDmg + dmgMod;
+              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              this.log(`${enemy.name} proyectil: [${totalAtk} vs CA ${this.player.ac}] ¡Impacto de ${totalDmg} daño!`);
+            } else {
+              this.log(`${enemy.name} proyectil desviado [${totalAtk} vs CA ${this.player.ac}].`);
+            }
           }
+          return;
+        }
+
+        // 2. MOVIMIENTO / TÁCTICA DE MANADA
+        let shouldFlee = false;
+
+        // Si es una Sombra básica (1x1) y detecta a Lior en su rango de visión (<= 2 casillas)
+        if (!enemy.isBoss && distToPlayer <= enemy.visionRange) {
+          // Evaluar si tiene al menos a otro aliado a <= 2 casillas de distancia
+          const hasAllyNearby = this.dungeon.enemies.some(other => {
+            if (other === enemy || !other.cells) return false;
+            return Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 2.0;
+          });
+
+          // Si está solo, huye aterrado de Lior
+          if (!hasAllyNearby) {
+            shouldFlee = true;
+          }
+        }
+
+        const directions = [
+          { dx: 0, dy: -1 },
+          { dx: 1, dy: 0 },
+          { dx: 0, dy: 1 },
+          { dx: -1, dy: 0 }
+        ];
+
+        if (shouldFlee) {
+          // HUIDA: Maximiza la distancia respecto a Lior
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distB - distA; // Mayor distancia primero
+          });
         } else {
-          if (totalAtk >= this.player.ac) {
-            sounds.playHurt();
-            const baseDmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
-            const totalDmg = baseDmg + dmgMod;
-            this.player.hp = Math.max(0, this.player.hp - totalDmg);
-            this.log(`${enemy.name} proyectil: [${totalAtk} vs CA ${this.player.ac}] ¡Impacto de ${totalDmg} daño!`);
-          } else {
-            this.log(`${enemy.name} proyectil desviado [${totalAtk} vs CA ${this.player.ac}].`);
+          // ACERCAMIENTO: Solo si Lior entra en su rango de visión (Jefes o sombras en manada)
+          if (distToPlayer > enemy.visionRange) return;
+
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distA - distB; // Menor distancia primero
+          });
+        }
+
+        for (const dir of directions) {
+          const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
+
+          const isValid = candidateCells.every(c => {
+            if (!this.dungeon.isInsideBounds(c.x, c.y)) return false;
+            this.generator.ensureTileGenerated(c.x, c.y);
+            if (this.dungeon.getTile(c.x, c.y) === TILE_WALL) return false;
+            if (c.x === this.player.x && c.y === this.player.y) return false;
+            return true;
+          });
+
+          if (!isValid) continue;
+
+          const collidesWithOther = this.dungeon.enemies.some(other => {
+            if (other === enemy || !other.cells) return false;
+            return other.cells.some(oc => candidateCells.some(nc => nc.x === oc.x && nc.y === oc.y));
+          });
+
+          if (!collidesWithOther) {
+            enemy.x += dir.dx;
+            enemy.y += dir.dy;
+            enemy.cells = candidateCells;
+            break;
           }
         }
-        return;
-      }
-
-      const directions = [
-        { dx: 0, dy: -1 },
-        { dx: 1, dy: 0 },
-        { dx: 0, dy: 1 },
-        { dx: -1, dy: 0 }
-      ];
-
-      directions.sort((a, b) => {
-        const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
-        const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
-        return distA - distB;
       });
-
-      for (const dir of directions) {
-        const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
-
-        const isValid = candidateCells.every(c => {
-          if (!this.dungeon.isInsideBounds(c.x, c.y)) return false;
-          this.generator.ensureTileGenerated(c.x, c.y);
-          if (this.dungeon.getTile(c.x, c.y) === TILE_WALL) return false;
-          if (c.x === this.player.x && c.y === this.player.y) return false;
-          return true;
-        });
-
-        if (!isValid) continue;
-
-        const collidesWithOther = this.dungeon.enemies.some(other => {
-          if (other === enemy) return false;
-          return other.cells.some(oc => candidateCells.some(nc => nc.x === oc.x && nc.y === oc.y));
-        });
-
-        if (!collidesWithOther) {
-          enemy.x += dir.dx;
-          enemy.y += dir.dy;
-          enemy.cells = candidateCells;
-          break;
-        }
-      }
-    });
+    } catch (err) {
+      console.error("Error en turno enemigo:", err);
+    }
 
     if (this.player.hp <= 0) {
       sounds.playDeath();
@@ -1369,10 +1438,10 @@ class GameController {
     }
 
     const enemyBlocking = this.dungeon.enemies.some(e =>
-      e.cells.some(c => c.x === next.x && c.y === next.y)
+      e.cells && e.cells.some(c => c.x === next.x && c.y === next.y)
     );
     if (enemyBlocking) {
-      this.log("¡Un enemigo bloquea el paso! Ataca.");
+      this.log("¡Un enemigo bloquea el paso! Ataca con espada o arma.");
       return;
     }
 
@@ -1400,7 +1469,7 @@ class GameController {
     }
 
     const enemyBlocking = this.dungeon.enemies.some(e =>
-      e.cells.some(c => c.x === prev.x && c.y === prev.y)
+      e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y)
     );
     if (enemyBlocking) {
       this.log("Un enemigo te bloquea el paso por la espalda.");
