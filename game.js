@@ -198,10 +198,10 @@ const sounds = new SoundEngine();
 const CARDINALS = ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"];
 
 const DIR_VECTORS = [
-  { x: 0, y: -1 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-  { x: -1, y: 0 }
+  { x: 0, y: -1 }, // N
+  { x: 1, y: 0 },  // E
+  { x: 0, y: 1 },  // S
+  { x: -1, y: 0 }  // W
 ];
 
 const TILE_OUT_OF_BOUNDS = -1;
@@ -254,7 +254,7 @@ function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
-function getRandomDungeonDimensions(min = 5, max = 50) {
+function getRandomDungeonDimensions(min = 7, max = 50) {
   const w = Math.floor(Math.random() * (max - min + 1)) + min;
   let h = Math.floor(Math.random() * (max - min + 1)) + min;
   while (h === w) {
@@ -271,8 +271,9 @@ class Dungeon {
     this.revealed = new Set();
     this.enemies = [];
 
-    this.entrance = { x: 1, y: height - 1 };
-    this.exit = { x: width - 2, y: 0 };
+    // Entrada y salida reubicadas hacia el interior para evitar el borde de muros
+    this.entrance = { x: 1, y: height - 2 };
+    this.exit = { x: width - 2, y: 1 };
   }
 
   getKey(x, y) {
@@ -373,8 +374,6 @@ class DungeonGenerator {
   constructor(dungeon, floorNumber = 1) {
     this.dungeon = dungeon;
     this.floorNumber = floorNumber;
-
-    // Escala de nivel (bloques de 10 pisos del 1 al 10)
     this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
 
     const area = dungeon.width * dungeon.height;
@@ -395,7 +394,6 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
-    // Mega Boss (4x4, rango 4, CA 12 + tier)
     if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
@@ -545,11 +543,13 @@ class DungeonGenerator {
       return;
     }
 
+    // Muro perimetral exterior estricto
     if (x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1) {
       this.dungeon.setTile(x, y, TILE_WALL);
       return;
     }
 
+    // Área libre garantizada en entrada y salida (radio de 2.2 casillas despejado)
     const distToEntrance = Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y);
     const distToExit = Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y);
 
@@ -1019,25 +1019,24 @@ class GameController {
     this.bindShopEvents();
   }
 
-  // Cálculos de escalado dinámico por nivel
   get tier() {
     return Math.min(10, Math.floor((this.floor - 1) / 10) + 1);
   }
 
   get playerAC() {
-    return 9 + this.tier; // Piso 1-10: 10, Piso 11-20: 11 ... Piso 91-100: 20
+    return 9 + this.tier;
   }
 
   get hitBonus() {
-    return this.tier; // +1 a +10
+    return this.tier;
   }
 
   get dmgBonus() {
-    return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99)); // +1 a +20
+    return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99));
   }
 
   initDungeonFloor() {
-    const { width, height } = getRandomDungeonDimensions(5, 50);
+    const { width, height } = getRandomDungeonDimensions(7, 50);
     this.dungeon = new Dungeon(width, height);
     this.generator = new DungeonGenerator(this.dungeon, this.floor);
 
@@ -1263,9 +1262,6 @@ class GameController {
     this.renderer.animateTurn(1);
   }
 
-  /**
-   * IA REACTIVA: Solo reaccionan si Lior está a su alcance (Normal 2, Boss 3, Mega Boss 4)
-   */
   processEnemiesTurn() {
     if (this.player.hp <= 0) return;
 
@@ -1275,12 +1271,10 @@ class GameController {
       const dist = CombatSystem.getMinDistToPlayer(this.player, enemy);
       const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
-      // Si Lior está fuera de su rango definido, no reaccionan
       if (dist > enemy.range) {
         return;
       }
 
-      // CASO A: En rango y con línea de visión despejada -> Atacan
       if (hasLOS) {
         const eD20 = rollDie(20);
         const hitMod = this.hitBonus;
@@ -1311,7 +1305,6 @@ class GameController {
         return;
       }
 
-      // CASO B: Está dentro del rango pero obstruido por muro -> Da un paso para rodearlo
       const directions = [
         { dx: 0, dy: -1 },
         { dx: 1, dy: 0 },
@@ -1514,7 +1507,7 @@ class GameController {
   }
 }
 
-// CONTROLADOR DE SPLASH CON LOGO NEKOPIN GAMES
+// INICIALIZADOR DE SPLASH CON LOGO NEKOPIN GAMES
 window.addEventListener("DOMContentLoaded", () => {
   const splashScreen = document.getElementById("splash-screen");
   let gameStarted = false;
