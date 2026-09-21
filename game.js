@@ -170,13 +170,13 @@ const sounds = new SoundEngine();
 /**
  * CONSTANTES DE MAPA Y VECTORES
  */
-const CARDINALS = ["Norte", "Este", "Sur", "Oeste"];
+const CARDINALS = ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"];
 
 const DIR_VECTORS = [
-  { x: 0, y: -1 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-  { x: -1, y: 0 }
+  { x: 0, y: -1 }, // N
+  { x: 1, y: 0 },  // E
+  { x: 0, y: 1 },  // S
+  { x: -1, y: 0 }  // W
 ];
 
 const TILE_OUT_OF_BOUNDS = -1;
@@ -195,14 +195,16 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
+/**
+ * CONFIGURACIÓN DE ARMAS
+ */
 const WEAPONS = {
   SWORD: {
     name: "Espada",
-    label: "Espada (c/c 1.5)",
+    label: "Espada (área c/c 1.5)",
     bonus: 8,
-    dieCount: 1,
-    dieSides: 8,
-    flatDmg: 5,
+    minDmg: 1,
+    maxDmg: 2,
     range: 1.5,
     isMelee: true,
     ammoType: null
@@ -211,9 +213,8 @@ const WEAPONS = {
     name: "Pistola",
     label: "Pistola (frente 3x3)",
     bonus: 9,
-    dieCount: 1,
-    dieSides: 10,
-    flatDmg: 6,
+    minDmg: 1,
+    maxDmg: 4,
     range: 3,
     isMelee: false,
     ammoType: "pistol"
@@ -222,9 +223,8 @@ const WEAPONS = {
     name: "Mosquete",
     label: "Mosquete (frente 5x3)",
     bonus: 9,
-    dieCount: 1,
-    dieSides: 12,
-    flatDmg: 6,
+    minDmg: 1,
+    maxDmg: 6,
     range: 5,
     isMelee: false,
     ammoType: "musket"
@@ -235,7 +235,7 @@ function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
-function getRandomDungeonDimensions(min = 15, max = 70) {
+function getRandomDungeonDimensions(min = 5, max = 50) {
   const w = Math.floor(Math.random() * (max - min + 1)) + min;
   let h = Math.floor(Math.random() * (max - min + 1)) + min;
   while (h === w) {
@@ -293,8 +293,8 @@ class Player {
     this.x = startX;
     this.y = startY;
     this.direction = 0;
-    this.maxHp = 48;
-    this.hp = 48;
+    this.maxHp = 61;
+    this.hp = 61;
     this.ac = 16;
     this.gold = 0;
 
@@ -356,7 +356,7 @@ class DungeonGenerator {
     this.floorNumber = floorNumber;
 
     const area = dungeon.width * dungeon.height;
-    this.totalEnemies = Math.max(4, Math.floor(area / 90));
+    this.totalEnemies = Math.max(3, Math.floor(area / 10));
 
     this.populateEnemies();
     this.placeSpecialTiles();
@@ -373,7 +373,7 @@ class DungeonGenerator {
   }
 
   populateEnemies() {
-    if (this.floorNumber % 10 === 0) {
+    if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
       let megaBossPlaced = false;
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
         const mx = Math.floor(Math.random() * (this.dungeon.width - 6)) + 2;
@@ -385,11 +385,10 @@ class DungeonGenerator {
         const bossCells = this.generateCells(mx, my, 4);
 
         this.dungeon.enemies.push({
-          x: mx,
-          y: my,
+          x: mx, y: my,
+          startX: mx, startY: my,
           name: "MEGA BOSS (4x4)",
-          hp: 120,
-          maxHp: 120,
+          hp: 16, maxHp: 16,
           ac: 16,
           isMegaBoss: true,
           isBoss: true,
@@ -400,9 +399,9 @@ class DungeonGenerator {
       }
     }
 
-    let basicCounter = 0;
+    let sequenceCounter = 0;
     for (let i = 0; i < this.totalEnemies; i++) {
-      const isBoss = (basicCounter === 3);
+      const isBoss = (sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6);
       const enemySize = isBoss ? 2 : 1;
       let placed = false;
 
@@ -410,7 +409,7 @@ class DungeonGenerator {
         const rx = Math.floor(Math.random() * (this.dungeon.width - enemySize - 2)) + 1;
         const ry = Math.floor(Math.random() * (this.dungeon.height - enemySize - 2)) + 1;
 
-        if (Math.hypot(rx - this.dungeon.entrance.x, ry - this.dungeon.entrance.y) <= 4.0) continue;
+        if (Math.hypot(rx - this.dungeon.entrance.x, ry - this.dungeon.entrance.y) <= 3.5) continue;
         if (Math.hypot(rx - this.dungeon.exit.x, ry - this.dungeon.exit.y) <= 2.5) continue;
 
         const candidateCells = this.generateCells(rx, ry, enemySize);
@@ -422,89 +421,60 @@ class DungeonGenerator {
 
         if (isBoss) {
           this.dungeon.enemies.push({
-            x: rx,
-            y: ry,
-            name: "Jefe de Horda (2x2)",
-            hp: 48,
-            maxHp: 48,
+            x: rx, y: ry,
+            startX: rx, startY: ry,
+            name: "Minijefe Intermedio (2x2)",
+            hp: 8, maxHp: 8,
             ac: 14,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
             cells: candidateCells
           });
-          basicCounter = 0;
+          sequenceCounter = 0;
         } else {
           this.dungeon.enemies.push({
-            x: rx,
-            y: ry,
+            x: rx, y: ry,
+            startX: rx, startY: ry,
             name: "Sombra Hostil",
-            hp: 16,
-            maxHp: 16,
+            hp: 2, maxHp: 2,
             ac: 12,
             isMegaBoss: false,
             isBoss: false,
             size: 1,
             cells: candidateCells
           });
-          basicCounter++;
+          sequenceCounter++;
         }
         placed = true;
       }
     }
   }
 
-  /**
-   * REGLAS DE COLOCACIÓN ESPACIAL DE TIENDAS Y CURACIONES:
-   * 1. Tiendas = (Total Jefes - 1). En un radio de 5 casillas de donde arranca el jefe.
-   *    Separadas entre sí al menos 3 casillas (si hay jefes contiguos, solo 1 tienda).
-   * 2. Curaciones = 1 por cada 4 enemigos.
-   *    Separadas entre sí al menos 5 casillas a la redonda obligatorias.
-   */
   placeSpecialTiles() {
-    // Lista de jefes en el terreno
-    const bosses = this.dungeon.enemies.filter(e => e.isBoss);
-    const targetShops = Math.max(0, bosses.length - 1);
+    const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
+    const targetShops = Math.floor(miniBosses.length / 3);
     const placedShopPositions = [];
 
-    // Agrupar jefes contiguos (a menos de 5 casillas de distancia)
-    // Para que un grupo de jefes cercanos solo genere 1 tienda compartida
-    const bossClusters = [];
-    bosses.forEach(boss => {
-      const existingCluster = bossClusters.find(cluster =>
-        cluster.some(b => Math.hypot(b.x - boss.x, b.y - boss.y) <= 5.0)
-      );
-      if (existingCluster) {
-        existingCluster.push(boss);
-      } else {
-        bossClusters.push([boss]);
-      }
-    });
-
-    // Colocar tiendas: radio <= 5 casillas del jefe y >= 3 casillas entre tiendas
-    for (let c = 0; c < bossClusters.length && placedShopPositions.length < targetShops; c++) {
-      const anchorBoss = bossClusters[c][0];
+    for (let i = 0; i < targetShops && i < miniBosses.length; i++) {
+      const anchor = miniBosses[i];
       let placed = false;
 
       for (let attempts = 0; attempts < 300 && !placed; attempts++) {
-        // Desfase entre -5 y +5 casillas
         const ox = Math.floor(Math.random() * 11) - 5;
         const oy = Math.floor(Math.random() * 11) - 5;
-        const distToBoss = Math.hypot(ox, oy);
+        if (Math.hypot(ox, oy) > 5.0) continue;
 
-        if (distToBoss > 5.0) continue; // Máximo 5 casillas a la redonda del jefe
-
-        const sx = anchorBoss.x + ox;
-        const sy = anchorBoss.y + oy;
+        const sx = anchor.startX + ox;
+        const sy = anchor.startY + oy;
 
         if (!this.dungeon.isInsideBounds(sx, sy)) continue;
-        if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 3.5) continue;
-        if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2.0) continue;
+        if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 3) continue;
+        if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2) continue;
         if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
 
-        // Separación mínima de 3 casillas entre tiendas
-        const tooCloseToOtherShop = placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3.0);
-        if (tooCloseToOtherShop) continue;
+        const tooClose = placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3.0);
+        if (tooClose) continue;
 
         this.dungeon.setTile(sx, sy, TILE_SHOP);
         placedShopPositions.push({ x: sx, y: sy });
@@ -512,23 +482,20 @@ class DungeonGenerator {
       }
     }
 
-    // Curaciones: 1 por cada 4 enemigos en el calabozo
-    const targetHeals = Math.floor(this.dungeon.enemies.length / 4);
+    const targetHeals = Math.floor(this.dungeon.enemies.length / 5);
     const placedHealPositions = [];
 
-    // Separación mínima obligatoria de 5 casillas de radio entre cada curación
     for (let attempts = 0; attempts < 1500 && placedHealPositions.length < targetHeals; attempts++) {
       const hx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
       const hy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
 
-      if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 3.5) continue;
-      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2.0) continue;
+      if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 3) continue;
+      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2) continue;
       if (this.dungeon.getTile(hx, hy) === TILE_SHOP) continue;
       if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === hx && c.y === hy))) continue;
 
-      // Radio mínimo de 5 casillas respecto a cualquier otra curación ya colocada
-      const tooCloseToAnotherHeal = placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5.0);
-      if (tooCloseToAnotherHeal) continue;
+      const tooClose = placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5.0);
+      if (tooClose) continue;
 
       this.dungeon.setTile(hx, hy, TILE_HEAL_FOUNTAIN);
       placedHealPositions.push({ x: hx, y: hy });
@@ -581,14 +548,10 @@ class CameraTransformer {
     let worldY = player.y;
 
     switch (player.direction) {
-      case 0:
-        worldX += lateralOffset; worldY -= forwardOffset; break;
-      case 1:
-        worldX += forwardOffset; worldY += lateralOffset; break;
-      case 2:
-        worldX -= lateralOffset; worldY += forwardOffset; break;
-      case 3:
-        worldX -= forwardOffset; worldY -= lateralOffset; break;
+      case 0: worldX += lateralOffset; worldY -= forwardOffset; break;
+      case 1: worldX += forwardOffset; worldY += lateralOffset; break;
+      case 2: worldX -= lateralOffset; worldY += forwardOffset; break;
+      case 3: worldX -= forwardOffset; worldY -= lateralOffset; break;
     }
 
     return { x: worldX, y: worldY };
@@ -640,11 +603,14 @@ class VisibilitySystem {
       }
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; curY += sy; }
+      if (e2 < dx) { err += dx; y0 += sy; }
     }
   }
 }
 
+/**
+ * RENDERER CON ANIMACIÓN DE GIRO SUAVE (PANEO)
+ */
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
     this.canvas = canvas;
@@ -652,6 +618,15 @@ class Renderer {
     this.dungeon = dungeon;
     this.player = player;
     this.generator = generator;
+
+    this.offscreenCanvas = document.createElement("canvas");
+    this.offscreenCanvas.width = canvas.width;
+    this.offscreenCanvas.height = canvas.height;
+    this.offCtx = this.offscreenCanvas.getContext("2d");
+
+    this.currentAngle = player.direction * 90;
+    this.targetAngle = player.direction * 90;
+    this.isAnimating = false;
   }
 
   setDungeon(dungeon, generator) {
@@ -659,12 +634,60 @@ class Renderer {
     this.generator = generator;
   }
 
+  animateTurn(deltaQuarterTurns) {
+    this.targetAngle += deltaQuarterTurns * 90;
+    if (!this.isAnimating) {
+      this.isAnimating = true;
+      this.stepAnimation();
+    }
+  }
+
+  stepAnimation() {
+    const diff = this.targetAngle - this.currentAngle;
+    if (Math.abs(diff) < 0.5) {
+      this.currentAngle = this.targetAngle;
+      this.isAnimating = false;
+      this.draw();
+      return;
+    }
+
+    this.currentAngle += diff * 0.28;
+    this.drawWithRotation(this.currentAngle - this.player.direction * 90);
+    requestAnimationFrame(() => this.stepAnimation());
+  }
+
   draw() {
+    if (this.isAnimating) return;
+    this.drawBase(this.ctx);
+  }
+
+  drawWithRotation(angleOffsetDeg) {
     const { ctx, canvas } = this;
-    const { cols, rows, tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
+    const { tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
+    const pivotX = playerScreenX * tileSize + tileSize / 2;
+    const pivotY = playerScreenY * tileSize + tileSize / 2;
+
+    this.drawBase(this.offCtx);
 
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(pivotX, pivotY);
+    ctx.rotate((angleOffsetDeg * Math.PI) / 180);
+    ctx.translate(-pivotX, -pivotY);
+    ctx.drawImage(this.offscreenCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  drawBase(targetCtx) {
+    const { canvas } = this;
+    const { cols, rows, tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
+
+    targetCtx.fillStyle = "#000000";
+    targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const enemiesRemain = this.dungeon.enemies.length > 0;
 
     for (let sy = 0; sy < rows; sy++) {
       for (let sx = 0; sx < cols; sx++) {
@@ -685,45 +708,50 @@ class Renderer {
         if (!inLineOfSight && !wasEverRevealed) continue;
 
         if (tileType === TILE_WALL) {
-          ctx.fillStyle = inLineOfSight ? "#ffffff" : "#444444";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = inLineOfSight ? "#ffffff" : "#444444";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
         } else if (tileType === TILE_ENTRANCE) {
-          ctx.fillStyle = inLineOfSight ? "#00e676" : "#00552b";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = inLineOfSight ? "#00e676" : "#00552b";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
         } else if (tileType === TILE_EXIT) {
-          ctx.fillStyle = inLineOfSight ? "#ffb300" : "#664700";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = enemiesRemain ? (inLineOfSight ? "#b71c1c" : "#4a0000") : (inLineOfSight ? "#ffb300" : "#664700");
+          targetCtx.fillRect(px, py, tileSize, tileSize);
+          if (inLineOfSight && enemiesRemain) {
+            targetCtx.strokeStyle = "#ffffff";
+            targetCtx.lineWidth = 1.5;
+            targetCtx.strokeRect(px + 4, py + 4, tileSize - 8, tileSize - 8);
+          }
         } else if (tileType === TILE_HEAL_FOUNTAIN) {
-          ctx.fillStyle = inLineOfSight ? "#062817" : "#02120a";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = inLineOfSight ? "#062817" : "#02120a";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
           if (inLineOfSight) {
-            ctx.fillStyle = "#00e676";
-            ctx.font = "bold 20px monospace";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("+", px + tileSize / 2, py + tileSize / 2);
+            targetCtx.fillStyle = "#00e676";
+            targetCtx.font = "bold 20px monospace";
+            targetCtx.textAlign = "center";
+            targetCtx.textBaseline = "middle";
+            targetCtx.fillText("+", px + tileSize / 2, py + tileSize / 2);
           }
         } else if (tileType === TILE_SHOP) {
-          ctx.fillStyle = inLineOfSight ? "#2b2204" : "#141002";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = inLineOfSight ? "#2b2204" : "#141002";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
           if (inLineOfSight) {
-            ctx.fillStyle = "#ffd700";
-            ctx.font = "bold 18px monospace";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("T", px + tileSize / 2, py + tileSize / 2);
+            targetCtx.fillStyle = "#ffd700";
+            targetCtx.font = "bold 18px monospace";
+            targetCtx.textAlign = "center";
+            targetCtx.textBaseline = "middle";
+            targetCtx.fillText("T", px + tileSize / 2, py + tileSize / 2);
           }
         } else if (tileType === TILE_FLOOR) {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = "#000000";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
         } else if (tileType === TILE_OUT_OF_BOUNDS) {
-          ctx.fillStyle = "#111111";
-          ctx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.fillStyle = "#111111";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
         }
 
-        ctx.strokeStyle = inLineOfSight ? "#2e2e34" : "#141416";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(px, py, tileSize, tileSize);
+        targetCtx.strokeStyle = inLineOfSight ? "#2e2e34" : "#141416";
+        targetCtx.lineWidth = 1;
+        targetCtx.strokeRect(px, py, tileSize, tileSize);
       }
     }
 
@@ -741,24 +769,24 @@ class Renderer {
                 const py = sy * tileSize;
 
                 if (enemy.isMegaBoss) {
-                  ctx.fillStyle = "#800020";
-                  ctx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-                  ctx.strokeStyle = "#ffd700";
-                  ctx.lineWidth = 2;
-                  ctx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
+                  targetCtx.fillStyle = "#800020";
+                  targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
+                  targetCtx.strokeStyle = "#ffd700";
+                  targetCtx.lineWidth = 2;
+                  targetCtx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
                 } else if (enemy.isBoss) {
-                  ctx.fillStyle = "#cc0029";
-                  ctx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
-                  ctx.strokeStyle = "#ffffff";
-                  ctx.lineWidth = 1.5;
-                  ctx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+                  targetCtx.fillStyle = "#cc0029";
+                  targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+                  targetCtx.strokeStyle = "#ffffff";
+                  targetCtx.lineWidth = 1.5;
+                  targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
                 } else {
                   const cx = px + tileSize / 2;
                   const cy = py + tileSize / 2;
-                  ctx.fillStyle = "#ff3333";
-                  ctx.beginPath();
-                  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-                  ctx.fill();
+                  targetCtx.fillStyle = "#ff3333";
+                  targetCtx.beginPath();
+                  targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
+                  targetCtx.fill();
                 }
               }
             }
@@ -770,18 +798,18 @@ class Renderer {
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
 
-    ctx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
-    ctx.beginPath();
-    ctx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
-    ctx.fill();
+    targetCtx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
+    targetCtx.beginPath();
+    targetCtx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
+    targetCtx.fill();
 
     if (this.player.hp > 0) {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(liorPx, liorPy);
-      ctx.lineTo(liorPx, liorPy - tileSize * 0.65);
-      ctx.stroke();
+      targetCtx.strokeStyle = "#ffffff";
+      targetCtx.lineWidth = 2.5;
+      targetCtx.beginPath();
+      targetCtx.moveTo(liorPx, liorPy);
+      targetCtx.lineTo(liorPx, liorPy - tileSize * 0.65);
+      targetCtx.stroke();
     }
   }
 }
@@ -836,6 +864,61 @@ class CombatSystem {
       sounds.playSword();
     }
 
+    if (weapon.isMelee) {
+      const targetsHit = [];
+
+      dungeon.enemies.forEach(enemy => {
+        const inArea = enemy.cells.some(cell => {
+          const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+          return dist <= weapon.range && VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon);
+        });
+
+        if (inArea) {
+          targetsHit.push(enemy);
+        }
+      });
+
+      if (targetsHit.length === 0) {
+        game.log("Blandes tu espada en círculo, pero no hay enemigos al alcance.");
+        game.updateHUD();
+        return;
+      }
+
+      game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) a la redonda.`);
+
+      targetsHit.forEach(target => {
+        const d20 = rollDie(20);
+        const attackTotal = d20 + weapon.bonus;
+
+        if (d20 === 20 || attackTotal >= target.ac) {
+          const dmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
+          target.hp -= dmg;
+          game.log(`> Impactas a ${target.name} por ${dmg} de daño. (HP: ${Math.max(0, target.hp)})`);
+        } else {
+          game.log(`> Tu golpe se desvía en la armadura de ${target.name}.`);
+        }
+      });
+
+      for (let i = dungeon.enemies.length - 1; i >= 0; i--) {
+        const enemy = dungeon.enemies[i];
+        if (enemy.hp <= 0) {
+          sounds.playCoin();
+          let goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+          player.gold += goldDrop;
+          game.log(`¡${enemy.name} abatido! Botín: +${goldDrop} PO.`);
+          dungeon.enemies.splice(i, 1);
+        }
+      }
+
+      targetsHit.filter(t => t.hp > 0).forEach(survivor => {
+        CombatSystem.enemyCounterAttack(game, survivor, 1.0);
+      });
+
+      game.updateHUD();
+      game.renderer.draw();
+      return;
+    }
+
     let target = null;
     let targetIndex = -1;
     let minDist = 999;
@@ -856,11 +939,7 @@ class CombatSystem {
     });
 
     if (!target) {
-      if (!weapon.isMelee) {
-        game.log(`Disparas tu ${weapon.name}... pero la bala no encuentra blanco.`);
-      } else {
-        game.log("Blandes la espada al aire. No hay objetivos.");
-      }
+      game.log(`Disparas tu ${weapon.name}... pero la bala se pierde sin impactar.`);
       game.updateHUD();
       return;
     }
@@ -870,14 +949,13 @@ class CombatSystem {
     game.log(`${weapon.name}: [d20(${d20}) + ${weapon.bonus} = ${attackTotal}] vs CA ${target.ac}`);
 
     if (d20 === 20 || attackTotal >= target.ac) {
-      let dmg = weapon.flatDmg;
-      for (let i = 0; i < weapon.dieCount; i++) dmg += rollDie(weapon.dieSides);
+      const dmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
       target.hp -= dmg;
-      game.log(`¡Impacto! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+      game.log(`¡Impacto certero! Causas ${dmg} de daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
 
       if (target.hp <= 0) {
         sounds.playCoin();
-        let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(4) : (Math.random() < 0.5 ? 1 : 0));
+        let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
         player.gold += goldDrop;
         game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
         dungeon.enemies.splice(targetIndex, 1);
@@ -886,7 +964,7 @@ class CombatSystem {
         return;
       }
     } else {
-      game.log("El ataque falló.");
+      game.log("El proyectil rebota sin penetrar.");
     }
 
     CombatSystem.enemyCounterAttack(game, target, minDist);
@@ -899,28 +977,28 @@ class CombatSystem {
     const eD20 = rollDie(20);
 
     if (dist <= 1.5) {
-      const atkBonus = enemy.isMegaBoss ? 8 : (enemy.isBoss ? 6 : 4);
+      const atkBonus = enemy.isMegaBoss ? 6 : (enemy.isBoss ? 5 : 3);
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} c/c: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
       if (totalAtk >= player.ac) {
         sounds.playHurt();
-        const dmg = rollDie(enemy.isMegaBoss ? 12 : (enemy.isBoss ? 10 : 6)) + (enemy.isMegaBoss ? 6 : (enemy.isBoss ? 4 : 2));
+        const dmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
         player.hp = Math.max(0, player.hp - dmg);
-        game.log(`¡Recibes ${dmg} de daño cuerpo a cuerpo!`);
+        game.log(`¡Recibes ${dmg} de daño!`);
       } else {
         game.log("Bloqueas el golpe con tu broquel.");
       }
     } else if ((enemy.isMegaBoss && dist <= 3.5) || (enemy.isBoss && dist <= 2.5) || (!enemy.isBoss && dist <= 3.5)) {
-      const atkBonus = enemy.isMegaBoss ? 7 : (enemy.isBoss ? 5 : 3);
+      const atkBonus = enemy.isMegaBoss ? 5 : (enemy.isBoss ? 4 : 2);
       const totalAtk = eD20 + atkBonus;
       game.log(`${enemy.name} proyectil: [d20(${eD20}) + ${atkBonus} = ${totalAtk}] vs CA ${player.ac}`);
       if (totalAtk >= player.ac) {
         sounds.playHurt();
-        const dmg = rollDie(enemy.isMegaBoss ? 10 : (enemy.isBoss ? 8 : 4)) + (enemy.isMegaBoss ? 4 : 2);
+        const dmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
         player.hp = Math.max(0, player.hp - dmg);
-        game.log(`¡Impacto de proyectil enemigo! -${dmg} HP.`);
+        game.log(`¡Proyectil hostil impacta! -${dmg} HP.`);
       } else {
-        game.log("El proyectil se desvía en la pared.");
+        game.log("El proyectil se estrella en la pared.");
       }
     }
 
@@ -944,7 +1022,7 @@ class GameController {
   }
 
   initDungeonFloor() {
-    const { width, height } = getRandomDungeonDimensions(15, 70);
+    const { width, height } = getRandomDungeonDimensions(5, 50);
     this.dungeon = new Dungeon(width, height);
     this.generator = new DungeonGenerator(this.dungeon, this.floor);
 
@@ -970,7 +1048,7 @@ class GameController {
     const bossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
     let desc = `Piso ${this.floor}: ${width}x${height}. Enemigos: ${this.dungeon.enemies.length}`;
     if (megaBossPresent) desc += " (¡MEGA BOSS 4x4!)";
-    if (bossCount > 0) desc += ` [${bossCount} Jefes 2x2]`;
+    if (bossCount > 0) desc += ` [${bossCount} Minijefes 2x2]`;
 
     this.log(desc);
     this.renderer.draw();
@@ -992,6 +1070,16 @@ class GameController {
     document.getElementById("hud-ammo").textContent = `P:${this.player.ammoPistol} | M:${this.player.ammoMusket}`;
     document.getElementById("hud-weapon").textContent = this.player.equippedWeapon.name;
     document.getElementById("misty-charges").textContent = this.player.mistyStepCharges;
+
+    const doorEl = document.getElementById("hud-door");
+    const enemiesRemain = this.dungeon.enemies.length > 0;
+    if (enemiesRemain) {
+      doorEl.textContent = `BLOQUEADA (${this.dungeon.enemies.length})`;
+      doorEl.className = "door-locked";
+    } else {
+      doorEl.textContent = "ABIERTA";
+      doorEl.className = "door-open";
+    }
 
     const mistyBtn = document.getElementById("btn-b");
     mistyBtn.disabled = this.player.mistyStepCharges <= 0 || this.player.hp <= 0;
@@ -1146,7 +1234,7 @@ class GameController {
     sounds.playStep();
     this.log(`Giras a la izquierda. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
-    this.renderer.draw();
+    this.renderer.animateTurn(-1);
   }
 
   turnRight() {
@@ -1155,7 +1243,7 @@ class GameController {
     sounds.playStep();
     this.log(`Giras a la derecha. Miras al ${CARDINALS[this.player.direction]}.`);
     this.updateHUD();
-    this.renderer.draw();
+    this.renderer.animateTurn(1);
   }
 
   stepEnemies() {
@@ -1276,11 +1364,15 @@ class GameController {
     this.updateHUD();
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
-      sounds.playCoin();
-      this.log("¡Salida alcanzada! Descendiendo...");
-      this.floor++;
-      setTimeout(() => this.initDungeonFloor(), 700);
-      return;
+      if (this.dungeon.enemies.length > 0) {
+        this.log(`¡La puerta está sellada! Debes eliminar a las ${this.dungeon.enemies.length} criaturas restantes.`);
+      } else {
+        sounds.playCoin();
+        this.log("¡Calabozo purificado! Descendiendo...");
+        this.floor++;
+        setTimeout(() => this.initDungeonFloor(), 700);
+        return;
+      }
     }
 
     this.renderer.draw();
@@ -1349,6 +1441,49 @@ class GameController {
   }
 }
 
+// CONTROLADOR DE INICIO CON ENLACE DE DRIVE Y AUDIO HABILITADO
 window.addEventListener("DOMContentLoaded", () => {
-  new GameController();
+  const startScreen = document.getElementById("start-screen");
+  const startBtn = document.getElementById("btn-start-game");
+  const introContainer = document.getElementById("intro-container");
+  const introVideo = document.getElementById("intro-video");
+  const skipBtn = document.getElementById("skip-intro-btn");
+
+  let gameInitialized = false;
+
+  function launchGame() {
+    if (gameInitialized) return;
+    gameInitialized = true;
+
+    introContainer.classList.add("fade-out");
+
+    setTimeout(() => {
+      introVideo.pause();
+      introVideo.src = "";
+      introContainer.style.display = "none";
+    }, 550);
+
+    new GameController();
+  }
+
+  startBtn.addEventListener("click", () => {
+    startScreen.classList.add("hidden");
+
+    introContainer.classList.remove("hidden");
+    introVideo.muted = false;
+    introVideo.volume = 1.0;
+
+    sounds.init();
+
+    introVideo.play().catch(err => {
+      console.warn("Reproducción adaptada:", err);
+      introVideo.muted = true;
+      introVideo.play();
+    });
+
+    introVideo.addEventListener("ended", launchGame);
+    setTimeout(launchGame, 10200);
+  });
+
+  skipBtn.addEventListener("click", launchGame);
 });

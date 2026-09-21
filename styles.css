@@ -22,6 +22,129 @@ body {
   gap: 2px;
 }
 
+/* =========================================================
+   PANTALLA DE LANZAMIENTO (DESBLOQUEO DE AUDIO)
+========================================================= */
+#start-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: #000000;
+  z-index: 100000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.4s ease;
+}
+
+#start-screen.hidden {
+  display: none;
+}
+
+.start-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-title {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #00b0ff;
+}
+
+.brand-sub {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.start-btn {
+  padding: 14px 28px;
+  background: #00b0ff;
+  color: #000000;
+  border: none;
+  border-radius: 999px;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 176, 255, 0.4);
+}
+
+.start-btn:active {
+  transform: scale(0.96);
+  background: #ffffff;
+}
+
+/* =========================================================
+   CINEMÁTICA DE VIDEO (AJUSTE VERTICAL Y RECORTE LATERAL)
+========================================================= */
+#intro-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: #000000;
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: opacity 0.5s ease;
+}
+
+#intro-container.hidden {
+  display: none;
+}
+
+#intro-container.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+#skip-intro-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  background: rgba(15, 16, 20, 0.75);
+  color: #ffffff;
+  border: 1px solid #4a5568;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+#skip-intro-btn:active {
+  background: #00b0ff;
+  color: #000000;
+}
+
+/* =========================================================
+   HUD SUPERIOR
+========================================================= */
 #hud {
   display: flex;
   flex-wrap: wrap;
@@ -33,7 +156,7 @@ body {
   border: 1px solid #333333;
   padding: 3px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .hud-item span {
@@ -45,6 +168,12 @@ body {
 #hud-weapon { color: #ffff00 !important; }
 #hud-ammo { color: #ffb300 !important; }
 
+.door-locked { color: #ff3333 !important; }
+.door-open { color: #00e676 !important; }
+
+/* =========================================================
+   LIENZO PRINCIPAL Y TIENDA
+========================================================= */
 #game-container {
   position: relative;
   display: flex;
@@ -135,16 +264,19 @@ body {
   cursor: pointer;
 }
 
+/* =========================================================
+   CONSOLA DE REGISTROS
+========================================================= */
 #log-container {
   width: 100%;
   max-width: 360px;
-  height: 48px;
+  height: 46px;
   background-color: #050505;
   border: 1px solid #222222;
   border-radius: 4px;
   padding: 3px 6px;
   overflow-y: auto;
-  font-size: 10.5px;
+  font-size: 10px;
   line-height: 1.25;
 }
 
@@ -157,7 +289,9 @@ body {
   color: #00ff88;
 }
 
-/* DOCK DE CONTROLES: EXPANDIDO +50% */
+/* =========================================================
+   DOCK DE CONTROLES INFERIORES (+50%)
+========================================================= */
 #control-dock {
   display: flex;
   justify-content: space-between;
@@ -168,7 +302,6 @@ body {
   padding: 4px 6px;
 }
 
-/* CRUCETA (+50%: 52px por botón) */
 .dpad {
   display: grid;
   grid-template-columns: repeat(3, 52px);
@@ -205,7 +338,6 @@ body {
   color: #88c0d0;
 }
 
-/* ROMBOIDE (+50%: botones de 50px) */
 .diamond-pad {
   display: grid;
   grid-template-columns: repeat(3, 52px);
@@ -265,7 +397,7 @@ body {
 }
 .btn-heal:active {
   background: #00e676;
-  color: #000000;
+  color: #00e676;
 }
 .btn-heal:disabled {
   border-color: #333333;
