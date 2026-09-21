@@ -597,7 +597,7 @@ class DungeonGenerator {
     this.totalEnemies =
       Math.max(
         3,
-        Math.floor(area / 10)
+        Math.floor(area / 20)
       );
 
     this.populateEnemies();
