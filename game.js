@@ -197,7 +197,7 @@ const TILE_SHOP = 5;
 const CAMERA_CONFIG = {
   cols: 7,
   rows: 12,
-  tileSize: 42, // Recalculado dinámicamente
+  tileSize: 42,
   playerScreenX: 3,
   playerScreenY: 10
 };
@@ -929,7 +929,10 @@ class GameController {
     this.turnNumber = 0;
     this.megaBossGraceTurns = new Map();
 
-    // Detección de mandos
+    // Navegación en tienda
+    this.shopSelectedIndex = 0;
+
+    // Dispositivo de entrada y mando
     this.controlDevice = "touch";
     this.lastGamepadAxes = { x: 0, y: 0 };
     this.lastGamepadButtons = [];
@@ -987,6 +990,7 @@ class GameController {
     window.addEventListener("keydown", () => this.setControlDevice("keyboard"));
     window.addEventListener("touchstart", () => this.setControlDevice("touch"));
     window.addEventListener("gamepadconnected", () => this.setControlDevice("gamepad"));
+    window.addEventListener("gamepaddisconnected", () => this.setControlDevice("touch"));
   }
 
   setControlDevice(device) {
@@ -1013,29 +1017,108 @@ class GameController {
       btnRight.textContent = "D";
 
       btnD.textContent = "I";
+      btnD.style.borderColor = "#ffd700";
+      btnD.style.color = "#ffd700";
+
       btnC.textContent = "L";
+      btnC.style.borderColor = "#00e676";
+      btnC.style.color = "#00e676";
+
       btnB.textContent = "K";
+      btnB.style.borderColor = "#00e5ff";
+      btnB.style.color = "#00e5ff";
+
       btnA.textContent = "J";
+      btnA.style.borderColor = "#ff3333";
+      btnA.style.color = "#ff3333";
     } else if (this.controlDevice === "gamepad") {
+      // Mandos estilo Xbox: Y (Amarillo), X (Azul), B (Rojo), A (Verde)
       btnUp.textContent = "▲";
       btnDown.textContent = "▼";
       btnLeft.textContent = "◀";
       btnRight.textContent = "▶";
 
       btnD.textContent = "Y";
+      btnD.style.borderColor = "#ffd700";
+      btnD.style.color = "#ffd700";
+
       btnC.textContent = "X";
+      btnC.style.borderColor = "#00b0ff";
+      btnC.style.color = "#00b0ff";
+
       btnB.textContent = "B";
+      btnB.style.borderColor = "#ff3333";
+      btnB.style.color = "#ff3333";
+
       btnA.textContent = "A";
+      btnA.style.borderColor = "#00e676";
+      btnA.style.color = "#00e676";
     } else {
+      // Dispositivo móvil táctil estándar
       btnUp.textContent = "▲";
       btnDown.textContent = "▼";
       btnLeft.textContent = "◀";
       btnRight.textContent = "▶";
 
       btnD.textContent = "D";
+      btnD.style.borderColor = "#ffd700";
+      btnD.style.color = "#ffd700";
+
       btnC.textContent = "C";
+      btnC.style.borderColor = "#00e676";
+      btnC.style.color = "#00e676";
+
       btnB.textContent = "B";
+      btnB.style.borderColor = "#00e5ff";
+      btnB.style.color = "#00e5ff";
+
       btnA.textContent = "A";
+      btnA.style.borderColor = "#ff3333";
+      btnA.style.color = "#ff3333";
+    }
+  }
+
+  getShopElements() {
+    return [
+      { row: document.querySelectorAll(".shop-item")[0], btn: document.getElementById("buy-pistol-ammo") },
+      { row: document.querySelectorAll(".shop-item")[1], btn: document.getElementById("buy-musket-ammo") },
+      { row: document.querySelectorAll(".shop-item")[2], btn: document.getElementById("buy-potion") },
+      { row: document.getElementById("close-shop"), btn: document.getElementById("close-shop") }
+    ];
+  }
+
+  updateShopFocus() {
+    const items = this.getShopElements();
+    items.forEach((item, idx) => {
+      if (item && item.row) {
+        if (idx === this.shopSelectedIndex) {
+          item.row.classList.add("focused");
+        } else {
+          item.row.classList.remove("focused");
+        }
+      }
+    });
+  }
+
+  removeShopFocus() {
+    const items = this.getShopElements();
+    items.forEach(item => {
+      if (item && item.row) item.row.classList.remove("focused");
+    });
+  }
+
+  navigateShop(direction) {
+    const items = this.getShopElements();
+    this.shopSelectedIndex = (this.shopSelectedIndex + direction + items.length) % items.length;
+    sounds.playStep();
+    this.updateShopFocus();
+  }
+
+  confirmShopSelection() {
+    const items = this.getShopElements();
+    const current = items[this.shopSelectedIndex];
+    if (current && current.btn) {
+      current.btn.click();
     }
   }
 
@@ -1050,7 +1133,6 @@ class GameController {
       if (gp) {
         if (this.controlDevice !== "gamepad") this.setControlDevice("gamepad");
 
-        // D-Pad y Sticks
         const axisX = gp.axes[0] || 0;
         const axisY = gp.axes[1] || 0;
         const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
@@ -1059,30 +1141,39 @@ class GameController {
         const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
 
         const threshold = 0.5;
+        const btnStates = gp.buttons.map(b => b.pressed);
 
-        // Comprobación de cambio de estado (just pressed)
-        if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
-        else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
-        else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
-        else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
+        // MODO NAVEGACIÓN EN TIENDA
+        if (this.isShopOpen) {
+          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) {
+            this.navigateShop(-1);
+          } else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) {
+            this.navigateShop(1);
+          }
+
+          if (btnStates[0] && !this.lastGamepadButtons[0]) {
+            this.confirmShopSelection();
+          }
+
+          if ((btnStates[1] && !this.lastGamepadButtons[1]) || (btnStates[9] && !this.lastGamepadButtons[9])) {
+            this.closeShop();
+          }
+        }
+        // MODO JUEGO REGULAR
+        else {
+          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
+          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
+          else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
+          else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
+
+          if (btnStates[0] && !this.lastGamepadButtons[0]) CombatSystem.executeAttack(this); // A (Verde): Atacar
+          if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();             // B (Rojo): Bruma
+          if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();            // X (Azul): Curar
+          if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();              // Y (Amarillo): Arma
+        }
 
         this.lastGamepadAxes.x = (axisX < -threshold || dpadLeft) ? -1 : (axisX > threshold || dpadRight ? 1 : 0);
         this.lastGamepadAxes.y = (axisY < -threshold || dpadUp) ? -1 : (axisY > threshold || dpadDown ? 1 : 0);
-
-        // Botones de Acción (Xbox standard)
-        // A: 0 (Atacar), B: 1 (Bruma), X: 2 (Curar), Y: 3 (Cambiar Arma)
-        const btnStates = gp.buttons.map(b => b.pressed);
-
-        if (btnStates[0] && !this.lastGamepadButtons[0]) {
-          if (!this.isShopOpen) CombatSystem.executeAttack(this);
-        }
-        if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();
-        if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();
-        if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();
-
-        // Botón Start / B en menú de tienda para cerrar
-        if (btnStates[9] && !this.lastGamepadButtons[9] && this.isShopOpen) this.closeShop();
-
         this.lastGamepadButtons = btnStates;
       }
       requestAnimationFrame(pollGamepad);
@@ -1175,15 +1266,18 @@ class GameController {
 
   openShop() {
     this.isShopOpen = true;
+    this.shopSelectedIndex = 0;
     this.shopModal.classList.remove("hidden");
     this.updateHUD();
     sounds.playCoin();
+    this.updateShopFocus();
     this.log("Entraste a la tienda del Mercader de Sombras.");
   }
 
   closeShop() {
     this.isShopOpen = false;
     this.shopModal.classList.add("hidden");
+    this.removeShopFocus();
     this.renderer.draw();
   }
 
@@ -1733,7 +1827,19 @@ class GameController {
     });
 
     window.addEventListener("keydown", event => {
-      if (this.isShopOpen && event.key !== "Escape") return;
+      if (this.isShopOpen) {
+        if (event.key === "Escape") {
+          this.closeShop();
+        } else if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
+          this.navigateShop(-1);
+        } else if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") {
+          this.navigateShop(1);
+        } else if (event.key === "Enter" || event.key === " " || event.key === "j" || event.key === "J") {
+          this.confirmShopSelection();
+        }
+        return;
+      }
+
       switch (event.key) {
         case "ArrowLeft":
         case "a":
