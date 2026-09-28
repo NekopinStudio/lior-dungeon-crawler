@@ -25,8 +25,10 @@ class SoundEngine {
       const gain = this.ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+
       gain.gain.setValueAtTime(0.08, this.ctx.currentTime + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.6);
+
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(this.ctx.currentTime + idx * 0.08);
@@ -42,8 +44,10 @@ class SoundEngine {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(90, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.05);
+
     gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -58,8 +62,10 @@ class SoundEngine {
     osc.type = "sine";
     osc.frequency.setValueAtTime(750, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.12);
+
     gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -69,22 +75,24 @@ class SoundEngine {
   playShot(isMusket = false) {
     this.init();
     if (!this.ctx) return;
-    const duration = isMusket ? 0.25 : 0.16;
-    const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+    const bufferSize = Math.floor(this.ctx.sampleRate * (isMusket ? 0.25 : 0.16));
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
 
     const noise = this.ctx.createBufferSource();
     noise.buffer = buffer;
+
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(isMusket ? 650 : 950, this.ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + duration);
+    filter.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(isMusket ? 0.35 : 0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
 
     noise.connect(filter);
     filter.connect(gain);
@@ -100,8 +108,10 @@ class SoundEngine {
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(120, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+
     gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -115,15 +125,16 @@ class SoundEngine {
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      const start = this.ctx.currentTime + idx * 0.05;
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.12, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.25);
+
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-      osc.start(start);
-      osc.stop(start + 0.25);
+      osc.start(this.ctx.currentTime + idx * 0.05);
+      osc.stop(this.ctx.currentTime + idx * 0.05 + 0.25);
     });
   }
 
@@ -135,8 +146,10 @@ class SoundEngine {
     osc.type = "sine";
     osc.frequency.setValueAtTime(800, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(260, this.ctx.currentTime + 0.3);
+
     gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -151,8 +164,10 @@ class SoundEngine {
     osc.type = "sine";
     osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
     osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.07);
+
     gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -167,8 +182,10 @@ class SoundEngine {
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(180, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.7);
+
     gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -179,11 +196,12 @@ class SoundEngine {
 const sounds = new SoundEngine();
 
 const CARDINALS = ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"];
+
 const DIR_VECTORS = [
-  { x: 0, y: -1 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-  { x: -1, y: 0 }
+  { x: 0, y: -1 }, // N
+  { x: 1, y: 0 },  // E
+  { x: 0, y: 1 },  // S
+  { x: -1, y: 0 }  // W
 ];
 
 const TILE_OUT_OF_BOUNDS = -1;
@@ -236,13 +254,21 @@ function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
-function getRandomDungeonDimensions(min = 7, max = 50) {
-  const width = Math.floor(Math.random() * (max - min + 1)) + min;
-  let height = Math.floor(Math.random() * (max - min + 1)) + min;
-  while (height === width) {
-    height = Math.floor(Math.random() * (max - min + 1)) + min;
+function getRandomDungeonDimensions(min = 10, max = 30, floorNumber = 1) {
+  // Arena especial para el Mega Boss cada 10 pisos
+  if (floorNumber % 10 === 0) {
+    const arenaTier = Math.min(5, Math.floor(floorNumber / 10));
+    const width = 20 + arenaTier * 2;
+    const height = 14 + arenaTier * 2;
+    return { width, height };
   }
-  return { width, height };
+
+  const w = Math.floor(Math.random() * (max - min + 1)) + min;
+  let h = Math.floor(Math.random() * (max - min + 1)) + min;
+  while (h === w) {
+    h = Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  return { width: w, height: h };
 }
 
 class Dungeon {
@@ -252,12 +278,18 @@ class Dungeon {
     this.tiles = new Map();
     this.revealed = new Set();
     this.enemies = [];
+
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
   }
 
-  getKey(x, y) { return `${x},${y}`; }
-  isInsideBounds(x, y) { return x >= 0 && x < this.width && y >= 0 && y < this.height; }
+  getKey(x, y) {
+    return `${x},${y}`;
+  }
+
+  isInsideBounds(x, y) {
+    return x >= 0 && x < this.width && y >= 0 && y < this.height;
+  }
 
   getTile(x, y) {
     if (!this.isInsideBounds(x, y)) return TILE_OUT_OF_BOUNDS;
@@ -265,16 +297,22 @@ class Dungeon {
   }
 
   setTile(x, y, type) {
-    if (!this.isInsideBounds(x, y)) return;
-    this.tiles.set(this.getKey(x, y), type);
+    if (this.isInsideBounds(x, y)) {
+      this.tiles.set(this.getKey(x, y), type);
+    }
   }
 
-  hasTile(x, y) { return this.tiles.has(this.getKey(x, y)); }
+  hasTile(x, y) {
+    return this.tiles.has(this.getKey(x, y));
+  }
+
   markRevealed(x, y) {
-    if (!this.isInsideBounds(x, y)) return;
     this.revealed.add(this.getKey(x, y));
   }
-  isRevealed(x, y) { return this.revealed.has(this.getKey(x, y)); }
+
+  isRevealed(x, y) {
+    return this.revealed.has(this.getKey(x, y));
+  }
 }
 
 class Player {
@@ -286,24 +324,32 @@ class Player {
     this.hp = 61;
     this.ac = 10;
     this.gold = 0;
+    this.kills = 0;
+
     this.ammoPistol = 10;
     this.ammoMusket = 4;
     this.equippedWeapon = WEAPONS.SWORD;
+
     this.mistyStepCharges = 2;
     this.hasUsedLayOnHands = false;
   }
 
-  turnLeft() { this.direction = (this.direction + 3) % 4; }
-  turnRight() { this.direction = (this.direction + 1) % 4; }
+  turnLeft() {
+    this.direction = (this.direction + 3) % 4;
+  }
+
+  turnRight() {
+    this.direction = (this.direction + 1) % 4;
+  }
 
   getNextForwardPos(steps = 1) {
-    const vector = DIR_VECTORS[this.direction];
-    return { x: this.x + vector.x * steps, y: this.y + vector.y * steps };
+    const v = DIR_VECTORS[this.direction];
+    return { x: this.x + v.x * steps, y: this.y + v.y * steps };
   }
 
   getNextBackwardPos() {
-    const vector = DIR_VECTORS[this.direction];
-    return { x: this.x - vector.x, y: this.y - vector.y };
+    const v = DIR_VECTORS[this.direction];
+    return { x: this.x - v.x, y: this.y - v.y };
   }
 
   moveForward() {
@@ -313,9 +359,9 @@ class Player {
   }
 
   moveBackward() {
-    const previous = this.getNextBackwardPos();
-    this.x = previous.x;
-    this.y = previous.y;
+    const prev = this.getNextBackwardPos();
+    this.x = prev.x;
+    this.y = prev.y;
   }
 
   cycleWeapon() {
@@ -336,9 +382,11 @@ class DungeonGenerator {
   constructor(dungeon, floorNumber = 1) {
     this.dungeon = dungeon;
     this.floorNumber = floorNumber;
-    this.tier = Math.min(10, Math.floor((floorNumber - 1) / 10) + 1);
+    this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
+
     const area = dungeon.width * dungeon.height;
-    this.totalEnemies = Math.max(3, Math.floor(area / 15));
+    this.totalEnemies = Math.max(2, Math.floor(area / 20));
+
     this.populateEnemies();
     this.placeSpecialTiles();
   }
@@ -359,20 +407,26 @@ class DungeonGenerator {
       for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
         const mx = Math.floor(Math.random() * (this.dungeon.width - 6)) + 2;
         const my = Math.floor(Math.random() * (this.dungeon.height - 6)) + 2;
-        if (Math.hypot(mx - this.dungeon.entrance.x, my - this.dungeon.entrance.y) <= 6) continue;
-        if (Math.hypot(mx - this.dungeon.exit.x, my - this.dungeon.exit.y) <= 4) continue;
+
+        if (Math.hypot(mx - this.dungeon.entrance.x, my - this.dungeon.entrance.y) <= 6.0) continue;
+        if (Math.hypot(mx - this.dungeon.exit.x, my - this.dungeon.exit.y) <= 4.0) continue;
 
         const bossCells = this.generateCells(mx, my, 4);
+
         this.dungeon.enemies.push({
           id: Math.random().toString(36).substring(2, 9),
-          x: mx, y: my, startX: mx, startY: my,
+          x: mx, y: my,
+          startX: mx, startY: my,
           name: "MEGA BOSS (4x4)",
           hp: 16, maxHp: 16,
-          ac: 10 + (this.tier - 1),
-          range: 4,
-          isMegaBoss: true, isBoss: true,
-          size: 4, cells: bossCells,
-          summonedMinions: true
+          ac: 12 + this.tier,
+          visionRange: 4,
+          attackRange: 3,
+          isMegaBoss: true,
+          isBoss: true,
+          size: 4,
+          cells: bossCells,
+          fearCooldown: 0
         });
         megaBossPlaced = true;
       }
@@ -380,17 +434,19 @@ class DungeonGenerator {
 
     let sequenceCounter = 0;
     for (let i = 0; i < this.totalEnemies; i++) {
-      const isBoss = sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6;
+      const isBoss = (sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6);
       const enemySize = isBoss ? 2 : 1;
       let placed = false;
 
       for (let attempts = 0; attempts < 800 && !placed; attempts++) {
         const rx = Math.floor(Math.random() * (this.dungeon.width - enemySize - 2)) + 1;
         const ry = Math.floor(Math.random() * (this.dungeon.height - enemySize - 2)) + 1;
+
         if (Math.hypot(rx - this.dungeon.entrance.x, ry - this.dungeon.entrance.y) <= 3.5) continue;
         if (Math.hypot(rx - this.dungeon.exit.x, ry - this.dungeon.exit.y) <= 2.5) continue;
 
         const candidateCells = this.generateCells(rx, ry, enemySize);
+
         const collides = this.dungeon.enemies.some(existing =>
           existing.cells.some(c1 => candidateCells.some(c2 => c1.x === c2.x && c1.y === c2.y))
         );
@@ -399,29 +455,35 @@ class DungeonGenerator {
         if (isBoss) {
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
-            x: rx, y: ry, startX: rx, startY: ry,
+            x: rx, y: ry,
+            startX: rx, startY: ry,
             name: "Minijefe Intermedio (2x2)",
             hp: 8, maxHp: 8,
-            ac: 10 + (this.tier - 1) * 7,
-            range: 3,
-            isMegaBoss: false, isBoss: true,
-            size: 2, cells: candidateCells,
+            ac: 10 + this.tier,
+            visionRange: 3,
+            attackRange: 2,
+            isMegaBoss: false,
+            isBoss: true,
+            size: 2,
+            cells: candidateCells,
             fearCooldown: 0
           });
           sequenceCounter = 0;
         } else {
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
-            x: rx, y: ry, startX: rx, startY: ry,
+            x: rx, y: ry,
+            startX: rx, startY: ry,
             name: "Sombra Hostil",
             hp: 2, maxHp: 2,
-            ac: 8 + (this.tier - 1) * 5,
-            range: 2,
-            isMegaBoss: false, isBoss: false,
-            size: 1, cells: candidateCells,
-            fearCooldown: 0,
-            commandedByBoss: null,
-            summonedByMegaBoss: false
+            ac: 8 + this.tier,
+            visionRange: 2,
+            attackRange: 1,
+            isMegaBoss: false,
+            isBoss: false,
+            size: 1,
+            cells: candidateCells,
+            fearCooldown: 0
           });
           sequenceCounter++;
         }
@@ -431,25 +493,29 @@ class DungeonGenerator {
   }
 
   placeSpecialTiles() {
-    const miniBosses = this.dungeon.enemies.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
+    const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const targetShops = Math.floor(miniBosses.length / 3);
     const placedShopPositions = [];
 
     for (let i = 0; i < targetShops && i < miniBosses.length; i++) {
       const anchor = miniBosses[i];
       let placed = false;
+
       for (let attempts = 0; attempts < 300 && !placed; attempts++) {
         const ox = Math.floor(Math.random() * 11) - 5;
         const oy = Math.floor(Math.random() * 11) - 5;
-        if (Math.hypot(ox, oy) > 5) continue;
+        if (Math.hypot(ox, oy) > 5.0) continue;
+
         const sx = anchor.startX + ox;
         const sy = anchor.startY + oy;
 
         if (!this.dungeon.isInsideBounds(sx, sy)) continue;
         if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 3) continue;
         if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2) continue;
-        if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === sx && cell.y === sy))) continue;
-        if (placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3)) continue;
+        if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
+
+        const tooClose = placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3.0);
+        if (tooClose) continue;
 
         this.dungeon.setTile(sx, sy, TILE_SHOP);
         placedShopPositions.push({ x: sx, y: sy });
@@ -467,8 +533,10 @@ class DungeonGenerator {
       if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 3) continue;
       if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2) continue;
       if (this.dungeon.getTile(hx, hy) === TILE_SHOP) continue;
-      if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === hx && cell.y === hy))) continue;
-      if (placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5)) continue;
+      if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === hx && c.y === hy))) continue;
+
+      const tooClose = placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5.0);
+      if (tooClose) continue;
 
       this.dungeon.setTile(hx, hy, TILE_HEAL_FOUNTAIN);
       placedHealPositions.push({ x: hx, y: hy });
@@ -476,16 +544,19 @@ class DungeonGenerator {
   }
 
   ensureTileGenerated(x, y) {
-    if (!this.dungeon.isInsideBounds(x, y) || this.dungeon.hasTile(x, y)) return;
+    if (!this.dungeon.isInsideBounds(x, y)) return;
+    if (this.dungeon.hasTile(x, y)) return;
 
     if (x === this.dungeon.entrance.x && y === this.dungeon.entrance.y) {
       this.dungeon.setTile(x, y, TILE_ENTRANCE);
       return;
     }
+
     if (x === this.dungeon.exit.x && y === this.dungeon.exit.y) {
       this.dungeon.setTile(x, y, TILE_EXIT);
       return;
     }
+
     if (x === this.dungeon.entrance.x && y === this.dungeon.entrance.y - 1) {
       this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
@@ -494,11 +565,13 @@ class DungeonGenerator {
       this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
     }
+
     if (x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1) {
       this.dungeon.setTile(x, y, TILE_WALL);
       return;
     }
-    if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === x && cell.y === y))) {
+
+    if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === x && c.y === y))) {
       this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
     }
@@ -512,6 +585,7 @@ class CameraTransformer {
   static screenToWorld(screenX, screenY, player) {
     const lateralOffset = screenX - CAMERA_CONFIG.playerScreenX;
     const forwardOffset = -(screenY - CAMERA_CONFIG.playerScreenY);
+
     let worldX = player.x;
     let worldY = player.y;
 
@@ -521,36 +595,56 @@ class CameraTransformer {
       case 2: worldX -= lateralOffset; worldY += forwardOffset; break;
       case 3: worldX -= forwardOffset; worldY -= lateralOffset; break;
     }
+
     return { x: worldX, y: worldY };
+  }
+
+  static worldToScreen(worldX, worldY, player) {
+    const dx = worldX - player.x;
+    const dy = worldY - player.y;
+    let forwardOffset = 0;
+    let lateralOffset = 0;
+
+    switch (player.direction) {
+      case 0: forwardOffset = -dy; lateralOffset = dx; break;
+      case 1: forwardOffset = dx; lateralOffset = dy; break;
+      case 2: forwardOffset = dy; lateralOffset = -dx; break;
+      case 3: forwardOffset = -dx; lateralOffset = -dy; break;
+    }
+
+    const screenX = CAMERA_CONFIG.playerScreenX + lateralOffset;
+    const screenY = CAMERA_CONFIG.playerScreenY - forwardOffset;
+    return { screenX, screenY };
   }
 }
 
 class VisibilitySystem {
-  static hasLineOfSight(screenX0, screenY0, screenX1, screenY1, dungeon, player, generator) {
+  static hasLineOfSight(screenX0, screenY0, screenX1, screenY1, dungeon, player) {
     let x0 = screenX0;
     let y0 = screenY0;
     const x1 = screenX1;
     const y1 = screenY1;
+
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
     const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
+
     const maxSteps = dx + dy + 2;
     let steps = 0;
 
     while (true) {
       steps++;
       if (steps > maxSteps) return false;
+
       if (x0 === x1 && y0 === y1) return true;
 
       if (x0 !== screenX0 || y0 !== screenY0) {
         const worldPos = CameraTransformer.screenToWorld(x0, y0, player);
-        if (!dungeon.isInsideBounds(worldPos.x, worldPos.y)) return false;
-        if (generator && !dungeon.hasTile(worldPos.x, worldPos.y)) {
-          generator.ensureTileGenerated(worldPos.x, worldPos.y);
+        if (dungeon.getTile(worldPos.x, worldPos.y) === TILE_WALL) {
+          return false;
         }
-        if (dungeon.getTile(worldPos.x, worldPos.y) === TILE_WALL) return false;
       }
 
       const e2 = 2 * err;
@@ -559,7 +653,7 @@ class VisibilitySystem {
     }
   }
 
-  static hasWorldLineOfSight(x0, y0, x1, y1, dungeon, generator) {
+  static hasWorldLineOfSight(x0, y0, x1, y1, dungeon) {
     let curX = x0;
     let curY = y0;
     const dx = Math.abs(x1 - curX);
@@ -567,25 +661,23 @@ class VisibilitySystem {
     const sx = curX < x1 ? 1 : -1;
     const sy = curY < y1 ? 1 : -1;
     let err = dx - dy;
+
     const maxSteps = dx + dy + 2;
     let steps = 0;
 
     while (true) {
       steps++;
       if (steps > maxSteps) return false;
+
       if (curX === x1 && curY === y1) return true;
 
-      if (curX !== x0 || curY !== y0) {
-        if (!dungeon.isInsideBounds(curX, curY)) return false;
-        if (generator && !dungeon.hasTile(curX, curY)) {
-          generator.ensureTileGenerated(curX, curY);
-        }
-        if (dungeon.getTile(curX, curY) === TILE_WALL) return false;
+      if ((curX !== x0 || curY !== y0) && dungeon.getTile(curX, curY) === TILE_WALL) {
+        return false;
       }
 
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; curY += sy; }
+      if (e2 < dx) { err += dx; y0 += sy; }
     }
   }
 }
@@ -597,21 +689,17 @@ class Renderer {
     this.dungeon = dungeon;
     this.player = player;
     this.generator = generator;
+    this.isVictorySequence = false;
+    this.victoryStep = 0;
 
     this.offscreenCanvas = document.createElement("canvas");
+    this.offscreenCanvas.width = canvas.width;
+    this.offscreenCanvas.height = canvas.height;
     this.offCtx = this.offscreenCanvas.getContext("2d");
 
     this.currentAngle = player.direction * 90;
     this.targetAngle = player.direction * 90;
     this.isAnimating = false;
-  }
-
-  resizeCanvas(tileSize) {
-    CAMERA_CONFIG.tileSize = tileSize;
-    this.canvas.width = CAMERA_CONFIG.cols * tileSize;
-    this.canvas.height = CAMERA_CONFIG.rows * tileSize;
-    this.offscreenCanvas.width = this.canvas.width;
-    this.offscreenCanvas.height = this.canvas.height;
   }
 
   setDungeon(dungeon, generator) {
@@ -635,6 +723,7 @@ class Renderer {
       this.draw();
       return;
     }
+
     this.currentAngle += diff * 0.28;
     this.drawWithRotation(this.currentAngle - this.player.direction * 90);
     requestAnimationFrame(() => this.stepAnimation());
@@ -652,8 +741,10 @@ class Renderer {
     const pivotY = playerScreenY * tileSize + tileSize / 2;
 
     this.drawBase(this.offCtx);
+
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.save();
     ctx.translate(pivotX, pivotY);
     ctx.rotate((angleOffsetDeg * Math.PI) / 180);
@@ -665,33 +756,71 @@ class Renderer {
   drawBase(targetCtx) {
     const { canvas } = this;
     const { cols, rows, tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
+
     targetCtx.fillStyle = "#000000";
     targetCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const enemiesRemain = this.dungeon.enemies.some(enemy => enemy.hp > 0);
+    // ==========================================
+    // RENDERIZADO ESPECIAL: CINEMÁTICA PISO 100
+    // ==========================================
+    if (this.isVictorySequence) {
+      for (let sy = 0; sy < rows; sy++) {
+        for (let sx = 0; sx < cols; sx++) {
+          const px = sx * tileSize;
+          const py = sy * tileSize;
 
-    for (let sy = 0; sy < rows; sy++) {
-      for (let sx = 0; sx < cols; sx++) {
-        const worldCoord = CameraTransformer.screenToWorld(sx, sy, this.player);
-        if (this.dungeon.isInsideBounds(worldCoord.x, worldCoord.y)) {
-          this.generator.ensureTileGenerated(worldCoord.x, worldCoord.y);
+          if (sy < 4) {
+            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#38bdf8" : "#0284c7"; // Cielo
+          } else if (sy === 4 || sy === 5) {
+            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#facc15" : "#eab308"; // Destello / horizonte
+          } else {
+            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#22c55e" : "#16a34a"; // Pradera exterior
+          }
+          targetCtx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+          targetCtx.strokeRect(px, py, tileSize, tileSize);
         }
       }
+
+      // Dibujar a Lior avanzando en la cinemática
+      const liorPx = playerScreenX * tileSize + tileSize / 2;
+      const liorPy = (playerScreenY - this.victoryStep) * tileSize + tileSize / 2;
+
+      targetCtx.fillStyle = "#00b0ff";
+      targetCtx.beginPath();
+      targetCtx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.strokeStyle = "#ffffff";
+      targetCtx.lineWidth = 2.5;
+      targetCtx.beginPath();
+      targetCtx.moveTo(liorPx, liorPy);
+      targetCtx.lineTo(liorPx, liorPy - tileSize * 0.65);
+      targetCtx.stroke();
+      return;
     }
+
+    // ==========================================
+    // RENDERIZADO HABITUAL DE CALABOZO
+    // ==========================================
+    const enemiesRemain = this.dungeon.enemies.length > 0;
 
     for (let sy = 0; sy < rows; sy++) {
       for (let sx = 0; sx < cols; sx++) {
         const worldCoord = CameraTransformer.screenToWorld(sx, sy, this.player);
+        this.generator.ensureTileGenerated(worldCoord.x, worldCoord.y);
+
         const tileType = this.dungeon.getTile(worldCoord.x, worldCoord.y);
         const px = sx * tileSize;
         const py = sy * tileSize;
 
         const inLineOfSight = VisibilitySystem.hasLineOfSight(
-          playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player, this.generator
+          playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player
         );
 
         if (inLineOfSight) this.dungeon.markRevealed(worldCoord.x, worldCoord.y);
         const wasEverRevealed = this.dungeon.isRevealed(worldCoord.x, worldCoord.y);
+
         if (!inLineOfSight && !wasEverRevealed) continue;
 
         if (tileType === TILE_WALL) {
@@ -713,7 +842,7 @@ class Renderer {
           targetCtx.fillRect(px, py, tileSize, tileSize);
           if (inLineOfSight) {
             targetCtx.fillStyle = "#00e676";
-            targetCtx.font = `bold ${Math.floor(tileSize * 0.5)}px monospace`;
+            targetCtx.font = "bold 20px monospace";
             targetCtx.textAlign = "center";
             targetCtx.textBaseline = "middle";
             targetCtx.fillText("+", px + tileSize / 2, py + tileSize / 2);
@@ -723,7 +852,7 @@ class Renderer {
           targetCtx.fillRect(px, py, tileSize, tileSize);
           if (inLineOfSight) {
             targetCtx.fillStyle = "#ffd700";
-            targetCtx.font = `bold ${Math.floor(tileSize * 0.45)}px monospace`;
+            targetCtx.font = "bold 18px monospace";
             targetCtx.textAlign = "center";
             targetCtx.textBaseline = "middle";
             targetCtx.fillText("T", px + tileSize / 2, py + tileSize / 2);
@@ -743,19 +872,16 @@ class Renderer {
     }
 
     this.dungeon.enemies.forEach(enemy => {
-      if (enemy.hp <= 0 || !enemy.cells) return;
+      if (!enemy.cells) return;
       enemy.cells.forEach(cell => {
-        for (let sy = 0; sy < rows; sy++) {
-          for (let sx = 0; sx < cols; sx++) {
-            const wPos = CameraTransformer.screenToWorld(sx, sy, this.player);
-            if (wPos.x !== cell.x || wPos.y !== cell.y) continue;
-            const visible = VisibilitySystem.hasLineOfSight(
-              playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player, this.generator
-            );
-            if (!visible) continue;
-
-            const px = sx * tileSize;
-            const py = sy * tileSize;
+        const { screenX, screenY } = CameraTransformer.worldToScreen(cell.x, cell.y, this.player);
+        if (screenX >= 0 && screenX < cols && screenY >= 0 && screenY < rows) {
+          const visible = VisibilitySystem.hasLineOfSight(
+            playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
+          );
+          if (visible) {
+            const px = screenX * tileSize;
+            const py = screenY * tileSize;
 
             if (enemy.isMegaBoss) {
               targetCtx.fillStyle = "#800020";
@@ -772,9 +898,9 @@ class Renderer {
             } else {
               const cx = px + tileSize / 2;
               const cy = py + tileSize / 2;
-              targetCtx.fillStyle = "#ff3333";
+              targetCtx.fillStyle = enemy.fearCooldown > 0 ? "#ff99bb" : "#ff3333";
               targetCtx.beginPath();
-              targetCtx.arc(cx, cy, tileSize * 0.2, 0, Math.PI * 2);
+              targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
               targetCtx.fill();
             }
           }
@@ -784,6 +910,7 @@ class Renderer {
 
     const liorPx = playerScreenX * tileSize + tileSize / 2;
     const liorPy = playerScreenY * tileSize + tileSize / 2;
+
     targetCtx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
     targetCtx.beginPath();
     targetCtx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
@@ -803,39 +930,49 @@ class Renderer {
 class CombatSystem {
   static getMinDistToPlayer(player, enemy) {
     if (!enemy.cells || enemy.cells.length === 0) return 999;
-    let minDist = Infinity;
-    for (const cell of enemy.cells) {
-      minDist = Math.min(minDist, Math.hypot(cell.x - player.x, cell.y - player.y));
-    }
+    let minDist = 999;
+    enemy.cells.forEach(cell => {
+      const d = Math.hypot(cell.x - player.x, cell.y - player.y);
+      if (d < minDist) minDist = d;
+    });
     return minDist;
   }
 
-  static canEnemySeePlayer(player, dungeon, enemy, generator) {
-    if (!enemy.cells || enemy.cells.length === 0) return false;
+  static canEnemySeePlayer(player, dungeon, enemy) {
+    if (!enemy.cells) return false;
     return enemy.cells.some(cell =>
-      VisibilitySystem.hasWorldLineOfSight(cell.x, cell.y, player.x, player.y, dungeon, generator)
+      VisibilitySystem.hasWorldLineOfSight(cell.x, cell.y, player.x, player.y, dungeon)
     );
   }
 
   static isCellInWeaponRange(player, targetX, targetY, weapon) {
     const dx = targetX - player.x;
     const dy = targetY - player.y;
-    if (weapon.isMelee) return Math.hypot(dx, dy) <= weapon.range;
+
+    if (weapon.isMelee) {
+      return Math.hypot(dx, dy) <= weapon.range;
+    }
 
     let forward = 0;
     let lateral = 0;
+
     switch (player.direction) {
       case 0: forward = -dy; lateral = dx; break;
       case 1: forward = dx; lateral = dy; break;
       case 2: forward = dy; lateral = -dx; break;
       case 3: forward = -dx; lateral = -dy; break;
     }
-    return forward >= 1 && forward <= weapon.range && Math.abs(lateral) <= 1;
+
+    return (forward >= 1 && forward <= weapon.range && Math.abs(lateral) <= 1);
   }
 
   static executeAttack(game) {
     const { player, dungeon } = game;
-    if (player.hp <= 0) return;
+
+    if (player.hp <= 0) {
+      game.log("Lior ha caído. No puedes atacar.");
+      return;
+    }
 
     const weapon = player.equippedWeapon;
     const hitBonus = game.hitBonus;
@@ -859,61 +996,128 @@ class CombatSystem {
       sounds.playSword();
     }
 
-    if (weapon.isMelee) {
-      const targets = dungeon.enemies.filter(enemy =>
-        enemy.hp > 0 && enemy.cells && enemy.cells.some(cell =>
-          Math.hypot(cell.x - player.x, cell.y - player.y) <= 1.5
-        )
-      );
+    let deadMiniBosses = [];
 
-      if (targets.length === 0) {
+    if (weapon.isMelee) {
+      const targetsHit = [];
+
+      dungeon.enemies.forEach(enemy => {
+        if (!enemy.cells) return;
+        const touchesPlayer = enemy.cells.some(cell => {
+          const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+          return dist <= 1.5;
+        });
+
+        if (touchesPlayer) {
+          targetsHit.push(enemy);
+        }
+      });
+
+      if (targetsHit.length === 0) {
         game.log("Blandes tu espada en círculo, pero no hay enemigos al alcance.");
       } else {
-        game.log(`¡Giro de espada! Afecta a ${targets.length} criatura(s).`);
-        for (const target of targets) {
+        game.log(`¡Giro de espada! Afecta a ${targetsHit.length} criatura(s) adyacente(s).`);
+
+        targetsHit.forEach(target => {
           const d20 = rollDie(20);
-          const total = d20 + hitBonus;
-          if (d20 === 20 || total >= target.ac) {
-            const damage = rollDie(2) + dmgBonus;
-            target.hp -= damage;
-            game.log(`Impacto [${total} vs CA ${target.ac}]: ${damage} daño a ${target.name}. (HP ${Math.max(0, target.hp)})`);
+          const attackTotal = d20 + hitBonus;
+
+          if (d20 === 20 || attackTotal >= target.ac) {
+            const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
+            const totalDmg = baseDmg + dmgBonus;
+            target.hp -= totalDmg;
+            game.log(`> Impacto [${attackTotal} vs CA ${target.ac}]: ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
           } else {
-            game.log(`La espada rebota en ${target.name} [${total} vs CA ${target.ac}].`);
+            game.log(`> Tu espada rebota en la defensa de ${target.name} [${attackTotal} vs CA ${target.ac}].`);
           }
+        });
+
+        const deadEnemyIds = new Set();
+        targetsHit.forEach(e => {
+          if (e.hp <= 0) {
+            deadEnemyIds.add(e.id);
+            player.kills++;
+            if (e.isBoss && !e.isMegaBoss) {
+              deadMiniBosses.push(e);
+            }
+          }
+        });
+
+        if (deadEnemyIds.size > 0) {
+          sounds.playCoin();
+          dungeon.enemies = dungeon.enemies.filter(e => {
+            if (deadEnemyIds.has(e.id)) {
+              let goldDrop = e.isMegaBoss ? 10 : (e.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+              player.gold += goldDrop;
+              game.log(`¡${e.name} abatido! Botín: +${goldDrop} PO.`);
+              return false;
+            }
+            return true;
+          });
         }
       }
     } else {
       let target = null;
-      let nearest = Infinity;
-      for (const enemy of dungeon.enemies) {
-        if (enemy.hp <= 0) continue;
-        for (const cell of enemy.cells || []) {
-          if (!CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) continue;
-          if (!VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon, game.generator)) continue;
-          const distance = Math.hypot(cell.x - player.x, cell.y - player.y);
-          if (distance < nearest) {
-            nearest = distance;
-            target = enemy;
+      let minDist = 999;
+
+      dungeon.enemies.forEach(enemy => {
+        if (!enemy.cells) return;
+        enemy.cells.forEach(cell => {
+          if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
+            if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
+              const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+              if (dist < minDist) {
+                minDist = dist;
+                target = enemy;
+              }
+            }
           }
-        }
-      }
+        });
+      });
 
       if (!target) {
-        game.log(`Disparas tu ${weapon.name}... pero no hay un objetivo visible en el cono.`);
+        game.log(`Disparas tu ${weapon.name}... pero la bala se pierde sin impactar.`);
       } else {
         const d20 = rollDie(20);
-        const total = d20 + hitBonus;
-        if (d20 === 20 || total >= target.ac) {
-          const damage = (weapon === WEAPONS.PISTOL ? rollDie(4) : rollDie(6)) + dmgBonus;
-          target.hp -= damage;
-          game.log(`¡Impacto [${total} vs CA ${target.ac}]! ${damage} daño a ${target.name}. (HP ${Math.max(0, target.hp)})`);
+        const attackTotal = d20 + hitBonus;
+
+        if (d20 === 20 || attackTotal >= target.ac) {
+          const baseDmg = Math.floor(Math.random() * (weapon.maxDmg - weapon.minDmg + 1)) + weapon.minDmg;
+          const totalDmg = baseDmg + dmgBonus;
+          target.hp -= totalDmg;
+          game.log(`¡Impacto [${attackTotal} vs CA ${target.ac}]! ${totalDmg} daño a ${target.name}. (HP: ${Math.max(0, target.hp)})`);
+
+          if (target.hp <= 0) {
+            sounds.playCoin();
+            player.kills++;
+            let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+            player.gold += goldDrop;
+            game.log(`¡${target.name} eliminado! Botín: +${goldDrop} PO.`);
+            if (target.isBoss && !target.isMegaBoss) {
+              deadMiniBosses.push(target);
+            }
+            dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
+          }
         } else {
-          game.log(`El disparo rebotó [${total} vs CA ${target.ac}] contra ${target.name}.`);
+          game.log(`El disparo rebotó [${attackTotal} vs CA ${target.ac}] contra ${target.name}.`);
         }
       }
     }
 
-    game.resolveDeaths();
+    if (deadMiniBosses.length > 0) {
+      deadMiniBosses.forEach(mb => {
+        dungeon.enemies.forEach(other => {
+          if (!other.isBoss) {
+            const d = Math.hypot(other.x - mb.x, other.y - mb.y);
+            if (d <= 2.2) {
+              other.fearCooldown = 2;
+            }
+          }
+        });
+      });
+      game.log("¡El líder cayó! Sus esbirros cercanos entran en pánico y huyen durante 2 turnos.");
+    }
+
     game.processEnemiesTurn();
     game.updateHUD();
     game.renderer.draw();
@@ -925,268 +1129,37 @@ class GameController {
     this.floor = 1;
     this.canvas = document.getElementById("viewport");
     this.shopModal = document.getElementById("shop-modal");
+    this.victoryScreen = document.getElementById("victory-screen");
     this.isShopOpen = false;
-    this.turnNumber = 0;
-    this.megaBossGraceTurns = new Map();
-
-    // Navegación en tienda
-    this.shopSelectedIndex = 0;
-
-    // Dispositivo de entrada y mando
-    this.controlDevice = "touch";
-    this.lastGamepadAxes = { x: 0, y: 0 };
-    this.lastGamepadButtons = [];
+    this.isVictory = false;
+    this.megaBossEmptyTurns = 0;
 
     this.initDungeonFloor();
-    this.setupResponsiveness();
     this.bindEvents();
     this.bindShopEvents();
-    this.initDeviceDetection();
-    this.startGamepadLoop();
   }
 
-  get tier() { return Math.min(10, Math.floor((this.floor - 1) / 10) + 1); }
-  get playerAC() { return 10 + (this.tier - 1); }
-  get hitBonus() { return this.tier; }
-  get dmgBonus() { return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99)); }
-
-  getEnemyAC(type) {
-    const block = this.tier - 1;
-    if (type === "mega") return 10 + block;
-    if (type === "mini") return 10 + block * 7;
-    return 8 + block * 5;
+  get tier() {
+    return Math.min(10, Math.floor((this.floor - 1) / 10) + 1);
   }
 
-  setupResponsiveness() {
-    const resizeHandler = () => {
-      const hudEl = document.getElementById("hud");
-      const logEl = document.getElementById("log-container");
-      const dockEl = document.getElementById("control-dock");
-
-      const hudHeight = hudEl ? hudEl.offsetHeight : 30;
-      const logHeight = logEl ? logEl.offsetHeight : 40;
-      const dockHeight = dockEl ? dockEl.offsetHeight : 125;
-
-      const windowHeight = window.innerHeight;
-      const windowWidth = window.innerWidth;
-
-      const availableHeight = Math.max(140, windowHeight - hudHeight - logHeight - dockHeight - 16);
-      const availableWidth = Math.min(windowWidth - 8, 360);
-
-      const sizeByHeight = Math.floor(availableHeight / CAMERA_CONFIG.rows);
-      const sizeByWidth = Math.floor(availableWidth / CAMERA_CONFIG.cols);
-
-      const newTileSize = Math.max(16, Math.min(sizeByHeight, sizeByWidth, 42));
-      this.renderer.resizeCanvas(newTileSize);
-      this.renderer.draw();
-    };
-
-    window.addEventListener("resize", resizeHandler);
-    window.addEventListener("orientationchange", resizeHandler);
-    setTimeout(resizeHandler, 100);
+  get playerAC() {
+    return 9 + this.tier;
   }
 
-  initDeviceDetection() {
-    window.addEventListener("keydown", () => this.setControlDevice("keyboard"));
-    window.addEventListener("touchstart", () => this.setControlDevice("touch"));
-    window.addEventListener("gamepadconnected", () => this.setControlDevice("gamepad"));
-    window.addEventListener("gamepaddisconnected", () => this.setControlDevice("touch"));
+  get hitBonus() {
+    return this.tier;
   }
 
-  setControlDevice(device) {
-    if (this.controlDevice === device) return;
-    this.controlDevice = device;
-    this.updateButtonLabels();
-  }
-
-  updateButtonLabels() {
-    const btnUp = document.getElementById("btn-forward");
-    const btnDown = document.getElementById("btn-backward");
-    const btnLeft = document.getElementById("btn-left");
-    const btnRight = document.getElementById("btn-right");
-
-    const btnD = document.getElementById("btn-d");
-    const btnC = document.getElementById("btn-c");
-    const btnB = document.getElementById("btn-b");
-    const btnA = document.getElementById("btn-a");
-
-    if (this.controlDevice === "keyboard") {
-      btnUp.textContent = "W";
-      btnDown.textContent = "S";
-      btnLeft.textContent = "A";
-      btnRight.textContent = "D";
-
-      btnD.textContent = "I";
-      btnD.style.borderColor = "#ffd700";
-      btnD.style.color = "#ffd700";
-
-      btnC.textContent = "L";
-      btnC.style.borderColor = "#00e676";
-      btnC.style.color = "#00e676";
-
-      btnB.textContent = "K";
-      btnB.style.borderColor = "#00e5ff";
-      btnB.style.color = "#00e5ff";
-
-      btnA.textContent = "J";
-      btnA.style.borderColor = "#ff3333";
-      btnA.style.color = "#ff3333";
-    } else if (this.controlDevice === "gamepad") {
-      // Mandos estilo Xbox: Y (Amarillo), X (Azul), B (Rojo), A (Verde)
-      btnUp.textContent = "▲";
-      btnDown.textContent = "▼";
-      btnLeft.textContent = "◀";
-      btnRight.textContent = "▶";
-
-      btnD.textContent = "Y";
-      btnD.style.borderColor = "#ffd700";
-      btnD.style.color = "#ffd700";
-
-      btnC.textContent = "X";
-      btnC.style.borderColor = "#00b0ff";
-      btnC.style.color = "#00b0ff";
-
-      btnB.textContent = "B";
-      btnB.style.borderColor = "#ff3333";
-      btnB.style.color = "#ff3333";
-
-      btnA.textContent = "A";
-      btnA.style.borderColor = "#00e676";
-      btnA.style.color = "#00e676";
-    } else {
-      // Dispositivo móvil táctil estándar
-      btnUp.textContent = "▲";
-      btnDown.textContent = "▼";
-      btnLeft.textContent = "◀";
-      btnRight.textContent = "▶";
-
-      btnD.textContent = "D";
-      btnD.style.borderColor = "#ffd700";
-      btnD.style.color = "#ffd700";
-
-      btnC.textContent = "C";
-      btnC.style.borderColor = "#00e676";
-      btnC.style.color = "#00e676";
-
-      btnB.textContent = "B";
-      btnB.style.borderColor = "#00e5ff";
-      btnB.style.color = "#00e5ff";
-
-      btnA.textContent = "A";
-      btnA.style.borderColor = "#ff3333";
-      btnA.style.color = "#ff3333";
-    }
-  }
-
-  getShopElements() {
-    return [
-      { row: document.querySelectorAll(".shop-item")[0], btn: document.getElementById("buy-pistol-ammo") },
-      { row: document.querySelectorAll(".shop-item")[1], btn: document.getElementById("buy-musket-ammo") },
-      { row: document.querySelectorAll(".shop-item")[2], btn: document.getElementById("buy-potion") },
-      { row: document.getElementById("close-shop"), btn: document.getElementById("close-shop") }
-    ];
-  }
-
-  updateShopFocus() {
-    const items = this.getShopElements();
-    items.forEach((item, idx) => {
-      if (item && item.row) {
-        if (idx === this.shopSelectedIndex) {
-          item.row.classList.add("focused");
-        } else {
-          item.row.classList.remove("focused");
-        }
-      }
-    });
-  }
-
-  removeShopFocus() {
-    const items = this.getShopElements();
-    items.forEach(item => {
-      if (item && item.row) item.row.classList.remove("focused");
-    });
-  }
-
-  navigateShop(direction) {
-    const items = this.getShopElements();
-    this.shopSelectedIndex = (this.shopSelectedIndex + direction + items.length) % items.length;
-    sounds.playStep();
-    this.updateShopFocus();
-  }
-
-  confirmShopSelection() {
-    const items = this.getShopElements();
-    const current = items[this.shopSelectedIndex];
-    if (current && current.btn) {
-      current.btn.click();
-    }
-  }
-
-  startGamepadLoop() {
-    const pollGamepad = () => {
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      let gp = null;
-      for (let i = 0; i < gamepads.length; i++) {
-        if (gamepads[i]) { gp = gamepads[i]; break; }
-      }
-
-      if (gp) {
-        if (this.controlDevice !== "gamepad") this.setControlDevice("gamepad");
-
-        const axisX = gp.axes[0] || 0;
-        const axisY = gp.axes[1] || 0;
-        const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
-        const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
-        const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
-        const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
-
-        const threshold = 0.5;
-        const btnStates = gp.buttons.map(b => b.pressed);
-
-        // MODO NAVEGACIÓN EN TIENDA
-        if (this.isShopOpen) {
-          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) {
-            this.navigateShop(-1);
-          } else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) {
-            this.navigateShop(1);
-          }
-
-          if (btnStates[0] && !this.lastGamepadButtons[0]) {
-            this.confirmShopSelection();
-          }
-
-          if ((btnStates[1] && !this.lastGamepadButtons[1]) || (btnStates[9] && !this.lastGamepadButtons[9])) {
-            this.closeShop();
-          }
-        }
-        // MODO JUEGO REGULAR
-        else {
-          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
-          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
-          else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
-          else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
-
-          if (btnStates[0] && !this.lastGamepadButtons[0]) CombatSystem.executeAttack(this); // A (Verde): Atacar
-          if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();             // B (Rojo): Bruma
-          if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();            // X (Azul): Curar
-          if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();              // Y (Amarillo): Arma
-        }
-
-        this.lastGamepadAxes.x = (axisX < -threshold || dpadLeft) ? -1 : (axisX > threshold || dpadRight ? 1 : 0);
-        this.lastGamepadAxes.y = (axisY < -threshold || dpadUp) ? -1 : (axisY > threshold || dpadDown ? 1 : 0);
-        this.lastGamepadButtons = btnStates;
-      }
-      requestAnimationFrame(pollGamepad);
-    };
-    requestAnimationFrame(pollGamepad);
+  get dmgBonus() {
+    return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99));
   }
 
   initDungeonFloor() {
-    const { width, height } = getRandomDungeonDimensions(7, 50);
+    const { width, height } = getRandomDungeonDimensions(10, 30, this.floor);
     this.dungeon = new Dungeon(width, height);
     this.generator = new DungeonGenerator(this.dungeon, this.floor);
-    this.turnNumber = 0;
-    this.megaBossGraceTurns.clear();
+    this.megaBossEmptyTurns = 0;
 
     if (!this.player) {
       this.player = new Player(this.dungeon.entrance.x, this.dungeon.entrance.y);
@@ -1197,42 +1170,33 @@ class GameController {
       this.player.mistyStepCharges = 2;
     }
 
-    this.player.direction = 0;
     this.player.ac = this.playerAC;
 
     if (!this.renderer) {
       this.renderer = new Renderer(this.canvas, this.dungeon, this.player, this.generator);
     } else {
       this.renderer.player = this.player;
-      this.renderer.currentAngle = 0;
-      this.renderer.targetAngle = 0;
-      this.renderer.isAnimating = false;
       this.renderer.setDungeon(this.dungeon, this.generator);
     }
 
     this.updateHUD();
 
-    const megaBossPresent = this.dungeon.enemies.some(enemy => enemy.isMegaBoss);
-    const bossCount = this.dungeon.enemies.filter(enemy => enemy.isBoss && !enemy.isMegaBoss).length;
+    const megaBossPresent = this.dungeon.enemies.some(e => e.isMegaBoss);
+    const bossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
     let desc = `Piso ${this.floor} (Tier ${this.tier}): ${width}x${height}. CA Lior: ${this.player.ac}, Impacto: +${this.hitBonus}, Daño: +${this.dmgBonus}.`;
     if (megaBossPresent) desc += " (¡MEGA BOSS 4x4!)";
     if (bossCount > 0) desc += ` [${bossCount} Minijefes]`;
+
     this.log(desc);
     this.renderer.draw();
   }
 
   log(message) {
     const logBox = document.getElementById("log-entries");
-    if (!logBox) return;
     const entry = document.createElement("div");
     entry.textContent = `> ${message}`;
     logBox.appendChild(entry);
-    const container = document.getElementById("log-container");
-    if (container) container.scrollTop = container.scrollHeight;
-  }
-
-  getActiveEnemyCount() {
-    return this.dungeon.enemies.filter(enemy => enemy.hp > 0).length;
+    document.getElementById("log-container").scrollTop = 99999;
   }
 
   updateHUD() {
@@ -1245,9 +1209,9 @@ class GameController {
     document.getElementById("misty-charges").textContent = this.player.mistyStepCharges;
 
     const doorEl = document.getElementById("hud-door");
-    const remaining = this.getActiveEnemyCount();
-    if (remaining > 0) {
-      doorEl.textContent = `BLOQUEADA (${remaining})`;
+    const enemiesRemain = this.dungeon.enemies.length > 0;
+    if (enemiesRemain) {
+      doorEl.textContent = `BLOQUEADA (${this.dungeon.enemies.length})`;
       doorEl.className = "door-locked";
     } else {
       doorEl.textContent = "ABIERTA";
@@ -1260,8 +1224,7 @@ class GameController {
     const layBtn = document.getElementById("btn-c");
     layBtn.disabled = this.player.hasUsedLayOnHands || this.player.hp <= 0;
 
-    const goldDisplay = document.getElementById("shop-gold-display");
-    if (goldDisplay) goldDisplay.textContent = this.player.gold;
+    document.getElementById("shop-gold-display").textContent = this.player.gold;
   }
 
   openShop() {
@@ -1279,6 +1242,48 @@ class GameController {
     this.shopModal.classList.add("hidden");
     this.removeShopFocus();
     this.renderer.draw();
+  }
+
+  getShopElements() {
+    return [
+      { row: document.querySelectorAll(".shop-item")[0], btn: document.getElementById("buy-pistol-ammo") },
+      { row: document.querySelectorAll(".shop-item")[1], btn: document.getElementById("buy-musket-ammo") },
+      { row: document.querySelectorAll(".shop-item")[2], btn: document.getElementById("buy-potion") },
+      { row: document.getElementById("close-shop"), btn: document.getElementById("close-shop") }
+    ];
+  }
+
+  updateShopFocus() {
+    const items = this.getShopElements();
+    items.forEach((item, idx) => {
+      if (idx === this.shopSelectedIndex) {
+        if (item.row) item.row.classList.add("focused");
+      } else {
+        if (item.row) item.row.classList.remove("focused");
+      }
+    });
+  }
+
+  removeShopFocus() {
+    const items = this.getShopElements();
+    items.forEach(item => {
+      if (item.row) item.row.classList.remove("focused");
+    });
+  }
+
+  navigateShop(direction) {
+    const items = this.getShopElements();
+    this.shopSelectedIndex = (this.shopSelectedIndex + direction + items.length) % items.length;
+    sounds.playStep();
+    this.updateShopFocus();
+  }
+
+  confirmShopSelection() {
+    const items = this.getShopElements();
+    const current = items[this.shopSelectedIndex];
+    if (current && current.btn) {
+      current.btn.click();
+    }
   }
 
   bindShopEvents() {
@@ -1313,9 +1318,9 @@ class GameController {
           return;
         }
         this.player.gold -= 2;
+        sounds.playHeal();
         const heal = rollDie(8) + 5;
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
-        sounds.playHeal();
         this.log(`Poción bebida: +${heal} HP restaurados.`);
         this.updateHUD();
       } else {
@@ -1323,115 +1328,171 @@ class GameController {
       }
     });
 
-    document.getElementById("close-shop").addEventListener("click", () => this.closeShop());
+    document.getElementById("close-shop").addEventListener("click", () => {
+      this.closeShop();
+    });
   }
 
-  isPerimeterWall(x, y) {
-    return x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1;
+  // ==========================================
+  // INVOCACIÓN ESCALONADA POR DADO REDUCIDO
+  // ==========================================
+  spawnMegaBossAdds(megaBoss) {
+    const bossEncounter = Math.floor(this.floor / 10);
+    const maxDieSides = Math.min(5, Math.floor((bossEncounter + 1) / 2));
+    const addsToSpawn = rollDie(maxDieSides);
+
+    this.log(`¡El Mega Boss invoca refuerzos [1d${maxDieSides} = ${addsToSpawn} Sombra(s)]!`);
+    let spawned = 0;
+
+    for (let dy = -3; dy <= 6 && spawned < addsToSpawn; dy++) {
+      for (let dx = -3; dx <= 6 && spawned < addsToSpawn; dx++) {
+        const sx = megaBoss.x + dx;
+        const sy = megaBoss.y + dy;
+
+        if (!this.dungeon.isInsideBounds(sx, sy)) continue;
+        this.generator.ensureTileGenerated(sx, sy);
+        if (this.dungeon.getTile(sx, sy) === TILE_WALL) continue;
+        if (sx === this.player.x && sy === this.player.y) continue;
+
+        const isOccupied = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === sx && c.y === sy));
+        if (isOccupied) continue;
+
+        this.dungeon.enemies.push({
+          id: Math.random().toString(36).substring(2, 9),
+          x: sx, y: sy,
+          startX: sx, startY: sy,
+          name: "Sombra Invocada",
+          hp: 2, maxHp: 2,
+          ac: 8 + this.tier,
+          visionRange: 3,
+          attackRange: 1,
+          isMegaBoss: false,
+          isBoss: false,
+          size: 1,
+          cells: [{ x: sx, y: sy }],
+          fearCooldown: 0
+        });
+        spawned++;
+      }
+    }
   }
 
-  isOccupiedByEnemy(x, y, ignoreEnemy = null) {
-    return this.dungeon.enemies.some(enemy =>
-      enemy !== ignoreEnemy && enemy.hp > 0 && (enemy.cells || []).some(cell => cell.x === x && cell.y === y)
-    );
-  }
+  // ==========================================
+  // CINEMÁTICA FINAL: SALIDA DEL CALABOZO (PISO 100)
+  // ==========================================
+  startVictorySequence() {
+    this.isVictory = true;
+    document.getElementById("control-dock").style.display = "none";
+    document.getElementById("hud").style.display = "none";
 
-  isFreeDestination(x, y, ignoreEnemy = null) {
-    if (!this.dungeon.isInsideBounds(x, y)) return false;
-    this.generator.ensureTileGenerated(x, y);
-    const tile = this.dungeon.getTile(x, y);
-    return tile !== TILE_WALL && tile !== TILE_OUT_OF_BOUNDS && !this.isOccupiedByEnemy(x, y, ignoreEnemy);
+    this.log("¡HAS DERROTADO LA ÚLTIMA PESADILLA! Una brisa cálida penetra el calabozo...");
+
+    this.renderer.isVictorySequence = true;
+    this.renderer.victoryStep = 0;
+    this.renderer.draw();
+
+    let steps = 0;
+    const walkInterval = setInterval(() => {
+      steps++;
+      this.renderer.victoryStep = steps;
+      sounds.playStep();
+      this.renderer.draw();
+
+      if (steps >= 6) {
+        clearInterval(walkInterval);
+        setTimeout(() => {
+          this.victoryScreen.classList.remove("hidden");
+          this.victoryScreen.classList.add("visible");
+          document.getElementById("victory-stats-display").innerHTML = `
+            Pisos conquistados: 100<br>
+            Enemigos purificados: ${this.player.kills}<br>
+            Oro reunido: ${this.player.gold} PO
+          `;
+          sounds.playLogoJingle();
+        }, 800);
+      }
+    }, 400);
   }
 
   castMistyStep() {
-    if (this.isShopOpen || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
-    const dir = DIR_VECTORS[this.player.direction];
-    let wallEncountered = false;
-    let destination = null;
-    let lastFree = null;
+    if (this.isShopOpen || this.isVictory || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
 
+    sounds.playMisty();
     this.log("Invocas Paso Brumoso...");
+    this.player.mistyStepCharges--;
+
+    const dirVec = DIR_VECTORS[this.player.direction];
+    let targetX = this.player.x;
+    let targetY = this.player.y;
+    let foundOpenTile = false;
+    let encounteredObstacle = false;
 
     for (let step = 1; step <= 8; step++) {
-      const x = this.player.x + dir.x * step;
-      const y = this.player.y + dir.y * step;
+      const cx = this.player.x + dirVec.x * step;
+      const cy = this.player.y + dirVec.y * step;
 
-      if (!this.dungeon.isInsideBounds(x, y)) {
-        this.player.mistyStepCharges--;
+      if (!this.dungeon.isInsideBounds(cx, cy)) {
+        this.log("¡Caíste al abismo exterior!");
         this.player.hp = 0;
-        sounds.playMisty();
         sounds.playDeath();
-        this.log("¡Paso Brumoso intenta atravesar el muro perimetral! Lior muere.");
         this.updateHUD();
         this.renderer.draw();
         return;
       }
 
-      this.generator.ensureTileGenerated(x, y);
-      const tile = this.dungeon.getTile(x, y);
+      this.generator.ensureTileGenerated(cx, cy);
+      const tile = this.dungeon.getTile(cx, cy);
 
       if (tile === TILE_WALL) {
-        if (this.isPerimeterWall(x, y)) {
-          this.player.mistyStepCharges--;
-          this.player.hp = 0;
-          sounds.playMisty();
-          sounds.playDeath();
-          this.log("¡El muro perimetral es infranqueable! Lior muere al intentar atravesarlo.");
-          this.updateHUD();
-          this.renderer.draw();
-          return;
-        }
-        wallEncountered = true;
-        continue;
-      }
-
-      if (!this.isOccupiedByEnemy(x, y)) {
-        if (wallEncountered) {
-          destination = { x, y };
-          break;
-        }
-        lastFree = { x, y };
+        encounteredObstacle = true;
+      } else if (encounteredObstacle && tile === TILE_FLOOR) {
+        targetX = cx;
+        targetY = cy;
+        foundOpenTile = true;
+        break;
       }
     }
 
-    const finalDestination = wallEncountered ? destination : lastFree;
-    if (!finalDestination) {
-      this.log("Paso Brumoso no encontró una casilla de destino válida.");
-      return;
+    if (foundOpenTile) {
+      this.player.x = targetX;
+      this.player.y = targetY;
+      this.log("Apareces al otro lado del muro.");
+    } else {
+      const freeStep = this.player.getNextForwardPos(3);
+      if (this.dungeon.isInsideBounds(freeStep.x, freeStep.y) && this.dungeon.getTile(freeStep.x, freeStep.y) === TILE_FLOOR) {
+        this.player.x = freeStep.x;
+        this.player.y = freeStep.y;
+        this.log("Avanzas 3 casillas entre la bruma.");
+      } else {
+        this.log("No se encontró destino despejado.");
+      }
     }
 
-    this.player.mistyStepCharges--;
-    this.player.x = finalDestination.x;
-    this.player.y = finalDestination.y;
-    sounds.playMisty();
-    this.log(`Paso Brumoso: apareces en (${this.player.x}, ${this.player.y}).`);
-
-    this.handleTileInteractions();
     this.updateHUD();
     this.renderer.draw();
   }
 
   useLayOnHands() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
     if (this.player.useLayOnHands()) {
       sounds.playHeal();
       this.log("Manos Curativas: +6 HP.");
       this.updateHUD();
-      this.renderer.draw();
     } else {
-      this.log("Manos Curativas ya fue usado en este piso o Lior ya está al máximo.");
+      this.log("Manos Curativas ya fue usado en este piso.");
     }
   }
 
   cycleWeapon() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
     this.player.cycleWeapon();
+    sounds.playStep();
     this.log(`Equipada: ${this.player.equippedWeapon.label}`);
     this.updateHUD();
   }
 
   turnLeft() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
     this.player.turnLeft();
     sounds.playStep();
     this.log(`Giras a la izquierda. Miras al ${CARDINALS[this.player.direction]}.`);
@@ -1440,7 +1501,7 @@ class GameController {
   }
 
   turnRight() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
     this.player.turnRight();
     sounds.playStep();
     this.log(`Giras a la derecha. Miras al ${CARDINALS[this.player.direction]}.`);
@@ -1448,332 +1509,201 @@ class GameController {
     this.renderer.animateTurn(1);
   }
 
-  getEnemyNeighbors(enemy, radius = 2) {
-    return this.dungeon.enemies.filter(other =>
-      other !== enemy && other.hp > 0 && other.cells &&
-      CombatSystem.getMinDistToPlayer({ x: enemy.x, y: enemy.y }, other) <= radius
-    );
-  }
+  processEnemiesTurn() {
+    if (this.player.hp <= 0 || this.isVictory) return;
 
-  getAdjacentShadows(enemy, radius = 1.1) {
-    return this.dungeon.enemies.filter(other =>
-      other !== enemy && other.hp > 0 && !other.isBoss && !other.isMegaBoss &&
-      Math.hypot(other.x - enemy.x, other.y - enemy.y) <= radius
-    );
-  }
-
-  canEnemyMoveTo(enemy, dx, dy) {
-    const candidateCells = enemy.cells.map(cell => ({ x: cell.x + dx, y: cell.y + dy }));
-    for (const cell of candidateCells) {
-      if (!this.dungeon.isInsideBounds(cell.x, cell.y)) return false;
-      this.generator.ensureTileGenerated(cell.x, cell.y);
-      if (this.dungeon.getTile(cell.x, cell.y) === TILE_WALL) return false;
-      if (cell.x === this.player.x && cell.y === this.player.y) return false;
-    }
-    for (const other of this.dungeon.enemies) {
-      if (other === enemy || other.hp <= 0) continue;
-      if ((other.cells || []).some(otherCell =>
-        candidateCells.some(candidate => candidate.x === otherCell.x && candidate.y === otherCell.y)
-      )) return false;
-    }
-    return true;
-  }
-
-  moveEnemy(enemy, dx, dy) {
-    if (!this.canEnemyMoveTo(enemy, dx, dy)) return false;
-    enemy.x += dx;
-    enemy.y += dy;
-    enemy.cells = enemy.cells.map(cell => ({ x: cell.x + dx, y: cell.y + dy }));
-    return true;
-  }
-
-  chooseMovement(enemy, mode) {
-    const dirs = [
-      { dx: 0, dy: -1 },
-      { dx: 1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 }
-    ];
-    const px = this.player.x;
-    const py = this.player.y;
-
-    if (mode === "flee") {
-      dirs.sort((a, b) => {
-        const da = Math.hypot(enemy.x + a.dx - px, enemy.y + a.dy - py);
-        const db = Math.hypot(enemy.x + b.dx - px, enemy.y + b.dy - py);
-        return db - da;
-      });
-    } else if (mode === "approach") {
-      dirs.sort((a, b) => {
-        const da = Math.hypot(enemy.x + a.dx - px, enemy.y + a.dy - py);
-        const db = Math.hypot(enemy.x + b.dx - px, enemy.y + b.dy - py);
-        return da - db;
-      });
-    } else {
-      for (let i = dirs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
-      }
-    }
-
-    for (const dir of dirs) {
-      if (this.moveEnemy(enemy, dir.dx, dir.dy)) return true;
-    }
-    return false;
-  }
-
-  enemyAttack(enemy, ranged = false) {
-    const d20 = rollDie(20);
-    const totalAtk = d20 + this.hitBonus;
-    if (d20 !== 20 && totalAtk < this.player.ac) {
-      this.log(`${enemy.name} falla [${totalAtk} vs CA ${this.player.ac}].`);
-      return;
-    }
-
-    let baseDamage;
-    if (enemy.isMegaBoss) baseDamage = ranged ? rollDie(4) : rollDie(6) + 2;
-    else if (enemy.isBoss) baseDamage = ranged ? rollDie(3) : rollDie(4) + 1;
-    else baseDamage = rollDie(2);
-
-    const damage = baseDamage + this.dmgBonus;
-    this.player.hp = Math.max(0, this.player.hp - damage);
-    sounds.playHurt();
-    this.log(`${enemy.name} ${ranged ? "a distancia" : "c/c"}: [${totalAtk} vs CA ${this.player.ac}] ¡${damage} daño!`);
-  }
-
-  processShadowAI(enemy) {
-    const distance = CombatSystem.getMinDistToPlayer(this.player, enemy);
-    const sees = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy, this.generator);
-
-    if (enemy.fearCooldown > 0) {
-      this.chooseMovement(enemy, "flee");
-      enemy.fearCooldown--;
-      return;
-    }
-
-    if (!sees || distance > 2) {
-      this.chooseMovement(enemy, "patrol");
-      return;
-    }
-
-    const allies = this.getEnemyNeighbors(enemy, 2).filter(other => !other.isMegaBoss);
-    if (allies.length > 0) {
-      if (distance <= 1.5) this.enemyAttack(enemy, false);
-      else this.chooseMovement(enemy, "approach");
-      return;
-    }
-
-    this.chooseMovement(enemy, "flee");
-  }
-
-  processMiniBossAI(enemy) {
-    const distance = CombatSystem.getMinDistToPlayer(this.player, enemy);
-    const sees = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy, this.generator);
-
-    if (!sees || distance > 3) {
-      this.chooseMovement(enemy, "patrol");
-      return;
-    }
-
-    const escort = this.getAdjacentShadows(enemy, 1.1);
-    for (const shadow of escort) shadow.commandedByBoss = enemy.id;
-
-    if (distance <= 1.5) this.enemyAttack(enemy, false);
-    else this.chooseMovement(enemy, "approach");
-  }
-
-  processMegaBossAI(enemy) {
-    const distance = CombatSystem.getMinDistToPlayer(this.player, enemy);
-    const sees = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy, this.generator);
-
-    if (sees && distance <= 4) {
-      if (distance <= 1.5) this.enemyAttack(enemy, false);
-      else this.chooseMovement(enemy, "approach");
-    } else {
-      this.chooseMovement(enemy, "patrol");
-    }
-  }
-
-  processCommandedShadowAI(enemy) {
-    const boss = this.dungeon.enemies.find(candidate => candidate.id === enemy.commandedByBoss && candidate.hp > 0);
-    if (!boss) {
-      enemy.commandedByBoss = null;
-      return this.processShadowAI(enemy);
-    }
-    const distance = CombatSystem.getMinDistToPlayer(this.player, enemy);
-    if (distance <= 1.5) this.enemyAttack(enemy, false);
-    else this.chooseMovement(enemy, "approach");
-  }
-
-  processEnemy(enemy) {
-    if (enemy.hp <= 0) return;
-    if (enemy.isMegaBoss) return this.processMegaBossAI(enemy);
-    if (enemy.isBoss) return this.processMiniBossAI(enemy);
-    if (enemy.commandedByBoss) return this.processCommandedShadowAI(enemy);
-    return this.processShadowAI(enemy);
-  }
-
-  resolveDeaths() {
-    const dead = this.dungeon.enemies.filter(enemy => enemy.hp <= 0);
-    if (dead.length === 0) return;
-
-    const deadMegaBosses = dead.filter(enemy => enemy.isMegaBoss);
-    const deadMiniBosses = dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
-    const deadIds = new Set(dead.map(enemy => enemy.id));
-
-    for (const boss of deadMiniBosses) {
-      for (const shadow of this.dungeon.enemies) {
-        if (shadow.isBoss || shadow.isMegaBoss || shadow.hp <= 0) continue;
-        if (Math.hypot(shadow.x - boss.x, shadow.y - boss.y) <= 2.2) {
-          shadow.fearCooldown = 2;
-          shadow.commandedByBoss = null;
-          this.log(`${shadow.name} entra en pánico durante 2 acciones de Lior.`);
+    try {
+      const megaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
+      if (megaBoss) {
+        const otherEnemiesCount = this.dungeon.enemies.filter(e => !e.isMegaBoss).length;
+        if (otherEnemiesCount === 0) {
+          this.megaBossEmptyTurns++;
+          if (this.megaBossEmptyTurns > 1) {
+            this.spawnMegaBossAdds(megaBoss);
+            this.megaBossEmptyTurns = 0;
+          }
+        } else {
+          this.megaBossEmptyTurns = 0;
         }
       }
+
+      const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
+
+      this.dungeon.enemies.forEach(enemy => {
+        if (this.player.hp <= 0) return;
+        if (!enemy.cells || enemy.cells.length === 0) return;
+
+        if (enemy.fearCooldown > 0) {
+          enemy.fearCooldown--;
+        }
+
+        const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
+        const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+
+        if (hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0) {
+          const eD20 = rollDie(20);
+          const hitMod = this.hitBonus;
+          const dmgMod = this.dmgBonus;
+          const totalAtk = eD20 + hitMod;
+
+          if (distToPlayer <= 1.5) {
+            if (totalAtk >= this.player.ac) {
+              sounds.playHurt();
+              const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
+              const totalDmg = baseDmg + dmgMod;
+              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              this.log(`${enemy.name} c/c: [${totalAtk} vs CA ${this.player.ac}] ¡${totalDmg} daño recibido!`);
+            } else {
+              this.log(`${enemy.name} c/c falla contra tu coraza [${totalAtk} vs CA ${this.player.ac}].`);
+            }
+          } else {
+            if (totalAtk >= this.player.ac) {
+              sounds.playHurt();
+              const baseDmg = enemy.isMegaBoss ? rollDie(4) : rollDie(2);
+              const totalDmg = baseDmg + dmgMod;
+              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              this.log(`${enemy.name} proyectil: [${totalAtk} vs CA ${this.player.ac}] ¡Impacto de ${totalDmg} daño!`);
+            } else {
+              this.log(`${enemy.name} proyectil desviado [${totalAtk} vs CA ${this.player.ac}].`);
+            }
+          }
+          return;
+        }
+
+        const directions = [
+          { dx: 0, dy: -1 },
+          { dx: 1, dy: 0 },
+          { dx: 0, dy: 1 },
+          { dx: -1, dy: 0 }
+        ];
+
+        let mode = "patrol";
+
+        if (enemy.fearCooldown > 0) {
+          mode = "flee";
+        } else if (enemy.isBoss) {
+          if (distToPlayer <= enemy.visionRange) {
+            mode = "chase";
+          }
+        } else {
+          const escortingMiniBoss = miniBosses.find(mb => Math.hypot(mb.x - enemy.x, mb.y - enemy.y) <= 1.8);
+
+          if (escortingMiniBoss && Math.hypot(escortingMiniBoss.x - this.player.x, escortingMiniBoss.y - this.player.y) <= escortingMiniBoss.visionRange) {
+            mode = "chase";
+          } else if (distToPlayer <= enemy.visionRange) {
+            const hasAllyNearby = this.dungeon.enemies.some(other => {
+              if (other === enemy || !other.cells) return false;
+              return Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 2.2;
+            });
+
+            mode = hasAllyNearby ? "chase" : "flee";
+          }
+        }
+
+        if (mode === "flee") {
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distB - distA;
+          });
+        } else if (mode === "chase") {
+          directions.sort((a, b) => {
+            const distA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
+            const distB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
+            return distA - distB;
+          });
+        } else {
+          directions.sort(() => Math.random() - 0.5);
+        }
+
+        for (const dir of directions) {
+          const candidateCells = enemy.cells.map(c => ({ x: c.x + dir.dx, y: c.y + dir.dy }));
+
+          const isValid = candidateCells.every(c => {
+            if (!this.dungeon.isInsideBounds(c.x, c.y)) return false;
+            this.generator.ensureTileGenerated(c.x, c.y);
+            if (this.dungeon.getTile(c.x, c.y) === TILE_WALL) return false;
+            if (c.x === this.player.x && c.y === this.player.y) return false;
+            return true;
+          });
+
+          if (!isValid) continue;
+
+          const collidesWithOther = this.dungeon.enemies.some(other => {
+            if (other === enemy || !other.cells) return false;
+            return other.cells.some(oc => candidateCells.some(nc => nc.x === oc.x && nc.y === oc.y));
+          });
+
+          if (!collidesWithOther) {
+            enemy.x += dir.dx;
+            enemy.y += dir.dy;
+            enemy.cells = candidateCells;
+            break;
+          }
+        }
+      });
+    } catch (err) {
+      console.error("Error en turno enemigo:", err);
     }
-
-    for (const mega of deadMegaBosses) {
-      const followers = this.dungeon.enemies.filter(enemy =>
-        !enemy.isMegaBoss && !enemy.isBoss && enemy.hp > 0 &&
-        enemy.summonedByMegaBoss && enemy.commandedByBoss === mega.id
-      );
-      for (const follower of followers) {
-        follower.hp = 0;
-        deadIds.add(follower.id);
-        this.log(`${follower.name} desaparece con el Mega Boss.`);
-      }
-    }
-
-    for (const enemy of dead) {
-      const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-      this.player.gold += goldDrop;
-      this.log(`¡${enemy.name} eliminado! Botín: +${goldDrop} PO.`);
-    }
-
-    this.dungeon.enemies = this.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
-  }
-
-  handleMegaBossWaves() {
-    const bosses = this.dungeon.enemies.filter(enemy => enemy.isMegaBoss && enemy.hp > 0);
-    if (bosses.length === 0) return;
-
-    for (const boss of bosses) {
-      const hasMinions = this.dungeon.enemies.some(enemy =>
-        enemy.hp > 0 && !enemy.isMegaBoss && !enemy.isBoss &&
-        enemy.summonedByMegaBoss && enemy.commandedByBoss === boss.id
-      );
-
-      if (hasMinions) {
-        this.megaBossGraceTurns.set(boss.id, 0);
-        continue;
-      }
-
-      const grace = (this.megaBossGraceTurns.get(boss.id) || 0) + 1;
-      this.megaBossGraceTurns.set(boss.id, grace);
-      if (grace <= 1) continue;
-
-      const count = rollDie(6);
-      let summoned = 0;
-
-      for (let attempt = 0; attempt < 1200 && summoned < count; attempt++) {
-        const dx = Math.floor(Math.random() * 11) - 5;
-        const dy = Math.floor(Math.random() * 11) - 5;
-        if (dx === 0 && dy === 0) continue;
-        const x = boss.x + dx;
-        const y = boss.y + dy;
-
-        if (!this.dungeon.isInsideBounds(x, y)) continue;
-        if (Math.hypot(x - boss.x, y - boss.y) > 5.5) continue;
-        if (!this.isFreeDestination(x, y)) continue;
-        if (Math.hypot(x - this.player.x, y - this.player.y) <= 1.5) continue;
-
-        const shadow = {
-          id: Math.random().toString(36).substring(2, 9),
-          x, y, startX: x, startY: y,
-          name: "Sombra Invocada",
-          hp: 2, maxHp: 2,
-          ac: this.getEnemyAC("shadow"),
-          range: 2,
-          isMegaBoss: false, isBoss: false,
-          size: 1, cells: [{ x, y }],
-          commandedByBoss: boss.id,
-          fearCooldown: 0,
-          summonedByMegaBoss: true
-        };
-        this.dungeon.enemies.push(shadow);
-        summoned++;
-      }
-
-      this.megaBossGraceTurns.set(boss.id, 0);
-      this.log(`¡El Mega Boss lanza 1d6 y convoca ${summoned}/${count} sombras!`);
-    }
-  }
-
-  processEnemiesTurn() {
-    if (this.player.hp <= 0) return;
-    this.turnNumber++;
-    const snapshot = [...this.dungeon.enemies];
-
-    for (const enemy of snapshot) {
-      if (this.player.hp <= 0) break;
-      if (!this.dungeon.enemies.includes(enemy) || enemy.hp <= 0) continue;
-      try {
-        this.processEnemy(enemy);
-      } catch (error) {
-        console.error("Error procesando enemigo:", enemy, error);
-      }
-    }
-
-    this.resolveDeaths();
-    this.handleMegaBossWaves();
-    this.resolveDeaths();
 
     if (this.player.hp <= 0) {
       sounds.playDeath();
       this.log("¡Lior ha caído en combate! Fin de la partida.");
     }
-    this.updateHUD();
-    this.renderer.draw();
   }
 
   moveForward() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+
     const next = this.player.getNextForwardPos(1);
+
     if (!this.dungeon.isInsideBounds(next.x, next.y)) {
       this.log("El muro exterior te detiene.");
       return;
     }
 
     this.generator.ensureTileGenerated(next.x, next.y);
+
     if (this.dungeon.getTile(next.x, next.y) === TILE_WALL) {
       this.log("Un muro blanco bloquea el camino.");
       return;
     }
-    if (this.isOccupiedByEnemy(next.x, next.y)) {
+
+    const enemyBlocking = this.dungeon.enemies.some(e =>
+      e.cells && e.cells.some(c => c.x === next.x && c.y === next.y)
+    );
+    if (enemyBlocking) {
       this.log("¡Un enemigo bloquea el paso! Ataca con espada o arma.");
       return;
     }
 
     this.player.moveForward();
     sounds.playStep();
-    const changedFloor = this.handleTileInteractions();
-    if (!changedFloor && this.player.hp > 0) this.processEnemiesTurn();
+    this.processEnemiesTurn();
+    this.handleTileInteractions();
   }
 
   moveBackward() {
-    if (this.isShopOpen || this.player.hp <= 0) return;
-    const previous = this.player.getNextBackwardPos();
-    if (!this.dungeon.isInsideBounds(previous.x, previous.y)) {
+    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+
+    const prev = this.player.getNextBackwardPos();
+
+    if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
       this.log("Un muro exterior detiene tu retroceso.");
       return;
     }
 
-    this.generator.ensureTileGenerated(previous.x, previous.y);
-    if (this.dungeon.getTile(previous.x, previous.y) === TILE_WALL) {
+    this.generator.ensureTileGenerated(prev.x, prev.y);
+
+    if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
       this.log("Un muro a tu espalda te impide retroceder.");
       return;
     }
-    if (this.isOccupiedByEnemy(previous.x, previous.y)) {
+
+    const enemyBlocking = this.dungeon.enemies.some(e =>
+      e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y)
+    );
+    if (enemyBlocking) {
       this.log("Un enemigo te bloquea el paso por la espalda.");
       return;
     }
@@ -1781,36 +1711,44 @@ class GameController {
     this.player.moveBackward();
     sounds.playStep();
     this.log(`Retrocedes un paso mirando al ${CARDINALS[this.player.direction]}.`);
-    const changedFloor = this.handleTileInteractions();
-    if (!changedFloor && this.player.hp > 0) this.processEnemiesTurn();
+    this.processEnemiesTurn();
+    this.handleTileInteractions();
   }
 
   handleTileInteractions() {
-    const tile = this.dungeon.getTile(this.player.x, this.player.y);
-    if (tile === TILE_HEAL_FOUNTAIN) {
+    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_HEAL_FOUNTAIN) {
       const heal = rollDie(6);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
       sounds.playHeal();
       this.log(`Santuario de vida: +${heal} HP restaurados.`);
       this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     }
-    if (tile === TILE_SHOP) this.openShop();
+
+    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_SHOP) {
+      this.openShop();
+    }
+
     this.updateHUD();
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
-      const remaining = this.getActiveEnemyCount();
-      if (remaining > 0) {
-        this.log(`¡La puerta está sellada! Debes eliminar a las ${remaining} criaturas restantes.`);
+      if (this.dungeon.enemies.length > 0) {
+        this.log(`¡La puerta está sellada! Debes eliminar a las ${this.dungeon.enemies.length} criaturas restantes.`);
       } else {
+        // Victoria definitiva al purificar el piso 100
+        if (this.floor >= 100) {
+          this.startVictorySequence();
+          return;
+        }
+
         sounds.playCoin();
         this.log("¡Calabozo purificado! Descendiendo...");
         this.floor++;
         setTimeout(() => this.initDungeonFloor(), 700);
-        return true;
+        return;
       }
     }
+
     this.renderer.draw();
-    return false;
   }
 
   bindEvents() {
@@ -1823,24 +1761,22 @@ class GameController {
     document.getElementById("btn-c").addEventListener("click", () => this.useLayOnHands());
     document.getElementById("btn-b").addEventListener("click", () => this.castMistyStep());
     document.getElementById("btn-a").addEventListener("click", () => {
-      if (!this.isShopOpen) CombatSystem.executeAttack(this);
+      if (this.isShopOpen) return;
+      CombatSystem.executeAttack(this);
     });
 
-    window.addEventListener("keydown", event => {
+    window.addEventListener("keydown", (e) => {
       if (this.isShopOpen) {
-        if (event.key === "Escape") {
-          this.closeShop();
-        } else if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
-          this.navigateShop(-1);
-        } else if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") {
-          this.navigateShop(1);
-        } else if (event.key === "Enter" || event.key === " " || event.key === "j" || event.key === "J") {
-          this.confirmShopSelection();
-        }
+        if (e.key === "Escape") this.closeShop();
+        else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") this.navigateShop(-1);
+        else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") this.navigateShop(1);
+        else if (e.key === "Enter" || e.key === " " || e.key === "j" || e.key === "J") this.confirmShopSelection();
         return;
       }
 
-      switch (event.key) {
+      if (this.isVictory) return;
+
+      switch (e.key) {
         case "ArrowLeft":
         case "a":
         case "A":
@@ -1878,14 +1814,59 @@ class GameController {
         case "I":
           this.cycleWeapon();
           break;
-        case "Escape":
-          if (this.isShopOpen) this.closeShop();
-          break;
       }
     });
+
+    // Bucle para control con Mando / Gamepad
+    this.lastGamepadAxes = { x: 0, y: 0 };
+    this.lastGamepadButtons = [];
+    const pollGamepad = () => {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let gp = null;
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) { gp = gamepads[i]; break; }
+      }
+
+      if (gp && !this.isVictory) {
+        const axisX = gp.axes[0] || 0;
+        const axisY = gp.axes[1] || 0;
+        const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
+        const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
+        const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
+        const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+        const threshold = 0.5;
+        const btnStates = gp.buttons.map(b => b.pressed);
+
+        if (this.isShopOpen) {
+          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.navigateShop(-1);
+          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.navigateShop(1);
+
+          if (btnStates[0] && !this.lastGamepadButtons[0]) this.confirmShopSelection();
+          if ((btnStates[1] && !this.lastGamepadButtons[1]) || (btnStates[9] && !this.lastGamepadButtons[9])) this.closeShop();
+        } else {
+          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
+          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
+          else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
+          else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
+
+          if (btnStates[0] && !this.lastGamepadButtons[0]) CombatSystem.executeAttack(this);
+          if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();
+          if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();
+          if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();
+        }
+
+        this.lastGamepadAxes.x = (axisX < -threshold || dpadLeft) ? -1 : (axisX > threshold || dpadRight ? 1 : 0);
+        this.lastGamepadAxes.y = (axisY < -threshold || dpadUp) ? -1 : (axisY > threshold || dpadDown ? 1 : 0);
+        this.lastGamepadButtons = btnStates;
+      }
+      requestAnimationFrame(pollGamepad);
+    };
+    requestAnimationFrame(pollGamepad);
   }
 }
 
+// INICIALIZADOR DE SPLASH CON LOGO NEKOPIN GAMES
 window.addEventListener("DOMContentLoaded", () => {
   const splashScreen = document.getElementById("splash-screen");
   let gameStarted = false;
@@ -1893,8 +1874,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function startGame() {
     if (gameStarted) return;
     gameStarted = true;
+
     splashScreen.classList.add("hidden");
-    setTimeout(() => { splashScreen.style.display = "none"; }, 850);
+
+    setTimeout(() => {
+      splashScreen.style.display = "none";
+    }, 850);
+
     new GameController();
   }
 
@@ -1903,11 +1889,16 @@ window.addEventListener("DOMContentLoaded", () => {
     document.removeEventListener("touchstart", unlockAudio);
     document.removeEventListener("click", unlockAudio);
   };
-
   document.addEventListener("touchstart", unlockAudio, { passive: true });
   document.addEventListener("click", unlockAudio, { passive: true });
 
-  setTimeout(() => { sounds.playLogoJingle(); }, 400);
-  setTimeout(() => { startGame(); }, 3300);
+  setTimeout(() => {
+    sounds.playLogoJingle();
+  }, 400);
+
+  setTimeout(() => {
+    startGame();
+  }, 3300);
+
   splashScreen.addEventListener("click", startGame);
 });
