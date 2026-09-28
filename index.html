@@ -2,104 +2,119 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Lior Kurogane - Dungeon Crawler</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- PANTALLA DE CARGA / LOGO NEKOPIN GAMES -->
+  <!-- PANTALLA SPLASH (LOGO NEKOPIN) -->
   <div id="splash-screen">
     <img src="nekopinGames.png" alt="Nekopin Games" class="splash-logo">
   </div>
 
-  <!-- PANEL SUPERIOR (HUD) -->
-  <header id="hud">
-    <div class="hud-item">PISO: <span id="hud-floor">1</span></div>
-    <div class="hud-item">DIR: <span id="hud-dir">Norte (▲)</span></div>
-    <div class="hud-item">HP: <span id="hud-hp">61</span>/61</div>
-    <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
-    <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
-    <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
-    <div class="hud-item door-item">SALIDA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
-  </header>
+  <!-- ENVOLTORIO PRINCIPAL -->
+  <div id="app-wrapper">
 
-  <!-- LIENZO Y CAPAS MODALES -->
-  <main id="game-container">
-    <canvas id="viewport" width="294" height="504"></canvas>
+    <!-- HUD SUPERIOR -->
+    <header id="hud">
+      <div class="hud-item">PISO: <span id="hud-floor">1</span></div>
+      <div class="hud-item">DIR: <span id="hud-dir">Norte (▲)</span></div>
+      <div class="hud-item">HP: <span id="hud-hp">61</span>/61</div>
+      <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
+      <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
+      <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
+      <div class="hud-item door-item">SALIDA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
+    </header>
 
-    <!-- VENTANA DE VICTORIA (PISO 100) -->
-    <div id="victory-screen" class="hidden">
-      <div class="victory-title">FIN</div>
-      <div class="victory-desc">Lior Kurogane ha emergido a la superficie.<br>El laberinto ha sido purificado.</div>
-      <div id="victory-stats-display" class="victory-stats"></div>
-      <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
-    </div>
+    <!-- ÁREA CENTRAL DE JUEGO Y MODALES -->
+    <main id="game-container">
+      <canvas id="viewport" width="294" height="504"></canvas>
 
-    <!-- MODAL DE LA TIENDA -->
-    <div id="shop-modal" class="hidden">
-      <div class="shop-content">
-        <h3>✦ MERCADER DE SOMBRAS ✦</h3>
-        <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
-        
-        <div class="shop-item">
-          <span>Pistola: 4 balas</span>
-          <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
+      <!-- VENTANA DE MUERTE / REINICIO -->
+      <div id="death-screen" class="hidden">
+        <div class="death-title">HAS CAÍDO</div>
+        <div class="death-desc">Las sombras del calabozo han consumido a Lior.</div>
+        <div id="death-stats-display" class="death-stats"></div>
+        <button id="btn-restart-game" class="death-restart-btn">☠ REINICIAR PARTIDA</button>
+      </div>
+
+      <!-- VENTANA DE VICTORIA (PISO 100) -->
+      <div id="victory-screen" class="hidden">
+        <div class="victory-title">FIN</div>
+        <div class="victory-desc">Lior Kurogane ha emergido a la superficie.<br>El laberinto ha sido purificado.</div>
+        <div id="victory-stats-display" class="victory-stats"></div>
+        <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
+      </div>
+
+      <!-- MODAL DE LA TIENDA -->
+      <div id="shop-modal" class="hidden">
+        <div class="shop-content">
+          <h3>✦ MERCADER DE SOMBRAS ✦</h3>
+          <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
+          
+          <div class="shop-item">
+            <span>Pistola: 4 balas</span>
+            <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
+          </div>
+          
+          <div class="shop-item">
+            <span>Mosquete: 2 balas</span>
+            <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+          </div>
+
+          <div class="shop-item">
+            <span>Poción de Vida (+1d8+5 HP)</span>
+            <button id="buy-potion" class="shop-btn">2 PO</button>
+          </div>
+
+          <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
         </div>
-        
-        <div class="shop-item">
-          <span>Mosquete: 2 balas</span>
-          <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+      </div>
+    </main>
+
+    <!-- CONSOLA DE MENSAJES -->
+    <section id="log-container">
+      <div id="log-entries"></div>
+    </section>
+
+    <!-- CONTROLES INFERIORES -->
+    <footer id="control-dock">
+      <!-- CRUCETA DPAD -->
+      <div class="dpad">
+        <div class="dpad-slot"></div>
+        <button id="btn-forward" class="dpad-btn up" aria-label="Avanzar">▲</button>
+        <div class="dpad-slot"></div>
+        <button id="btn-left" class="dpad-btn left" aria-label="Girar izquierda">◀</button>
+        <div class="dpad-center"></div>
+        <button id="btn-right" class="dpad-btn right" aria-label="Girar derecha">▶</button>
+        <div class="dpad-slot"></div>
+        <button id="btn-backward" class="dpad-btn down" aria-label="Retroceder">▼</button>
+        <div class="dpad-slot"></div>
+      </div>
+
+      <!-- ROMBOIDE DE ACCIONES -->
+      <div class="diamond-pad">
+        <div class="btn-slot top">
+          <button id="btn-d" class="arcade-btn btn-xbox-y">Y</button>
+          <span id="caption-d" class="btn-caption">ARMA</span>
         </div>
-
-        <div class="shop-item">
-          <span>Poción de Vida (+1d8+5 HP)</span>
-          <button id="buy-potion" class="shop-btn">2 PO</button>
+        <div class="btn-slot left">
+          <button id="btn-c" class="arcade-btn btn-xbox-x">X</button>
+          <span id="caption-c" class="btn-caption">CURAR</span>
         </div>
+        <div class="btn-slot right">
+          <button id="btn-b" class="arcade-btn btn-xbox-b">B</button>
+          <span id="caption-b" class="btn-caption">BRUMA (<span id="misty-charges">2</span>)</span>
+        </div>
+        <div class="btn-slot bottom">
+          <button id="btn-a" class="arcade-btn btn-xbox-a">A</button>
+          <span id="caption-a" class="btn-caption">ATACAR</span>
+        </div>
+      </div>
+    </footer>
 
-        <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
-      </div>
-    </div>
-  </main>
-
-  <!-- CONSOLA DE REGISTROS -->
-  <section id="log-container">
-    <div id="log-entries"></div>
-  </section>
-
-  <!-- BOTONERA INFERIOR (DPAD Y DIAMOND PAD) -->
-  <footer id="control-dock">
-    <div class="dpad">
-      <div></div>
-      <button id="btn-forward" class="dpad-btn up">▲</button>
-      <div></div>
-      <button id="btn-left" class="dpad-btn left">◀</button>
-      <div class="dpad-center"></div>
-      <button id="btn-right" class="dpad-btn right">▶</button>
-      <div></div>
-      <button id="btn-backward" class="dpad-btn down">▼</button>
-      <div></div>
-    </div>
-
-    <div class="diamond-pad">
-      <div class="btn-slot top">
-        <button id="btn-d" class="arcade-btn btn-weapon">D</button>
-        <span class="btn-caption">ARMA</span>
-      </div>
-      <div class="btn-slot left">
-        <button id="btn-c" class="arcade-btn btn-heal">C</button>
-        <span class="btn-caption">CURAR</span>
-      </div>
-      <div class="btn-slot right">
-        <button id="btn-b" class="arcade-btn btn-misty">B</button>
-        <span class="btn-caption">BRUMA (<span id="misty-charges">2</span>)</span>
-      </div>
-      <div class="btn-slot bottom">
-        <button id="btn-a" class="arcade-btn btn-attack">A</button>
-        <span class="btn-caption">ATACAR</span>
-      </div>
-    </div>
-  </footer>
+  </div>
 
   <script src="game.js"></script>
 </body>
