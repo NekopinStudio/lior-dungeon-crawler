@@ -14,78 +14,57 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   height: 100vh;
   height: 100dvh;
-  padding: 2px 4px;
-  padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 6px;
   overflow: hidden;
-  justify-content: space-between;
+  position: relative;
 }
 
-/* =========================================================
-   PANTALLA DE SPLASH / INTRO
-========================================================= */
+/* PANTALLA SPLASH CON EL LOGO */
 #splash-screen {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100dvh;
   background-color: #000000;
-  z-index: 100000;
+  z-index: 99999;
   display: flex;
   justify-content: center;
   align-items: center;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.8s ease, visibility 0.8s ease;
+  cursor: pointer;
+  transition: opacity 0.5s ease;
 }
 
-#splash-screen.hidden {
+#splash-screen.fade-out {
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
 }
 
-.splash-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
+.splash-logo {
+  max-width: 220px;
+  max-height: 220px;
+  object-fit: contain;
+  animation: logoPulse 1.8s infinite alternate ease-in-out;
 }
 
-#splash-logo {
-  max-width: 240px;
-  width: 65%;
-  height: auto;
-  opacity: 0;
-  transform: scale(0.95);
-  animation: logoSequence 3.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+@keyframes logoPulse {
+  0% { transform: scale(0.96); opacity: 0.85; }
+  100% { transform: scale(1.03); opacity: 1; }
 }
 
-@keyframes logoSequence {
-  0% { opacity: 0; transform: scale(0.92); }
-  25% { opacity: 1; transform: scale(1); }
-  75% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.04); }
-}
-
-/* =========================================================
-   HUD SUPERIOR
-========================================================= */
+/* HUD SUPERIOR */
 #hud {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 2px;
   width: 100%;
-  max-width: 360px;
+  max-width: 320px;
   background-color: #0c0d12;
   border: 1px solid #333333;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 4px;
   font-size: 10px;
-  flex-shrink: 0;
+  gap: 2px 6px;
 }
 
 .hud-item span {
@@ -93,128 +72,54 @@ body {
   color: #00b0ff;
 }
 
-#hud-gold { color: #ffd700 !important; }
-#hud-weapon { color: #ffff00 !important; }
-#hud-ammo { color: #ffb300 !important; }
+#hud-ammo {
+  color: #ffb300 !important;
+}
 
-.door-locked { color: #ff3333 !important; }
-.door-open { color: #00e676 !important; }
+.door-locked {
+  color: #ff3333 !important;
+}
 
-/* =========================================================
-   CONTENEDOR DEL LIENZO
-========================================================= */
+.door-open {
+  color: #00e676 !important;
+}
+
+/* CONTENEDOR DEL CANVAS */
 #game-container {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  flex: 1 1 auto;
+  flex: 1;
+  position: relative;
   min-height: 0;
-  margin: 0;
-  padding: 0;
 }
 
+/* AJUSTE PARA QUE NO REBASE LA PANTALLA */
 #viewport {
   background-color: #000000;
   border: 2px solid #ffffff;
   display: block;
+  max-height: 48vh;
+  max-width: 100%;
+  object-fit: contain;
 }
 
-/* Modal de Tienda */
-#shop-modal {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-#shop-modal.hidden {
-  display: none;
-}
-
-.shop-content {
-  background: #0f1015;
-  border: 2px solid #ffd700;
-  border-radius: 8px;
-  padding: 10px;
-  width: 88%;
-  max-width: 270px;
-  text-align: center;
-}
-
-.shop-content h3 {
-  font-size: 12px;
-  color: #ffd700;
-  margin-bottom: 4px;
-}
-
-.shop-desc {
-  font-size: 10px;
-  color: #aaaaaa;
-  margin-bottom: 6px;
-}
-
-.shop-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-  font-size: 10px;
-  background: #181a20;
-  padding: 4px 6px;
-  border-radius: 4px;
-}
-
-.shop-btn {
-  background: #ffd700;
-  color: #000000;
-  border: none;
-  font-family: monospace;
-  font-weight: bold;
-  padding: 3px 6px;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.close-shop-btn {
-  margin-top: 6px;
-  width: 100%;
-  padding: 5px;
-  background: #333333;
-  color: #ffffff;
-  border: 1px solid #555555;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-/* =========================================================
-   CONSOLA DE REGISTROS
-========================================================= */
+/* CONSOLA DE LOGS */
 #log-container {
   width: 100%;
-  max-width: 360px;
+  max-width: 320px;
   height: 38px;
   background-color: #050505;
   border: 1px solid #222222;
   border-radius: 4px;
-  padding: 2px 4px;
+  padding: 3px 5px;
   overflow-y: auto;
-  font-size: 9.5px;
-  line-height: 1.2;
-  flex-shrink: 0;
+  font-size: 10px;
 }
 
 #log-entries div {
-  margin-bottom: 1px;
+  margin-bottom: 2px;
   color: #888888;
 }
 
@@ -222,34 +127,31 @@ body {
   color: #00ff88;
 }
 
-/* =========================================================
-   DOCK DE CONTROLES INFERIOR
-========================================================= */
+/* DOCK DE CONTROLES INFERIORES */
 #control-dock {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 360px;
-  height: 125px;
-  padding: 2px 4px;
-  flex-shrink: 0;
+  max-width: 320px;
+  height: 116px;
+  padding: 0 4px;
 }
 
+/* DPAD (CRUCETA) */
 .dpad {
   display: grid;
-  grid-template-columns: repeat(3, 40px);
-  grid-template-rows: repeat(3, 38px);
+  grid-template-columns: repeat(3, 36px);
+  grid-template-rows: repeat(3, 36px);
   gap: 2px;
 }
 
 .dpad-btn {
-  background: #181a20;
+  background-color: #141418;
   color: #ffffff;
-  border: 1.5px solid #3b4252;
-  border-radius: 5px;
-  font-family: monospace;
-  font-size: 15px;
+  border: 1px solid #444444;
+  border-radius: 4px;
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -258,112 +160,143 @@ body {
 }
 
 .dpad-btn:active {
-  background: #00b0ff;
+  background-color: #00b0ff;
   color: #000000;
 }
 
-.dpad-btn.up {
-  border-color: #00b0ff;
-  color: #00b0ff;
+.dpad-center {
+  background-color: #0c0d12;
+  border: 1px solid #222222;
+  border-radius: 4px;
 }
 
-.dpad-btn.down {
-  border-color: #5e81ac;
-  color: #88c0d0;
-}
-
+/* BOTONERA EN ROMBOIDE */
 .diamond-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 40px);
-  grid-template-rows: repeat(3, 40px);
-  align-items: center;
-  justify-items: center;
-  width: 120px;
-  height: 120px;
+  position: relative;
+  width: 114px;
+  height: 114px;
 }
 
 .btn-slot {
+  position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
 
-.btn-slot.top { grid-column: 2; grid-row: 1; }
-.btn-slot.left { grid-column: 1; grid-row: 2; }
-.btn-slot.right { grid-column: 3; grid-row: 2; }
-.btn-slot.bottom { grid-column: 2; grid-row: 3; }
+.btn-slot.top { top: 0; left: 39px; }
+.btn-slot.bottom { bottom: 0; left: 39px; }
+.btn-slot.left { left: 0; top: 39px; }
+.btn-slot.right { right: 0; top: 39px; }
 
 .arcade-btn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
+  border: 1px solid #ffffff;
   font-family: monospace;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #ffffff;
-  background: #111111;
+  background-color: #141418;
   color: #ffffff;
 }
 
+.arcade-btn:active {
+  transform: scale(0.92);
+}
+
+.btn-weapon { border-color: #ffb300; color: #ffb300; }
+.btn-heal { border-color: #00e676; color: #00e676; }
+.btn-misty { border-color: #a855f7; color: #a855f7; }
+.btn-attack { border-color: #ff3333; color: #ff3333; }
+
+.arcade-btn:disabled {
+  border-color: #333333;
+  color: #444444;
+  cursor: not-allowed;
+}
+
 .btn-caption {
-  font-size: 7.5px;
+  font-size: 8px;
   color: #888888;
   margin-top: 1px;
 }
 
-.btn-weapon { border-color: #ffd700; color: #ffd700; }
-.btn-weapon:active { background: #ffd700; color: #000000; }
-
-.btn-heal { border-color: #00e676; color: #00e676; }
-.btn-heal:active { background: #00e676; color: #000000; }
-.btn-heal:disabled { border-color: #333333; color: #444444; }
-
-.btn-misty { border-color: #00e5ff; color: #00e5ff; }
-.btn-misty:active { background: #00e5ff; color: #000000; }
-.btn-misty:disabled { border-color: #333333; color: #444444; }
-
-.btn-attack { border-color: #ff3333; color: #ff3333; }
-.btn-attack:active { background: #ff3333; color: #000000; }
-
-/* Resaltado de selección con mando / teclado en la tienda */
-.shop-item.focused {
-  background: #2a2d38 !important;
-  outline: 2px solid #ffd700;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+/* MODAL DE TIENDA */
+#shop-modal {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
 }
 
-.close-shop-btn.focused {
-  background: #ffd700 !important;
-  color: #000000 !important;
-  outline: 2px solid #ffffff;
+.shop-content {
+  background-color: #0c0d12;
+  border: 1px solid #ffd700;
+  padding: 12px;
+  border-radius: 6px;
+  width: 85%;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.shop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px;
+  border: 1px solid #222222;
+  border-radius: 4px;
+}
+
+.shop-btn {
+  background-color: #ffd700;
+  color: #000000;
+  border: none;
+  padding: 4px 8px;
   font-weight: bold;
+  font-family: monospace;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
-/* =========================================================
-   CINEMÁTICA DE FINAL Y CRÉDITOS (PISO 100)
-========================================================= */
+.close-shop-btn {
+  background-color: #222222;
+  color: #ffffff;
+  border: 1px solid #444444;
+  padding: 6px;
+  font-family: monospace;
+  font-size: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* VICTORIA PISO 100 */
 #victory-screen {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.88);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 100;
-  opacity: 0;
-  transition: opacity 1.5s ease;
-  pointer-events: none;
   text-align: center;
-  padding: 20px;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  pointer-events: none;
 }
 
 #victory-screen.visible {
@@ -372,35 +305,39 @@ body {
 }
 
 .victory-title {
-  font-size: 38px;
-  font-weight: bold;
+  font-size: 36px;
+  font-weight: 900;
   color: #ffd700;
-  text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-  margin-bottom: 12px;
   letter-spacing: 4px;
+  margin-bottom: 8px;
 }
 
 .victory-desc {
-  font-size: 13px;
+  font-size: 11px;
   color: #ffffff;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   line-height: 1.4;
 }
 
 .victory-stats {
-  font-size: 11px;
+  font-size: 10px;
   color: #00e5ff;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
+  line-height: 1.5;
 }
 
 .victory-restart-btn {
   background: #ffd700;
   color: #000000;
   border: none;
-  padding: 10px 20px;
+  padding: 8px 16px;
   font-family: monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
 }
