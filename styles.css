@@ -329,3 +329,17 @@ body {
 
 .btn-attack { border-color: #ff3333; color: #ff3333; }
 .btn-attack:active { background: #ff3333; color: #000000; }
+
+/* Resaltado de selección con mando / teclado en la tienda */
+.shop-item.focused {
+  background: #2a2d38 !important;
+  outline: 2px solid #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.close-shop-btn.focused {
+  background: #ffd700 !important;
+  color: #000000 !important;
+  outline: 2px solid #ffffff;
+  font-weight: bold;
+}
