@@ -255,7 +255,6 @@ function rollDie(sides) {
 }
 
 function getRandomDungeonDimensions(min = 10, max = 30, floorNumber = 1) {
-  // Arena especial para el Mega Boss cada 10 pisos
   if (floorNumber % 10 === 0) {
     const arenaTier = Math.min(5, Math.floor(floorNumber / 10));
     const width = 20 + arenaTier * 2;
@@ -677,7 +676,7 @@ class VisibilitySystem {
 
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; curX += sx; }
-      if (e2 < dx) { err += dx; y0 += sy; }
+      if (e2 < dx) { err += dx; curY += sy; } // Seguridad: curY, nunca y0
     }
   }
 }
@@ -760,9 +759,7 @@ class Renderer {
     targetCtx.fillStyle = "#000000";
     targetCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // ==========================================
-    // RENDERIZADO ESPECIAL: CINEMÁTICA PISO 100
-    // ==========================================
+    // Cinemática de victoria (Piso 100)
     if (this.isVictorySequence) {
       for (let sy = 0; sy < rows; sy++) {
         for (let sx = 0; sx < cols; sx++) {
@@ -772,9 +769,9 @@ class Renderer {
           if (sy < 4) {
             targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#38bdf8" : "#0284c7"; // Cielo
           } else if (sy === 4 || sy === 5) {
-            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#facc15" : "#eab308"; // Destello / horizonte
+            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#facc15" : "#eab308"; // Destello
           } else {
-            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#22c55e" : "#16a34a"; // Pradera exterior
+            targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#22c55e" : "#16a34a"; // Verde exterior
           }
           targetCtx.fillRect(px, py, tileSize, tileSize);
           targetCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
@@ -782,7 +779,6 @@ class Renderer {
         }
       }
 
-      // Dibujar a Lior avanzando en la cinemática
       const liorPx = playerScreenX * tileSize + tileSize / 2;
       const liorPy = (playerScreenY - this.victoryStep) * tileSize + tileSize / 2;
 
@@ -800,9 +796,6 @@ class Renderer {
       return;
     }
 
-    // ==========================================
-    // RENDERIZADO HABITUAL DE CALABOZO
-    // ==========================================
     const enemiesRemain = this.dungeon.enemies.length > 0;
 
     for (let sy = 0; sy < rows; sy++) {
@@ -1133,6 +1126,7 @@ class GameController {
     this.isShopOpen = false;
     this.isVictory = false;
     this.megaBossEmptyTurns = 0;
+    this.shopSelectedIndex = 0;
 
     this.initDungeonFloor();
     this.bindEvents();
@@ -1333,9 +1327,7 @@ class GameController {
     });
   }
 
-  // ==========================================
-  // INVOCACIÓN ESCALONADA POR DADO REDUCIDO
-  // ==========================================
+  // Invocación escalada del Mega Boss
   spawnMegaBossAdds(megaBoss) {
     const bossEncounter = Math.floor(this.floor / 10);
     const maxDieSides = Math.min(5, Math.floor((bossEncounter + 1) / 2));
@@ -1377,9 +1369,7 @@ class GameController {
     }
   }
 
-  // ==========================================
-  // CINEMÁTICA FINAL: SALIDA DEL CALABOZO (PISO 100)
-  // ==========================================
+  // Cinemática de victoria (Piso 100)
   startVictorySequence() {
     this.isVictory = true;
     document.getElementById("control-dock").style.display = "none";
@@ -1734,7 +1724,6 @@ class GameController {
       if (this.dungeon.enemies.length > 0) {
         this.log(`¡La puerta está sellada! Debes eliminar a las ${this.dungeon.enemies.length} criaturas restantes.`);
       } else {
-        // Victoria definitiva al purificar el piso 100
         if (this.floor >= 100) {
           this.startVictorySequence();
           return;
@@ -1817,7 +1806,6 @@ class GameController {
       }
     });
 
-    // Bucle para control con Mando / Gamepad
     this.lastGamepadAxes = { x: 0, y: 0 };
     this.lastGamepadButtons = [];
     const pollGamepad = () => {
@@ -1866,7 +1854,7 @@ class GameController {
   }
 }
 
-// INICIALIZADOR DE SPLASH CON LOGO NEKOPIN GAMES
+// INICIALIZACIÓN CON PANTALLA SPLASH (nekopinGames.png)
 window.addEventListener("DOMContentLoaded", () => {
   const splashScreen = document.getElementById("splash-screen");
   let gameStarted = false;
@@ -1875,30 +1863,17 @@ window.addEventListener("DOMContentLoaded", () => {
     if (gameStarted) return;
     gameStarted = true;
 
-    splashScreen.classList.add("hidden");
+    sounds.init();
+    sounds.playLogoJingle();
+
+    splashScreen.classList.add("fade-out");
 
     setTimeout(() => {
       splashScreen.style.display = "none";
-    }, 850);
-
-    new GameController();
+      new GameController();
+    }, 500);
   }
 
-  const unlockAudio = () => {
-    sounds.init();
-    document.removeEventListener("touchstart", unlockAudio);
-    document.removeEventListener("click", unlockAudio);
-  };
-  document.addEventListener("touchstart", unlockAudio, { passive: true });
-  document.addEventListener("click", unlockAudio, { passive: true });
-
-  setTimeout(() => {
-    sounds.playLogoJingle();
-  }, 400);
-
-  setTimeout(() => {
-    startGame();
-  }, 3300);
-
   splashScreen.addEventListener("click", startGame);
+  setTimeout(startGame, 2000);
 });
