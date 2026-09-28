@@ -14,22 +14,21 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100vh;
   height: 100dvh;
-  min-height: 100vh;
   padding: 2px 4px;
+  padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
   overflow: hidden;
-  justify-content: flex-start;
-  gap: 2px;
+  justify-content: space-between;
 }
 
 /* =========================================================
-   PANTALLA DE SPLASH / LOGO INTRO (FADE IN -> STAY -> FADE OUT)
+   PANTALLA DE SPLASH / INTRO
 ========================================================= */
 #splash-screen {
   position: fixed;
   inset: 0;
   width: 100vw;
-  height: 100vh;
   height: 100dvh;
   background-color: #000000;
   z-index: 100000;
@@ -56,32 +55,19 @@ body {
 }
 
 #splash-logo {
-  max-width: 260px;
-  width: 70%;
+  max-width: 240px;
+  width: 65%;
   height: auto;
   opacity: 0;
   transform: scale(0.95);
   animation: logoSequence 3.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Animación completa: Fade In (0-25%) -> Stay (25-75%) -> Fade Out (75-100%) */
 @keyframes logoSequence {
-  0% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  25% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  75% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.04);
-  }
+  0% { opacity: 0; transform: scale(0.92); }
+  25% { opacity: 1; transform: scale(1); }
+  75% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.04); }
 }
 
 /* =========================================================
@@ -98,7 +84,8 @@ body {
   border: 1px solid #333333;
   padding: 3px 6px;
   border-radius: 4px;
-  font-size: 10.5px;
+  font-size: 10px;
+  flex-shrink: 0;
 }
 
 .hud-item span {
@@ -114,7 +101,7 @@ body {
 .door-open { color: #00e676 !important; }
 
 /* =========================================================
-   LIENZO PRINCIPAL Y MODAL DE TIENDA
+   CONTENEDOR DEL LIENZO
 ========================================================= */
 #game-container {
   position: relative;
@@ -122,6 +109,8 @@ body {
   justify-content: center;
   align-items: center;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   margin: 0;
   padding: 0;
 }
@@ -132,13 +121,14 @@ body {
   display: block;
 }
 
+/* Modal de Tienda */
 #shop-modal {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -153,32 +143,32 @@ body {
   background: #0f1015;
   border: 2px solid #ffd700;
   border-radius: 8px;
-  padding: 12px;
-  width: 85%;
-  max-width: 280px;
+  padding: 10px;
+  width: 88%;
+  max-width: 270px;
   text-align: center;
 }
 
 .shop-content h3 {
-  font-size: 13px;
+  font-size: 12px;
   color: #ffd700;
   margin-bottom: 4px;
 }
 
 .shop-desc {
-  font-size: 11px;
+  font-size: 10px;
   color: #aaaaaa;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .shop-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
-  font-size: 11px;
+  margin-bottom: 5px;
+  font-size: 10px;
   background: #181a20;
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
 }
 
@@ -188,21 +178,21 @@ body {
   border: none;
   font-family: monospace;
   font-weight: bold;
-  padding: 4px 8px;
+  padding: 3px 6px;
   border-radius: 3px;
   cursor: pointer;
 }
 
 .close-shop-btn {
-  margin-top: 8px;
+  margin-top: 6px;
   width: 100%;
-  padding: 6px;
+  padding: 5px;
   background: #333333;
   color: #ffffff;
   border: 1px solid #555555;
   border-radius: 4px;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
 }
 
@@ -212,14 +202,15 @@ body {
 #log-container {
   width: 100%;
   max-width: 360px;
-  height: 46px;
+  height: 38px;
   background-color: #050505;
   border: 1px solid #222222;
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 2px 4px;
   overflow-y: auto;
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 9.5px;
+  line-height: 1.2;
+  flex-shrink: 0;
 }
 
 #log-entries div {
@@ -232,7 +223,7 @@ body {
 }
 
 /* =========================================================
-   DOCK DE CONTROLES INFERIORES (+50%)
+   DOCK DE CONTROLES INFERIOR
 ========================================================= */
 #control-dock {
   display: flex;
@@ -240,24 +231,25 @@ body {
   align-items: center;
   width: 100%;
   max-width: 360px;
-  height: 160px;
-  padding: 4px 6px;
+  height: 125px;
+  padding: 2px 4px;
+  flex-shrink: 0;
 }
 
 .dpad {
   display: grid;
-  grid-template-columns: repeat(3, 52px);
-  grid-template-rows: repeat(3, 50px);
-  gap: 3px;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 38px);
+  gap: 2px;
 }
 
 .dpad-btn {
   background: #181a20;
   color: #ffffff;
   border: 1.5px solid #3b4252;
-  border-radius: 6px;
+  border-radius: 5px;
   font-family: monospace;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -282,12 +274,12 @@ body {
 
 .diamond-pad {
   display: grid;
-  grid-template-columns: repeat(3, 52px);
-  grid-template-rows: repeat(3, 52px);
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 40px);
   align-items: center;
   justify-items: center;
-  width: 156px;
-  height: 156px;
+  width: 120px;
+  height: 120px;
 }
 
 .btn-slot {
@@ -303,11 +295,11 @@ body {
 .btn-slot.bottom { grid-column: 2; grid-row: 3; }
 
 .arcade-btn {
-  width: 50px;
-  height: 50px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   font-family: monospace;
-  font-size: 19px;
+  font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -319,51 +311,21 @@ body {
 }
 
 .btn-caption {
-  font-size: 8.5px;
+  font-size: 7.5px;
   color: #888888;
   margin-top: 1px;
 }
 
-.btn-weapon {
-  border-color: #ffd700;
-  color: #ffd700;
-}
-.btn-weapon:active {
-  background: #ffd700;
-  color: #000000;
-}
+.btn-weapon { border-color: #ffd700; color: #ffd700; }
+.btn-weapon:active { background: #ffd700; color: #000000; }
 
-.btn-heal {
-  border-color: #00e676;
-  color: #00e676;
-}
-.btn-heal:active {
-  background: #00e676;
-  color: #00e676;
-}
-.btn-heal:disabled {
-  border-color: #333333;
-  color: #444444;
-}
+.btn-heal { border-color: #00e676; color: #00e676; }
+.btn-heal:active { background: #00e676; color: #000000; }
+.btn-heal:disabled { border-color: #333333; color: #444444; }
 
-.btn-misty {
-  border-color: #00e5ff;
-  color: #00e5ff;
-}
-.btn-misty:active {
-  background: #00e5ff;
-  color: #000000;
-}
-.btn-misty:disabled {
-  border-color: #333333;
-  color: #444444;
-}
+.btn-misty { border-color: #00e5ff; color: #00e5ff; }
+.btn-misty:active { background: #00e5ff; color: #000000; }
+.btn-misty:disabled { border-color: #333333; color: #444444; }
 
-.btn-attack {
-  border-color: #ff3333;
-  color: #ff3333;
-}
-.btn-attack:active {
-  background: #ff3333;
-  color: #000000;
-}
+.btn-attack { border-color: #ff3333; color: #ff3333; }
+.btn-attack:active { background: #ff3333; color: #000000; }
