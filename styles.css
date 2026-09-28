@@ -343,3 +343,64 @@ body {
   outline: 2px solid #ffffff;
   font-weight: bold;
 }
+
+/* =========================================================
+   CINEMÁTICA DE FINAL Y CRÉDITOS (PISO 100)
+========================================================= */
+#victory-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  pointer-events: none;
+  text-align: center;
+  padding: 20px;
+}
+
+#victory-screen.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.victory-title {
+  font-size: 38px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+  margin-bottom: 12px;
+  letter-spacing: 4px;
+}
+
+.victory-desc {
+  font-size: 13px;
+  color: #ffffff;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.victory-stats {
+  font-size: 11px;
+  color: #00e5ff;
+  margin-bottom: 24px;
+}
+
+.victory-restart-btn {
+  background: #ffd700;
+  color: #000000;
+  border: none;
+  padding: 10px 20px;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
