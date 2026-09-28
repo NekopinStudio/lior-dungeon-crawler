@@ -8,34 +8,27 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE INICIO (SPLASH SCREEN / LOGO NEKOPIN) -->
+  <!-- PANTALLA DE CARGA / LOGO NEKOPIN GAMES -->
   <div id="splash-screen">
-    <div class="splash-logo">
-      <div class="logo-box">
-        <span class="logo-cat">🐾</span>
-        <div class="logo-brand">NEKOPIN</div>
-        <div class="logo-sub">GAMES</div>
-      </div>
-    </div>
-    <div class="splash-prompt">TOCA LA PANTALLA O ESPERA UN MOMENTO</div>
+    <img src="nekopinGames.png" alt="Nekopin Games" class="splash-logo">
   </div>
 
-  <!-- PANEL DE ESTADO SUPERIOR (HUD) -->
+  <!-- PANEL SUPERIOR (HUD) -->
   <header id="hud">
     <div class="hud-item">PISO: <span id="hud-floor">1</span></div>
-    <div class="hud-item">MIRAS: <span id="hud-dir">Norte (▲)</span></div>
+    <div class="hud-item">DIR: <span id="hud-dir">Norte (▲)</span></div>
     <div class="hud-item">HP: <span id="hud-hp">61</span>/61</div>
     <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
-    <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
     <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
-    <div class="hud-item">PUERTA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
+    <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
+    <div class="hud-item door-item">SALIDA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
   </header>
 
-  <!-- LIENZO Y CAPAS DE INTERFAZ MODAL -->
+  <!-- LIENZO Y CAPAS MODALES -->
   <main id="game-container">
     <canvas id="viewport" width="294" height="504"></canvas>
 
-    <!-- VENTANA DE VICTORIA Y CRÉDITOS (PISO 100) -->
+    <!-- VENTANA DE VICTORIA (PISO 100) -->
     <div id="victory-screen" class="hidden">
       <div class="victory-title">FIN</div>
       <div class="victory-desc">Lior Kurogane ha emergido a la superficie.<br>El laberinto ha sido purificado.</div>
@@ -43,76 +36,70 @@
       <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
     </div>
 
-    <!-- MODAL DE LA TIENDA (MERCADER DE SOMBRAS) -->
+    <!-- MODAL DE LA TIENDA -->
     <div id="shop-modal" class="hidden">
       <div class="shop-content">
-        <div class="shop-header">
-          <h3>MERCADER DE SOMBRAS</h3>
-          <div class="shop-gold">TU ORO: <span id="shop-gold-display">0</span> PO</div>
+        <h3>✦ MERCADER DE SOMBRAS ✦</h3>
+        <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
+        
+        <div class="shop-item">
+          <span>Pistola: 4 balas</span>
+          <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
         </div>
-        <div class="shop-list">
-          <div class="shop-item">
-            <div class="shop-item-info">
-              <span class="shop-item-name">Balas de Pistola (x4)</span>
-              <span class="shop-item-desc">Munición de impacto medio (Rango 3)</span>
-            </div>
-            <button id="buy-pistol-ammo" class="shop-buy-btn">1 PO</button>
-          </div>
-          <div class="shop-item">
-            <div class="shop-item-info">
-              <span class="shop-item-name">Balas de Mosquete (x2)</span>
-              <span class="shop-item-desc">Munición de largo alcance (Rango 5)</span>
-            </div>
-            <button id="buy-musket-ammo" class="shop-buy-btn">1 PO</button>
-          </div>
-          <div class="shop-item">
-            <div class="shop-item-info">
-              <span class="shop-item-name">Poción de Curación</span>
-              <span class="shop-item-desc">Restaura 1d8 + 5 Puntos de Golpe</span>
-            </div>
-            <button id="buy-potion" class="shop-buy-btn">2 PO</button>
-          </div>
+        
+        <div class="shop-item">
+          <span>Mosquete: 2 balas</span>
+          <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
         </div>
-        <button id="close-shop" class="close-shop-btn">SALIR DE LA TIENDA</button>
+
+        <div class="shop-item">
+          <span>Poción de Vida (+1d8+5 HP)</span>
+          <button id="buy-potion" class="shop-btn">2 PO</button>
+        </div>
+
+        <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
       </div>
     </div>
   </main>
 
-  <!-- CONSOLA DE MENSAJES Y REGISTRO -->
+  <!-- CONSOLA DE REGISTROS -->
   <section id="log-container">
     <div id="log-entries"></div>
   </section>
 
-  <!-- DOCK DE CONTROLES TÁCTILES / GUÍA PARA MANDO Y TECLADO -->
-  <div id="control-dock">
-    <!-- CRUCETA DE DIRECCIÓN (D-PAD) -->
-    <div class="dpad-cluster">
-      <div class="dpad-slot slot-empty"></div>
-      <button id="btn-forward" class="ctrl-btn dpad-btn" title="Avanzar (W / Flecha Arriba)">▲</button>
-      <div class="dpad-slot slot-empty"></div>
-      <button id="btn-left" class="ctrl-btn dpad-btn" title="Giro Izquierda (A / Flecha Izquierda)">◀</button>
-      <button id="btn-backward" class="ctrl-btn dpad-btn" title="Retroceder (S / Flecha Abajo)">▼</button>
-      <button id="btn-right" class="ctrl-btn dpad-btn" title="Giro Derecha (D / Flecha Derecha)">▶</button>
+  <!-- BOTONERA INFERIOR (DPAD Y DIAMOND PAD) -->
+  <footer id="control-dock">
+    <div class="dpad">
+      <div></div>
+      <button id="btn-forward" class="dpad-btn up">▲</button>
+      <div></div>
+      <button id="btn-left" class="dpad-btn left">◀</button>
+      <div class="dpad-center"></div>
+      <button id="btn-right" class="dpad-btn right">▶</button>
+      <div></div>
+      <button id="btn-backward" class="dpad-btn down">▼</button>
+      <div></div>
     </div>
 
-    <!-- BOTONERA DE ACCIONES EN DISPOSICIÓN ROMBOIDE (ESTILO MANDO) -->
-    <div class="action-cluster">
-      <!-- BOTÓN SUPERIOR: CAMBIAR ARMA (Y / D / I) -->
-      <button id="btn-d" class="ctrl-btn act-btn btn-top" title="Cambiar Arma (Y / I)">D</button>
-
-      <div class="action-middle-row">
-        <!-- BOTÓN IZQUIERDO: CURACIÓN / MANOS CURATIVAS (X / C / L) -->
-        <button id="btn-c" class="ctrl-btn act-btn" title="Manos Curativas (X / L)">C</button>
-        <!-- BOTÓN DERECHO: PASO BRUMOSO (B / K) -->
-        <button id="btn-b" class="ctrl-btn act-btn" title="Paso Brumoso (B / K)">
-          B<span id="misty-charges" class="charge-badge">2</span>
-        </button>
+    <div class="diamond-pad">
+      <div class="btn-slot top">
+        <button id="btn-d" class="arcade-btn btn-weapon">D</button>
+        <span class="btn-caption">ARMA</span>
       </div>
-
-      <!-- BOTÓN INFERIOR: ATACAR (A / ESPACIO / J) -->
-      <button id="btn-a" class="ctrl-btn act-btn btn-bottom btn-atk" title="Atacar (A / Espacio / J)">A</button>
+      <div class="btn-slot left">
+        <button id="btn-c" class="arcade-btn btn-heal">C</button>
+        <span class="btn-caption">CURAR</span>
+      </div>
+      <div class="btn-slot right">
+        <button id="btn-b" class="arcade-btn btn-misty">B</button>
+        <span class="btn-caption">BRUMA (<span id="misty-charges">2</span>)</span>
+      </div>
+      <div class="btn-slot bottom">
+        <button id="btn-a" class="arcade-btn btn-attack">A</button>
+        <span class="btn-caption">ATACAR</span>
+      </div>
     </div>
-  </div>
+  </footer>
 
   <script src="game.js"></script>
 </body>
