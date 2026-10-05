@@ -76,7 +76,10 @@ const I18N = {
     exitDescend: IS_SPANISH ? "¡Piso purificado! Descendiendo al siguiente nivel..." : "Floor purified! Descending to the next floor...",
     floorIntro: (floor, tier, w, h, ac, hit, dmg) => IS_SPANISH
       ? `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`
-      : `Floor ${floor} (Tier ${tier}): ${w}x${h}. Lior AC: ${ac}, Hit bonus: +${hit}, Flat Dmg: +${dmg}.`
+      : `Floor ${floor} (Tier ${tier}): ${w}x${h}. Lior AC: ${ac}, Hit bonus: +${hit}, Flat Dmg: +${dmg}.`,
+    bunnyCaught: IS_SPANISH
+      ? "¡Atrapaste al Conejo Dorado! Obtienes 5 monedas de oro."
+      : "You caught the Golden Bunny! You receive 5 gold coins."
   }
 };
 
@@ -1089,7 +1092,7 @@ class Renderer {
   drawChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
     const chests = this.mapDecorations.chests;
     if (!chests.complete || chests.naturalWidth === 0) return;
-    const frame = CHEST_SPRITES[frameIndex];
+    const frame = CHECH_FRAME = CHEST_SPRITES[frameIndex];
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
     targetCtx.imageSmoothingEnabled = false;
@@ -2224,10 +2227,26 @@ class GameController {
     this.updateHUD();
   }
 
+  checkGoldenBunnyCapture() {
+    const bunnyIndex = this.dungeon.npcs.findIndex(
+      npc => npc.id === "golden-bunny" && npc.x === this.player.x && npc.y === this.player.y
+    );
+
+    if (bunnyIndex !== -1) {
+      this.dungeon.npcs.splice(bunnyIndex, 1);
+      this.player.gold += 5;
+      sounds.playCoin();
+      this.log(I18N.logs.bunnyCaught);
+      this.updateHUD();
+    }
+  }
+
   handleTileInteractions() {
     if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_CHEST) {
       this.openChest();
     }
+
+    this.checkGoldenBunnyCapture();
 
     this.updateHUD();
 
