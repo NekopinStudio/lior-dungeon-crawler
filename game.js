@@ -1092,7 +1092,7 @@ class Renderer {
   drawChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
     const chests = this.mapDecorations.chests;
     if (!chests.complete || chests.naturalWidth === 0) return;
-    const frame = CHECH_FRAME = CHEST_SPRITES[frameIndex];
+    const frame = CHEST_SPRITES[frameIndex];
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
     targetCtx.imageSmoothingEnabled = false;
@@ -2160,6 +2160,7 @@ class GameController {
 
     this.player.moveForward();
     sounds.playStep();
+    this.handleTileInteractions();
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
@@ -2186,6 +2187,7 @@ class GameController {
 
     this.player.moveBackward();
     sounds.playStep();
+    this.handleTileInteractions();
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
