@@ -1,6 +1,3 @@
-/**
- * SISTEMA DE INTERNACIONALIZACIÓN (i18n)
- */
 const IS_SPANISH = (navigator.language || navigator.userLanguage || "es").toLowerCase().startsWith("es");
 
 const I18N = {
@@ -329,7 +326,6 @@ const CAMERA_CONFIG = {
   playerScreenY: 10
 };
 
-// Bases ortogonales directas para la orientación
 const CAMERA_CARDINAL_BASIS = [
   { forward: { x: 0, y: -1 }, right: { x: 1, y: 0 } },  // 0: Norte
   { forward: { x: 1, y: 0 },  right: { x: 0, y: 1 } },  // 1: Este
@@ -569,7 +565,6 @@ class DungeonGenerator {
       return;
     }
 
-    // Pasillo frontal despejado
     if (x === this.dungeon.entrance.x && y === this.dungeon.entrance.y - 1) {
       this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
@@ -692,20 +687,19 @@ class DungeonGenerator {
     }
   }
 
- placeGoldenBunny() {
-    // Contamos los minijefes que realmente se generaron en el piso
+  placeGoldenBunny() {
     const miniBossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
-    const spawnChance = miniBossCount * 0.10;
+    // Si no hay minijefes, no aparece; de lo contrario, 10% por cada uno hasta el 100%
+    const spawnChance = Math.min(1.0, miniBossCount * 0.10);
 
-    // Si la tirada aleatoria no supera la probabilidad acumulada, no aparece
-    if (Math.random() >= spawnChance) return;
+    if (spawnChance <= 0 || Math.random() >= spawnChance) return;
 
-    for (let attempts = 0; attempts < 300; attempts++) {
+    for (let attempts = 0; attempts < 600; attempts++) {
       const x = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
       const y = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
       if (this.dungeon.getTile(x, y) !== TILE_FLOOR) continue;
-      if (Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y) <= 3) continue;
-      if (Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y) <= 2) continue;
+      if (Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y) <= 2) continue;
+      if (Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y) <= 1.5) continue;
       if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === x && cell.y === y))) continue;
 
       this.dungeon.npcs.push({
@@ -967,7 +961,7 @@ class Renderer {
       const y = Math.floor(pixel / sprite.width);
       if (x > 0) enqueue(pixel - 1);
       if (x + 1 < sprite.width) enqueue(pixel + 1);
-      if (y > 0) enqueue(pixel - sprite.width);
+      if (y > 0) enqueue(pixel - mouseLeft);
       if (y + 1 < sprite.height) enqueue(pixel + sprite.width);
     }
 
@@ -1363,7 +1357,6 @@ class Renderer {
     const enemiesRemain = this.dungeon.enemies.length > 0;
     const theme = this.getTerrainTheme();
 
-    // Lior siempre está descubierto
     this.dungeon.markRevealed(this.player.x, this.player.y);
 
     for (let sy = 0; sy < rows; sy++) {
@@ -1411,7 +1404,6 @@ class Renderer {
 
     this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
 
-    // Dibujado individual y certero de cada enemigo
     this.dungeon.enemies.forEach(enemy => {
       if (!enemy.cells || enemy.cells.length === 0) return;
 
@@ -1445,7 +1437,6 @@ class Renderer {
       if (visible) this.drawGoldenBunny(targetCtx, npc, screenX, screenY);
     });
 
-    // Lior se dibuja siempre en primer plano
     const liorCellPx = playerScreenX * tileSize;
     const liorCellPy = playerScreenY * tileSize;
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
@@ -1758,6 +1749,21 @@ class GameController {
     this.renderer.draw();
   }
 
+  resetGame() {
+    this.floor = 1;
+    this.isVictory = false;
+    this.megaBossEmptyTurns = 0;
+
+    this.deathScreen.classList.remove("visible");
+    this.deathScreen.classList.add("hidden");
+
+    const logBox = document.getElementById("log-entries");
+    if (logBox) logBox.innerHTML = "";
+
+    this.player = null;
+    this.initDungeonFloor();
+  }
+
   log(message) {
     const logBox = document.getElementById("log-entries");
     if (!logBox) return;
@@ -1952,8 +1958,8 @@ class GameController {
     }
 
     this.renderer.playMistyStep();
-    this.updateHUD();
     this.handleTileInteractions();
+    this.updateHUD();
   }
 
   useLayOnHands() {
@@ -2165,7 +2171,6 @@ class GameController {
 
     this.player.moveForward();
     sounds.playStep();
-    this.handleTileInteractions();
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
@@ -2192,7 +2197,6 @@ class GameController {
 
     this.player.moveBackward();
     sounds.playStep();
-    this.handleTileInteractions();
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
@@ -2254,7 +2258,6 @@ class GameController {
     }
 
     this.checkGoldenBunnyCapture();
-
     this.updateHUD();
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
@@ -2290,7 +2293,7 @@ class GameController {
     });
 
     const restartBtn = document.getElementById("btn-restart-game");
-    if (restartBtn) restartBtn.addEventListener("click", () => location.reload());
+    if (restartBtn) restartBtn.addEventListener("click", () => this.resetGame());
 
     window.addEventListener("keydown", (e) => {
       if (this.isVictory) return;
@@ -2390,11 +2393,18 @@ window.addEventListener("DOMContentLoaded", () => {
   let gameStarted = false;
   let fallbackTimer;
 
+  if (sessionStorage.getItem("lior_intro_played")) {
+    if (splashScreen) splashScreen.style.display = "none";
+    new GameController();
+    return;
+  }
+
   function startGame() {
     if (gameStarted) return;
     gameStarted = true;
     clearTimeout(fallbackTimer);
     introVideo?.pause();
+    sessionStorage.setItem("lior_intro_played", "true");
 
     if (splashScreen) {
       splashScreen.classList.add("fade-out");
