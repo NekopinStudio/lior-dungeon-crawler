@@ -8,9 +8,13 @@
 </head>
 <body>
 
-  <!-- PANTALLA SPLASH (LOGO NEKOPIN) -->
+  <!-- INTRO -->
   <div id="splash-screen">
-    <img src="nekopinGames.png" alt="Nekopin Games" class="splash-logo">
+    <video id="intro-video" class="splash-video" muted autoplay playsinline preload="auto" aria-label="Video de introducción">
+      <source src="Assets/Video/intro.mp4" type="video/mp4">
+    </video>
+    <div class="splash-logo hidden" aria-label="Nekopin Games">NEKOPIN<br>GAMES</div>
+    <button id="skip-intro" type="button">Omitir video</button>
   </div>
 
   <!-- ENVOLTORIO PRINCIPAL -->

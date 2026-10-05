@@ -12,12 +12,14 @@ const I18N = {
   weaponNames: {
     sword: IS_SPANISH ? "Espada" : "Sword",
     pistol: IS_SPANISH ? "Pistola" : "Pistol",
-    musket: IS_SPANISH ? "Mosquete" : "Musket"
+    musket: IS_SPANISH ? "Mosquete" : "Musket",
+    blunderbuss: IS_SPANISH ? "Trabuco" : "Blunderbuss"
   },
   weaponLabels: {
     sword: IS_SPANISH ? "Espada (área c/c 1.5)" : "Longsword (1.5 AoE)",
     pistol: IS_SPANISH ? "Pistola (frente 3x3)" : "Pistol (front 3x3)",
-    musket: IS_SPANISH ? "Mosquete (frente 5x3)" : "Musket (front 5x3)"
+    musket: IS_SPANISH ? "Mosquete (frente 5x3)" : "Musket (front 5x3)",
+    blunderbuss: IS_SPANISH ? "Trabuco (frente 2x4)" : "Blunderbuss (front 2x4)"
   },
   captions: {
     weapon: IS_SPANISH ? "ARMA" : "WEAPON",
@@ -56,19 +58,70 @@ const I18N = {
     enemyBlockBack: IS_SPANISH ? "Un enemigo te bloquea el paso por la espalda." : "An enemy blocks your path from behind.",
     noAmmoPistol: IS_SPANISH ? "¡Sin balas de Pistola! Cambia de arma." : "Out of Pistol ammo! Switch weapons.",
     noAmmoMusket: IS_SPANISH ? "¡Sin balas de Mosquete! Cambia de arma." : "Out of Musket ammo! Switch weapons.",
+    noAmmoBlunderbuss: IS_SPANISH ? "¡Sin balas de Trabuco! Cambia de arma." : "Out of Blunderbuss ammo! Switch weapons.",
+    chestPotion: (heal) => IS_SPANISH ? `Encontraste una poción: +${heal} HP.` : `You found a potion: +${heal} HP.`,
+    chestWeapon: (weapon, ammo) => IS_SPANISH
+      ? `Encontraste ${weapon} y ${ammo} ${ammo === 1 ? "bala" : "balas"}.`
+      : `You found a ${weapon} and ${ammo} ${ammo === 1 ? "round" : "rounds"}.`,
+    chestAmmo: (weapon, ammo) => IS_SPANISH
+      ? `El cofre tenía ${ammo} ${ammo === 1 ? "bala" : "balas"} de ${weapon}.`
+      : `The chest had ${ammo} ${ammo === 1 ? "round" : "rounds"} for your ${weapon}.`,
     swordWhiff: IS_SPANISH ? "Blandes tu espada en círculo, pero no hay enemigos al alcance." : "You swing your sword in an arc, but no enemies are near.",
     shotWhiff: (weapon) => IS_SPANISH ? `Disparas tu ${weapon}... pero la bala se pierde sin impactar.` : `You fire your ${weapon}... but the shot finds no target.`,
     panic: IS_SPANISH ? "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen." : "The leader fell! Nearby minions panic and flee.",
     deadPlayer: IS_SPANISH ? "Lior ha caído en combate. Fin de la partida." : "Lior has fallen in battle. Game Over.",
     layUsed: IS_SPANISH ? "Manos Curativas ya fue usado en este piso." : "Lay on Hands was already used on this floor.",
     layHealed: IS_SPANISH ? "Manos Curativas: +6 HP restaurados." : "Lay on Hands: +6 HP restored.",
-    fountain: (hp) => IS_SPANISH ? `Santuario de vida: +${hp} HP restaurados.` : `Fountain of life: +${hp} HP restored.`,
-    shopEnter: IS_SPANISH ? "Entraste a la tienda del Mercader de Sombras." : "You entered the Shadow Merchant shop.",
     exitLocked: (cnt) => IS_SPANISH ? `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.` : `The gate is sealed! Slay the remaining ${cnt} threats.`,
     exitDescend: IS_SPANISH ? "¡Piso purificado! Descendiendo al siguiente nivel..." : "Floor purified! Descending to the next floor...",
     floorIntro: (floor, tier, w, h, ac, hit, dmg) => IS_SPANISH
       ? `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`
       : `Floor ${floor} (Tier ${tier}): ${w}x${h}. Lior AC: ${ac}, Hit bonus: +${hit}, Flat Dmg: +${dmg}.`
+  }
+};
+
+/**
+ * ATLAS PRO IMAGINIBUS LIORIS KUROGANE
+ */
+const LIOR_SPRITES = {
+  IDLE: {
+    SWORD:       { x: 51,  y: 52, w: 132, h: 197 },
+    PISTOL:      { x: 286, y: 62, w: 114, h: 187 },
+    MUSKET:      { x: 496, y: 35, w: 163, h: 223 },
+    BLUNDERBUSS: { x: 720, y: 61, w: 114, h: 185 }
+  },
+  SWORD_SPIN: [
+    { x: 903,  y: 80, w: 151, h: 178 },
+    { x: 1048, y: 52, w: 297, h: 214 },
+    { x: 1372, y: 81, w: 119, h: 177 }
+  ],
+  MISTY_STEP: [
+    { x: 700, y: 545, w: 112, h: 180 },
+    { x: 810, y: 535, w: 94, h: 185 },
+    { x: 900, y: 545, w: 100, h: 160 }
+  ],
+  HEAL: [
+    { x: 1260, y: 535, w: 120, h: 190 },
+    { x: 1390, y: 535, w: 132, h: 190 }
+  ],
+  DRINK_POTION: [
+    { x: 1020, y: 538, w: 92, h: 188 },
+    { x: 1135, y: 545, w: 108, h: 183 }
+  ],
+  WEAPON_CHANGE: { x: 50, y: 800, w: 116, h: 190 },
+  PISTOL_SHOT: {
+    sprite: { x: 35, y: 298, w: 132, h: 154 },
+    muzzle: { x: 155, y: 322, w: 74, h: 80 },
+    projectile: { x: 243, y: 340, w: 62, h: 58 },
+    trail: { x: 328, y: 360, w: 230, h: 32 },
+    impact: { x: 594, y: 340, w: 91, h: 100 }
+  },
+  MUSKET_SHOT: {
+    sprite: { x: 15, y: 540, w: 135, h: 164 },
+    muzzle: { x: 142, y: 564, w: 67, h: 84 },
+    projectile: { x: 202, y: 585, w: 130, h: 50 },
+    trail: { x: 328, y: 600, w: 224, h: 32 },
+    impact: { x: 568, y: 562, w: 120, h: 145 }
   }
 };
 
@@ -263,8 +316,7 @@ const TILE_FLOOR = 0;
 const TILE_WALL = 1;
 const TILE_ENTRANCE = 2;
 const TILE_EXIT = 3;
-const TILE_HEAL_FOUNTAIN = 4;
-const TILE_SHOP = 5;
+const TILE_CHEST = 4;
 
 const CAMERA_CONFIG = {
   cols: 7,
@@ -273,6 +325,32 @@ const CAMERA_CONFIG = {
   playerScreenX: 3,
   playerScreenY: 10
 };
+
+// Bases ortogonales directas para la orientación
+const CAMERA_CARDINAL_BASIS = [
+  { forward: { x: 0, y: -1 }, right: { x: 1, y: 0 } },  // 0: Norte
+  { forward: { x: 1, y: 0 },  right: { x: 0, y: 1 } },  // 1: Este
+  { forward: { x: 0, y: 1 },  right: { x: -1, y: 0 } }, // 2: Sur
+  { forward: { x: -1, y: 0 }, right: { x: 0, y: -1 } }  // 3: Oeste
+];
+
+const ENEMY_SPRITES = {
+  small: [
+    { x: 0, y: 96, w: 144, h: 144 },
+    { x: 624, y: 96, w: 144, h: 144 },
+    { x: 1248, y: 96, w: 144, h: 144 }
+  ],
+  miniBoss: { x: 1880, y: 104, w: 176, h: 176 },
+  megaBoss: { x: 2568, y: 770, w: 220, h: 236 },
+  bunnyIdle: { x: 0, y: 64, w: 256, h: 256 },
+  bunnyFlee: [
+    { x: 1672, y: 940, w: 288, h: 224 },
+    { x: 2120, y: 940, w: 272, h: 224 },
+    { x: 2548, y: 940, w: 248, h: 224 }
+  ]
+};
+
+const CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 0, w: 16, h: 16 }));
 
 const WEAPONS = {
   SWORD: {
@@ -292,8 +370,10 @@ const WEAPONS = {
     minDmg: 1,
     maxDmg: 4,
     range: 3,
+    width: 3,
     isMelee: false,
-    ammoType: "pistol"
+    ammoType: "pistol",
+    ammoProperty: "ammoPistol"
   },
   MUSKET: {
     id: "musket",
@@ -302,8 +382,22 @@ const WEAPONS = {
     minDmg: 1,
     maxDmg: 6,
     range: 5,
+    width: 3,
     isMelee: false,
-    ammoType: "musket"
+    ammoType: "musket",
+    ammoProperty: "ammoMusket"
+  },
+  BLUNDERBUSS: {
+    id: "blunderbuss",
+    name: I18N.weaponNames.blunderbuss,
+    label: I18N.weaponLabels.blunderbuss,
+    minDmg: 1,
+    maxDmg: 8,
+    range: 2,
+    width: 4,
+    isMelee: false,
+    ammoType: "blunderbuss",
+    ammoProperty: "ammoBlunderbuss"
   }
 };
 
@@ -331,6 +425,8 @@ class Dungeon {
     this.tiles = new Map();
     this.revealed = new Set();
     this.enemies = [];
+    this.npcs = [];
+    this.chests = new Set();
 
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
@@ -379,8 +475,10 @@ class Player {
     this.gold = 0;
     this.kills = 0;
 
-    this.ammoPistol = 10;
-    this.ammoMusket = 4;
+    this.ammoPistol = 0;
+    this.ammoMusket = 0;
+    this.ammoBlunderbuss = 0;
+    this.unlockedWeapons = new Set([WEAPONS.SWORD.id]);
     this.equippedWeapon = WEAPONS.SWORD;
 
     this.mistyStepCharges = 2;
@@ -418,9 +516,10 @@ class Player {
   }
 
   cycleWeapon() {
-    if (this.equippedWeapon === WEAPONS.SWORD) this.equippedWeapon = WEAPONS.PISTOL;
-    else if (this.equippedWeapon === WEAPONS.PISTOL) this.equippedWeapon = WEAPONS.MUSKET;
-    else this.equippedWeapon = WEAPONS.SWORD;
+    const availableWeapons = Object.values(WEAPONS).filter(weapon => this.unlockedWeapons.has(weapon.id));
+    if (availableWeapons.length < 2) return;
+    const currentIndex = availableWeapons.findIndex(weapon => weapon.id === this.equippedWeapon.id);
+    this.equippedWeapon = availableWeapons[(currentIndex + 1) % availableWeapons.length];
   }
 
   useLayOnHands() {
@@ -447,7 +546,9 @@ class DungeonGenerator {
     }
 
     this.populateEnemies();
-    this.placeSpecialTiles();
+    this.placeChests();
+    this.placeGoldenBunny();
+    this.ensureStartingEnemyVisible();
   }
 
   generateTile(x, y) {
@@ -462,6 +563,12 @@ class DungeonGenerator {
 
     if (x === 0 || x === this.dungeon.width - 1 || y === 0 || y === this.dungeon.height - 1) {
       this.dungeon.setTile(x, y, TILE_WALL);
+      return;
+    }
+
+    // Pasillo frontal despejado
+    if (x === this.dungeon.entrance.x && y === this.dungeon.entrance.y - 1) {
+      this.dungeon.setTile(x, y, TILE_FLOOR);
       return;
     }
 
@@ -571,6 +678,7 @@ class DungeonGenerator {
             isMegaBoss: false,
             isBoss: false,
             size: 1,
+            spriteSet: Math.floor(Math.random() * ENEMY_SPRITES.small.length),
             cells: candidateCells,
             fearCooldown: 0
           });
@@ -581,141 +689,131 @@ class DungeonGenerator {
     }
   }
 
-  placeSpecialTiles() {
-    const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
-    const targetShops = Math.max(1, Math.floor(miniBosses.length / 3));
-    const placedShopPositions = [];
+  placeGoldenBunny() {
+    if (Math.random() >= 0.1) return;
 
-    for (let i = 0; i < targetShops; i++) {
-      const anchor = miniBosses.length > 0 ? miniBosses[i % miniBosses.length] : null;
-      let placed = false;
+    for (let attempts = 0; attempts < 300; attempts++) {
+      const x = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
+      const y = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
+      if (this.dungeon.getTile(x, y) !== TILE_FLOOR) continue;
+      if (Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y) <= 3) continue;
+      if (Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y) <= 2) continue;
+      if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === x && cell.y === y))) continue;
 
-      for (let attempts = 0; attempts < 600 && !placed; attempts++) {
-        let sx, sy;
-        if (anchor) {
-          const ox = Math.floor(Math.random() * 11) - 5;
-          const oy = Math.floor(Math.random() * 11) - 5;
-          if (Math.hypot(ox, oy) > 5.0) continue;
-          sx = anchor.startX + ox;
-          sy = anchor.startY + oy;
-        } else {
-          sx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
-          sy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
-        }
-
-        if (!this.dungeon.isInsideBounds(sx, sy)) continue;
-        if (Math.hypot(sx - this.dungeon.entrance.x, sy - this.dungeon.entrance.y) <= 3) continue;
-        if (Math.hypot(sx - this.dungeon.exit.x, sy - this.dungeon.exit.y) <= 2) continue;
-        if (this.dungeon.getTile(sx, sy) === TILE_WALL) continue;
-        if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === sx && c.y === sy))) continue;
-
-        const tooClose = placedShopPositions.some(p => Math.hypot(sx - p.x, sy - p.y) < 3.0);
-        if (tooClose) continue;
-
-        this.dungeon.setTile(sx, sy, TILE_SHOP);
-        placedShopPositions.push({ x: sx, y: sy });
-        placed = true;
-      }
+      this.dungeon.npcs.push({
+        id: "golden-bunny",
+        name: "Golden Bunny",
+        x,
+        y,
+        isFleeing: false,
+        fleeDirection: { dx: 1, dy: 0 },
+        fleeStartedAt: 0
+      });
+      return;
     }
+  }
 
-    const targetHeals = Math.floor(this.dungeon.enemies.length / 5);
-    const placedHealPositions = [];
+  ensureStartingEnemyVisible() {
+    const enemy = this.dungeon.enemies.find(candidate => candidate.size === 1 && !candidate.isBoss);
+    if (!enemy) return;
 
-    for (let attempts = 0; attempts < 1500 && placedHealPositions.length < targetHeals; attempts++) {
-      const hx = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
-      const hy = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
+    const { x, y } = this.dungeon.entrance;
+    for (let distance = 4; distance <= 8; distance++) {
+      const targetX = x;
+      const targetY = y - distance;
+      if (!this.dungeon.isInsideBounds(targetX, targetY)) continue;
+      if (this.dungeon.chests.has(this.dungeon.getKey(targetX, targetY))) continue;
+      if (this.dungeon.npcs.some(npc => npc.x === targetX && npc.y === targetY)) continue;
+      if (this.dungeon.enemies.some(other => other !== enemy
+        && other.cells.some(cell => cell.x === targetX && cell.y === targetY))) continue;
 
-      if (Math.hypot(hx - this.dungeon.entrance.x, hy - this.dungeon.entrance.y) <= 3) continue;
-      if (Math.hypot(hx - this.dungeon.exit.x, hy - this.dungeon.exit.y) <= 2) continue;
-      if (this.dungeon.getTile(hx, hy) === TILE_SHOP) continue;
-      if (this.dungeon.getTile(hx, hy) === TILE_WALL) continue;
-      if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === hx && c.y === hy))) continue;
+      for (let step = 1; step < distance; step++) {
+        const corridorY = y - step;
+        if (!this.dungeon.chests.has(this.dungeon.getKey(x, corridorY))) {
+          this.dungeon.setTile(x, corridorY, TILE_FLOOR);
+        }
+      }
 
-      const tooClose = placedHealPositions.some(p => Math.hypot(hx - p.x, hy - p.y) < 5.0);
-      if (tooClose) continue;
+      enemy.x = targetX;
+      enemy.y = targetY;
+      enemy.startX = targetX;
+      enemy.startY = targetY;
+      enemy.cells = [{ x: targetX, y: targetY }];
+      this.dungeon.setTile(targetX, targetY, TILE_FLOOR);
+      return;
+    }
+  }
 
-      this.dungeon.setTile(hx, hy, TILE_HEAL_FOUNTAIN);
-      placedHealPositions.push({ x: hx, y: hy });
+  placeChests() {
+    const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
+    const targetChests = Math.max(1, Math.floor(miniBosses.length / 3))
+      + Math.floor(this.dungeon.enemies.length / 5);
+
+    for (let attempts = 0; attempts < 1500 && this.dungeon.chests.size < targetChests; attempts++) {
+      const x = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
+      const y = Math.floor(Math.random() * (this.dungeon.height - 2)) + 1;
+      if (this.dungeon.getTile(x, y) !== TILE_FLOOR) continue;
+      if (Math.hypot(x - this.dungeon.entrance.x, y - this.dungeon.entrance.y) <= 3) continue;
+      if (Math.hypot(x - this.dungeon.exit.x, y - this.dungeon.exit.y) <= 2) continue;
+      if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === x && cell.y === y))) continue;
+      if ([...this.dungeon.chests].some(key => {
+        const [chestX, chestY] = key.split(",").map(Number);
+        return Math.hypot(x - chestX, y - chestY) < 3;
+      })) continue;
+
+      this.dungeon.setTile(x, y, TILE_CHEST);
+      this.dungeon.chests.add(this.dungeon.getKey(x, y));
     }
   }
 }
 
+/**
+ * PROYECCIÓN Y TRANSFORMACIÓN DE CÁMARA RELATIVA
+ */
 class CameraTransformer {
+  static getBasis(direction) {
+    const cardinal = ((direction % 4) + 4) % 4;
+    return CAMERA_CARDINAL_BASIS[cardinal];
+  }
+
   static screenToWorld(screenX, screenY, player) {
-    const lateralOffset = screenX - CAMERA_CONFIG.playerScreenX;
-    const forwardOffset = -(screenY - CAMERA_CONFIG.playerScreenY);
-
-    let worldX = player.x;
-    let worldY = player.y;
-
-    switch (player.direction) {
-      case 0: worldX += lateralOffset; worldY -= forwardOffset; break;
-      case 1: worldX += forwardOffset; worldY += lateralOffset; break;
-      case 2: worldX -= lateralOffset; worldY += forwardOffset; break;
-      case 3: worldX -= forwardOffset; worldY -= lateralOffset; break;
-    }
-
-    return { x: worldX, y: worldY };
+    const lateral = screenX - CAMERA_CONFIG.playerScreenX;
+    const forward = CAMERA_CONFIG.playerScreenY - screenY;
+    const basis = CameraTransformer.getBasis(player.direction);
+    return {
+      x: player.x + basis.forward.x * forward + basis.right.x * lateral,
+      y: player.y + basis.forward.y * forward + basis.right.y * lateral
+    };
   }
 
   static worldToScreen(worldX, worldY, player) {
     const dx = worldX - player.x;
     const dy = worldY - player.y;
-    let forwardOffset = 0;
-    let lateralOffset = 0;
-
-    switch (player.direction) {
-      case 0: forwardOffset = -dy; lateralOffset = dx; break;
-      case 1: forwardOffset = dx; lateralOffset = dy; break;
-      case 2: forwardOffset = dy; lateralOffset = -dx; break;
-      case 3: forwardOffset = -dx; lateralOffset = -dy; break;
-    }
-
-    const screenX = CAMERA_CONFIG.playerScreenX + lateralOffset;
-    const screenY = CAMERA_CONFIG.playerScreenY - forwardOffset;
-    return { screenX, screenY };
+    const basis = CameraTransformer.getBasis(player.direction);
+    const forward = dx * basis.forward.x + dy * basis.forward.y;
+    const lateral = dx * basis.right.x + dy * basis.right.y;
+    return {
+      screenX: CAMERA_CONFIG.playerScreenX + lateral,
+      screenY: CAMERA_CONFIG.playerScreenY - forward
+    };
   }
 }
 
 /**
- * SISTEMA DE VISIBILIDAD (BRESENHAM CON TOPE DE SEGURIDAD)
+ * SISTEMA DE VISIBILIDAD ROBUSTO
  */
 class VisibilitySystem {
   static hasLineOfSight(screenX0, screenY0, screenX1, screenY1, dungeon, player) {
-    let x0 = screenX0;
-    let y0 = screenY0;
-    const x1 = screenX1;
-    const y1 = screenY1;
+    if (screenX0 === screenX1 && screenY0 === screenY1) return true;
 
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
-
-    const maxSteps = dx + dy + 2;
-    let steps = 0;
-
-    while (true) {
-      steps++;
-      if (steps > maxSteps) return false;
-
-      if (x0 === x1 && y0 === y1) return true;
-
-      if (x0 !== screenX0 || y0 !== screenY0) {
-        const worldPos = CameraTransformer.screenToWorld(x0, y0, player);
-        if (dungeon.getTile(worldPos.x, worldPos.y) === TILE_WALL) {
-          return false;
-        }
-      }
-
-      const e2 = 2 * err;
-      if (e2 > -dy) { err -= dy; x0 += sx; }
-      if (e2 < dx) { err += dx; y0 += sy; }
-    }
+    const p0 = CameraTransformer.screenToWorld(screenX0, screenY0, player);
+    const p1 = CameraTransformer.screenToWorld(screenX1, screenY1, player);
+    return VisibilitySystem.hasWorldLineOfSight(p0.x, p0.y, p1.x, p1.y, dungeon);
   }
 
   static hasWorldLineOfSight(x0, y0, x1, y1, dungeon) {
+    if (x0 === x1 && y0 === y1) return true;
+
     let curX = x0;
     let curY = y0;
     const dx = Math.abs(x1 - curX);
@@ -733,8 +831,10 @@ class VisibilitySystem {
 
       if (curX === x1 && curY === y1) return true;
 
-      if ((curX !== x0 || curY !== y0) && dungeon.getTile(curX, curY) === TILE_WALL) {
-        return false;
+      if ((curX !== x0 || curY !== y0) && (curX !== x1 || curY !== y1)) {
+        if (dungeon.getTile(curX, curY) === TILE_WALL) {
+          return false;
+        }
       }
 
       const e2 = 2 * err;
@@ -754,14 +854,431 @@ class Renderer {
     this.isVictorySequence = false;
     this.victoryStep = 0;
 
-    this.offscreenCanvas = document.createElement("canvas");
-    this.offscreenCanvas.width = canvas.width;
-    this.offscreenCanvas.height = canvas.height;
-    this.offCtx = this.offscreenCanvas.getContext("2d");
+    this.terrainThemes = [
+      {
+        floorColor: "#111713",
+        wallColor: "#292e2c",
+        boundaryColor: "#080c0a",
+        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_1/Dungeon_1.png"),
+        wallCrop: { x: 32, y: 16, w: 16, h: 16 }
+      },
+      {
+        floorColor: "#20170f",
+        wallColor: "#4a2f1d",
+        boundaryColor: "#0d0906",
+        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_2/Dungeon_2.png"),
+        wallCrop: { x: 32, y: 16, w: 16, h: 16 }
+      },
+      {
+        floorColor: "#111c2d",
+        wallColor: "#293b57",
+        boundaryColor: "#070e1b",
+        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_3/Dungeon_3.png"),
+        wallCrop: { x: 96, y: 16, w: 16, h: 16 }
+      }
+    ];
+    this.mapDecorations = {
+      chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png")
+    };
+    this.enemySpriteSheet = this.loadTerrainTexture("Assets/Enemy/enemy-spriteSheet.jpg");
+    this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
+    this.keyedSpriteCache = new Map();
 
-    this.currentAngle = player.direction * 90;
-    this.targetAngle = player.direction * 90;
-    this.isAnimating = false;
+    this.liorSpritesheet = this.loadTerrainTexture("Assets/Lior/lior_spritesheet.png");
+
+    this.playerAnimation = null;
+    this.playerAnimationFrame = null;
+    this.chestOpening = null;
+    this.chestOpeningFrame = null;
+  }
+
+  loadTerrainTexture(src) {
+    const image = new Image();
+    image.addEventListener("load", () => this.draw());
+    image.src = src;
+    return image;
+  }
+
+  getKeyedSprite(sheet, sourceRect, backgroundType) {
+    if (!sheet.complete || sheet.naturalWidth === 0) return null;
+    const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}`;
+    if (this.keyedSpriteCache.has(cacheKey)) return this.keyedSpriteCache.get(cacheKey);
+
+    const sprite = document.createElement("canvas");
+    sprite.width = sourceRect.w;
+    sprite.height = sourceRect.h;
+    const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
+    spriteCtx.drawImage(sheet, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h,
+      0, 0, sourceRect.w, sourceRect.h);
+
+    const imageData = spriteCtx.getImageData(0, 0, sprite.width, sprite.height);
+    const { data } = imageData;
+    const visited = new Uint8Array(sprite.width * sprite.height);
+    const queue = new Int32Array(sprite.width * sprite.height);
+    const background = backgroundType === "gray"
+      ? [data[0], data[1], data[2]]
+      : [0, 0, 0];
+    const isBackground = (pixel) => {
+      const offset = pixel * 4;
+      if (backgroundType === "enemy") {
+        const red = data[offset];
+        const green = data[offset + 1];
+        const blue = data[offset + 2];
+        const isBlack = Math.max(red, green, blue) < 30;
+        const isGray = Math.max(red, green, blue) - Math.min(red, green, blue) < 14
+          && red >= 92 && red <= 142;
+        return isBlack || isGray;
+      }
+      if (backgroundType === "black") {
+        return Math.max(data[offset], data[offset + 1], data[offset + 2]) < 30;
+      }
+      return Math.abs(data[offset] - background[0]) < 27
+        && Math.abs(data[offset + 1] - background[1]) < 27
+        && Math.abs(data[offset + 2] - background[2]) < 27;
+    };
+
+    let queueEnd = 0;
+    const enqueue = (pixel) => {
+      if (pixel < 0 || pixel >= visited.length || visited[pixel] || !isBackground(pixel)) return;
+      visited[pixel] = 1;
+      queue[queueEnd++] = pixel;
+    };
+    for (let x = 0; x < sprite.width; x++) {
+      enqueue(x);
+      enqueue((sprite.height - 1) * sprite.width + x);
+    }
+    for (let y = 0; y < sprite.height; y++) {
+      enqueue(y * sprite.width);
+      enqueue(y * sprite.width + sprite.width - 1);
+    }
+
+    for (let head = 0; head < queueEnd; head++) {
+      const pixel = queue[head];
+      data[pixel * 4 + 3] = 0;
+      const x = pixel % sprite.width;
+      const y = Math.floor(pixel / sprite.width);
+      if (x > 0) enqueue(pixel - 1);
+      if (x + 1 < sprite.width) enqueue(pixel + 1);
+      if (y > 0) enqueue(pixel - sprite.width);
+      if (y + 1 < sprite.height) enqueue(pixel + sprite.width);
+    }
+
+    const isMegaBossFrame = backgroundType === "enemy"
+      && sourceRect.x === ENEMY_SPRITES.megaBoss.x
+      && sourceRect.y === ENEMY_SPRITES.megaBoss.y;
+    if (isMegaBossFrame) {
+      const artifactVisited = new Uint8Array(sprite.width * sprite.height);
+      for (let start = 0; start < artifactVisited.length; start++) {
+        if (artifactVisited[start] || data[start * 4 + 3] === 0) continue;
+        artifactVisited[start] = 1;
+        const component = [start];
+        let minX = start % sprite.width;
+        let maxX = minX;
+        let minY = Math.floor(start / sprite.width);
+        let maxY = minY;
+
+        for (let head = 0; head < component.length; head++) {
+          const pixel = component[head];
+          const x = pixel % sprite.width;
+          const y = Math.floor(pixel / sprite.width);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+          for (let nextY = Math.max(0, y - 1); nextY <= Math.min(sprite.height - 1, y + 1); nextY++) {
+            for (let nextX = Math.max(0, x - 1); nextX <= Math.min(sprite.width - 1, x + 1); nextX++) {
+              const next = nextY * sprite.width + nextX;
+              if (artifactVisited[next] || data[next * 4 + 3] === 0) continue;
+              artifactVisited[next] = 1;
+              component.push(next);
+            }
+          }
+        }
+
+        const isThinBorderArtifact = maxX - minX <= 1 && component.length <= 24
+          && (minX < 24 || maxX >= sprite.width - 24 || minY < 16 || maxY >= sprite.height - 16);
+        if (isThinBorderArtifact) {
+          component.forEach(pixel => { data[pixel * 4 + 3] = 0; });
+        }
+      }
+    }
+
+    spriteCtx.putImageData(imageData, 0, 0);
+    this.keyedSpriteCache.set(cacheKey, sprite);
+    return sprite;
+  }
+
+  drawEnemySprite(targetCtx, enemy, px, py) {
+    const sourceRect = enemy.isMegaBoss
+      ? ENEMY_SPRITES.megaBoss
+      : (enemy.isBoss ? ENEMY_SPRITES.miniBoss : ENEMY_SPRITES.small[enemy.spriteSet || 0]);
+    const sprite = this.getKeyedSprite(this.enemySpriteSheet, sourceRect, "enemy");
+    const tileSize = CAMERA_CONFIG.tileSize;
+    const drawSize = enemy.size * tileSize;
+
+    if (!sprite) {
+      targetCtx.fillStyle = enemy.isBoss ? "#cc0029" : "#ff3333";
+      targetCtx.fillRect(px + 2, py + 2, drawSize - 4, drawSize - 4);
+      return;
+    }
+
+    targetCtx.save();
+    targetCtx.imageSmoothingEnabled = false;
+    targetCtx.drawImage(sprite, px, py, drawSize, drawSize);
+    targetCtx.restore();
+  }
+
+  drawGoldenBunny(targetCtx, bunny, screenX, screenY) {
+    const fleeing = bunny.isFleeing;
+    const frame = fleeing
+      ? ENEMY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % ENEMY_SPRITES.bunnyFlee.length]
+      : ENEMY_SPRITES.bunnyIdle;
+    const sprite = this.getKeyedSprite(this.goldenBunnySheet, frame, "black");
+    if (!sprite) return;
+
+    const tileSize = CAMERA_CONFIG.tileSize;
+    const scale = Math.min(tileSize / frame.w, tileSize / frame.h);
+    const width = frame.w * scale;
+    const height = frame.h * scale;
+    const px = screenX * tileSize + (tileSize - width) / 2;
+    const py = screenY * tileSize + tileSize - height;
+    const nextScreen = CameraTransformer.worldToScreen(
+      bunny.x + bunny.fleeDirection.dx,
+      bunny.y + bunny.fleeDirection.dy,
+      this.player
+    );
+    const movingLeft = fleeing && nextScreen.screenX < screenX;
+
+    targetCtx.save();
+    targetCtx.imageSmoothingEnabled = false;
+    if (movingLeft) {
+      targetCtx.translate(px + width, 0);
+      targetCtx.scale(-1, 1);
+      targetCtx.drawImage(sprite, 0, py, width, height);
+    } else {
+      targetCtx.drawImage(sprite, px, py, width, height);
+    }
+    targetCtx.restore();
+  }
+
+  getTerrainTheme() {
+    const floorNumber = this.generator?.floorNumber || 1;
+    const themeIndex = Math.min(2, Math.floor((floorNumber - 1) / 34));
+    return this.terrainThemes[themeIndex];
+  }
+
+  drawTerrainTile(targetCtx, texture, sourceRect, x, y, fallbackColor, opacity = 1) {
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.fillStyle = fallbackColor;
+    targetCtx.fillRect(x, y, CAMERA_CONFIG.tileSize, CAMERA_CONFIG.tileSize);
+
+    if (texture?.complete && texture.naturalWidth > 0 && sourceRect) {
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.drawImage(texture, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h,
+        x, y, CAMERA_CONFIG.tileSize, CAMERA_CONFIG.tileSize);
+    }
+    targetCtx.restore();
+  }
+
+  getDecorationSeed(x, y) {
+    const floorNumber = this.generator?.floorNumber || 1;
+    return (Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(floorNumber, 83492791)) >>> 0;
+  }
+
+  drawChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
+    const chests = this.mapDecorations.chests;
+    if (!chests.complete || chests.naturalWidth === 0) return;
+    const frame = CHEST_SPRITES[frameIndex];
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.imageSmoothingEnabled = false;
+    targetCtx.drawImage(chests, frame.x, frame.y, frame.w, frame.h, px + 5, py + 5,
+      CAMERA_CONFIG.tileSize - 10, CAMERA_CONFIG.tileSize - 10);
+    targetCtx.restore();
+  }
+
+  drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY) {
+    if (!this.chestOpening) return;
+    const { screenX, screenY } = CameraTransformer.worldToScreen(
+      this.chestOpening.x, this.chestOpening.y, this.player
+    );
+    if (screenX < 0 || screenX >= CAMERA_CONFIG.cols || screenY < 0 || screenY >= CAMERA_CONFIG.rows) return;
+    if (!VisibilitySystem.hasLineOfSight(
+      playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
+    )) return;
+
+    const frameIndex = Math.min(CHEST_SPRITES.length - 1,
+      Math.floor((performance.now() - this.chestOpening.startedAt) / 90));
+    this.drawChestSprite(targetCtx, screenX * CAMERA_CONFIG.tileSize,
+      screenY * CAMERA_CONFIG.tileSize, 1, frameIndex);
+  }
+
+  playChestOpening(x, y) {
+    if (this.chestOpeningFrame !== null) cancelAnimationFrame(this.chestOpeningFrame);
+    const opening = { x, y, startedAt: performance.now() };
+    this.chestOpening = opening;
+    const animate = () => {
+      if (this.chestOpening !== opening) return;
+      if (performance.now() - opening.startedAt >= CHEST_SPRITES.length * 90) {
+        this.chestOpening = null;
+        this.chestOpeningFrame = null;
+        this.redrawCurrentView();
+        return;
+      }
+      this.redrawCurrentView();
+      this.chestOpeningFrame = requestAnimationFrame(animate);
+    };
+    animate();
+  }
+
+  drawLiorSprite(targetCtx, px, py, tileSize) {
+    targetCtx.save();
+    targetCtx.imageSmoothingEnabled = false;
+
+    if (this.liorSpritesheet && this.liorSpritesheet.complete && this.liorSpritesheet.naturalWidth > 0) {
+      let spriteDef = LIOR_SPRITES.IDLE.SWORD;
+      if (this.player.equippedWeapon.id === "pistol") spriteDef = LIOR_SPRITES.IDLE.PISTOL;
+      else if (this.player.equippedWeapon.id === "musket") spriteDef = LIOR_SPRITES.IDLE.MUSKET;
+      else if (this.player.equippedWeapon.id === "blunderbuss") spriteDef = LIOR_SPRITES.IDLE.BLUNDERBUSS;
+
+      let actionFrame = null;
+      if (this.playerAnimation) {
+        const frameIndex = Math.floor(
+          (performance.now() - this.playerAnimation.startedAt) / this.playerAnimation.frameDuration
+        );
+        if (frameIndex < this.playerAnimation.frames.length) {
+          actionFrame = this.playerAnimation.frames[frameIndex];
+          spriteDef = actionFrame.sprite || actionFrame;
+        }
+      }
+
+      const renderH = tileSize * 1.35;
+      const renderW = renderH * (spriteDef.w / spriteDef.h);
+      const drawX = px + (tileSize - renderW) / 2;
+      const drawY = py + (tileSize - renderH) + 2;
+
+      targetCtx.drawImage(
+        this.liorSpritesheet,
+        spriteDef.x, spriteDef.y, spriteDef.w, spriteDef.h,
+        drawX, drawY, renderW, renderH
+      );
+
+      if (actionFrame?.effects) {
+        this.drawPlayerEffects(targetCtx, actionFrame.effects, px, py, tileSize);
+      }
+    } else {
+      const centerX = px + tileSize / 2;
+      const centerY = py + tileSize / 2;
+
+      targetCtx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
+      targetCtx.beginPath();
+      targetCtx.arc(centerX, centerY, tileSize * 0.38, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.strokeStyle = "#ffffff";
+      targetCtx.lineWidth = 2.5;
+      targetCtx.stroke();
+
+      if (this.player.hp > 0) {
+        targetCtx.beginPath();
+        targetCtx.moveTo(centerX, centerY);
+        targetCtx.lineTo(centerX, centerY - tileSize * 0.55);
+        targetCtx.stroke();
+      }
+    }
+    targetCtx.restore();
+  }
+
+  drawPlayerEffects(targetCtx, effects, px, py, tileSize) {
+    const centerX = px + tileSize / 2;
+    effects.forEach(effect => {
+      if (effect.type === "muzzle") {
+        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
+          effect.sprite.w, effect.sprite.h, centerX + tileSize * 0.05, py - tileSize * 0.55,
+          tileSize * 0.75, tileSize * 0.75);
+      } else if (effect.type === "projectile") {
+        const projectileY = py - tileSize * effect.distance;
+        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
+          effect.sprite.w, effect.sprite.h, centerX - tileSize * 0.2, projectileY - tileSize * 0.2,
+          tileSize * 0.4, tileSize * 0.4);
+      } else if (effect.type === "trail") {
+        const length = tileSize * effect.distance;
+        targetCtx.save();
+        targetCtx.translate(centerX, py - length / 2);
+        targetCtx.rotate(-Math.PI / 2);
+        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
+          effect.sprite.w, effect.sprite.h, -length / 2, -tileSize * 0.12, length, tileSize * 0.24);
+        targetCtx.restore();
+      } else if (effect.type === "impact") {
+        const impactY = py - tileSize * effect.distance;
+        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
+          effect.sprite.w, effect.sprite.h, centerX - tileSize * 0.65, impactY - tileSize * 0.65,
+          tileSize * 1.3, tileSize * 1.3);
+      }
+    });
+  }
+
+  playSpriteAnimation(frames, frameDuration) {
+    if (this.playerAnimationFrame !== null) {
+      cancelAnimationFrame(this.playerAnimationFrame);
+    }
+
+    const animation = { frames, frameDuration, startedAt: performance.now() };
+    this.playerAnimation = animation;
+    const animate = () => {
+      if (this.playerAnimation !== animation) return;
+
+      if (performance.now() - animation.startedAt >= frames.length * frameDuration) {
+        this.playerAnimation = null;
+        this.playerAnimationFrame = null;
+        this.redrawCurrentView();
+        return;
+      }
+
+      this.redrawCurrentView();
+      this.playerAnimationFrame = requestAnimationFrame(animate);
+    };
+    animate();
+  }
+
+  redrawCurrentView() {
+    this.draw();
+  }
+
+  playSwordSpin() {
+    this.playSpriteAnimation(LIOR_SPRITES.SWORD_SPIN, 110);
+  }
+
+  playMistyStep() {
+    this.playSpriteAnimation(LIOR_SPRITES.MISTY_STEP, 100);
+  }
+
+  playHealing() {
+    this.playSpriteAnimation(LIOR_SPRITES.HEAL, 140);
+  }
+
+  playDrinkPotion() {
+    this.playSpriteAnimation(LIOR_SPRITES.DRINK_POTION, 160);
+  }
+
+  playWeaponChange() {
+    this.playSpriteAnimation([LIOR_SPRITES.WEAPON_CHANGE], 220);
+  }
+
+  playShot(weaponId) {
+    const shot = weaponId === "pistol" ? LIOR_SPRITES.PISTOL_SHOT : LIOR_SPRITES.MUSKET_SHOT;
+    const distance = weaponId === "pistol" ? 3 : (weaponId === "blunderbuss" ? 2 : 5);
+    const shooter = weaponId === "blunderbuss" ? LIOR_SPRITES.IDLE.BLUNDERBUSS : shot.sprite;
+    const frames = [
+      { sprite: shooter, effects: [{ type: "muzzle", sprite: shot.muzzle }] },
+      { sprite: shooter, effects: [
+        { type: "projectile", sprite: shot.projectile, distance: distance * 0.55 },
+        { type: "trail", sprite: shot.trail, distance: distance * 0.55 }
+      ] },
+      { sprite: shooter, effects: [{ type: "impact", sprite: shot.impact, distance }] }
+    ];
+    this.playSpriteAnimation(frames, 100);
   }
 
   setDungeon(dungeon, generator) {
@@ -770,48 +1287,11 @@ class Renderer {
   }
 
   animateTurn(deltaQuarterTurns) {
-    this.targetAngle += deltaQuarterTurns * 90;
-    if (!this.isAnimating) {
-      this.isAnimating = true;
-      requestAnimationFrame(() => this.stepAnimation());
-    }
-  }
-
-  stepAnimation() {
-    const diff = this.targetAngle - this.currentAngle;
-    if (Math.abs(diff) < 0.3) {
-      this.currentAngle = this.targetAngle;
-      this.isAnimating = false;
-      this.drawBase(this.ctx);
-      return;
-    }
-
-    this.currentAngle += diff * 0.32;
-    this.drawWithRotation(this.currentAngle - this.player.direction * 90);
-    requestAnimationFrame(() => this.stepAnimation());
+    this.draw();
   }
 
   draw() {
     this.drawBase(this.ctx);
-  }
-
-  drawWithRotation(angleOffsetDeg) {
-    const { ctx, canvas } = this;
-    const { tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
-    const pivotX = playerScreenX * tileSize + tileSize / 2;
-    const pivotY = playerScreenY * tileSize + tileSize / 2;
-
-    this.drawBase(this.offCtx);
-
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.translate(pivotX, pivotY);
-    ctx.rotate((angleOffsetDeg * Math.PI) / 180);
-    ctx.translate(-pivotX, -pivotY);
-    ctx.drawImage(this.offscreenCanvas, 0, 0);
-    ctx.restore();
   }
 
   drawBase(targetCtx) {
@@ -821,7 +1301,6 @@ class Renderer {
     targetCtx.fillStyle = "#000000";
     targetCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Cinemática de victoria: Piso 100 completado (Cielo azul, sendero marrón y césped verde)
     if (this.isVictorySequence) {
       for (let sy = 0; sy < rows; sy++) {
         for (let sx = 0; sx < cols; sx++) {
@@ -867,24 +1346,17 @@ class Renderer {
         targetCtx.restore();
       }
 
-      const liorPx = playerScreenX * tileSize + tileSize / 2;
-      const liorPy = (playerScreenY - this.victoryStep) * tileSize + tileSize / 2;
-
-      targetCtx.fillStyle = "#00b0ff";
-      targetCtx.beginPath();
-      targetCtx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
-      targetCtx.fill();
-
-      targetCtx.strokeStyle = "#ffffff";
-      targetCtx.lineWidth = 2.5;
-      targetCtx.beginPath();
-      targetCtx.moveTo(liorPx, liorPy);
-      targetCtx.lineTo(liorPx, liorPy - tileSize * 0.65);
-      targetCtx.stroke();
+      const liorPx = playerScreenX * tileSize;
+      const liorPy = (playerScreenY - this.victoryStep) * tileSize;
+      this.drawLiorSprite(targetCtx, liorPx, liorPy, tileSize);
       return;
     }
 
     const enemiesRemain = this.dungeon.enemies.length > 0;
+    const theme = this.getTerrainTheme();
+
+    // Lior siempre está descubierto
+    this.dungeon.markRevealed(this.player.x, this.player.y);
 
     for (let sy = 0; sy < rows; sy++) {
       for (let sx = 0; sx < cols; sx++) {
@@ -893,7 +1365,8 @@ class Renderer {
         const px = sx * tileSize;
         const py = sy * tileSize;
 
-        const inLineOfSight = VisibilitySystem.hasLineOfSight(
+        const isPlayerCell = (sx === playerScreenX && sy === playerScreenY);
+        const inLineOfSight = isPlayerCell || VisibilitySystem.hasLineOfSight(
           playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player
         );
 
@@ -907,47 +1380,19 @@ class Renderer {
         }
 
         if (tileType === TILE_WALL) {
-          targetCtx.fillStyle = inLineOfSight ? "#ffffff" : "#666666";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
-        } else if (tileType === TILE_ENTRANCE) {
-          targetCtx.fillStyle = inLineOfSight ? "#00e676" : "#00552b";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
-        } else if (tileType === TILE_EXIT) {
-          targetCtx.fillStyle = enemiesRemain
-            ? (inLineOfSight ? "#b71c1c" : "#4a0000")
-            : (inLineOfSight ? "#ffb300" : "#664700");
-          targetCtx.fillRect(px, py, tileSize, tileSize);
-          if (inLineOfSight && enemiesRemain) {
-            targetCtx.strokeStyle = "#ffffff";
-            targetCtx.lineWidth = 1.5;
-            targetCtx.strokeRect(px + 4, py + 4, tileSize - 8, tileSize - 8);
-          }
-        } else if (tileType === TILE_HEAL_FOUNTAIN) {
-          targetCtx.fillStyle = inLineOfSight ? "#062817" : "#02120a";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
-          if (inLineOfSight) {
-            targetCtx.fillStyle = "#00e676";
-            targetCtx.font = "bold 20px monospace";
-            targetCtx.textAlign = "center";
-            targetCtx.textBaseline = "middle";
-            targetCtx.fillText("+", px + tileSize / 2, py + tileSize / 2);
-          }
-        } else if (tileType === TILE_SHOP) {
-          targetCtx.fillStyle = inLineOfSight ? "#2b2204" : "#141002";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
-          if (inLineOfSight) {
-            targetCtx.fillStyle = "#ffd700";
-            targetCtx.font = "bold 18px monospace";
-            targetCtx.textAlign = "center";
-            targetCtx.textBaseline = "middle";
-            targetCtx.fillText("T", px + tileSize / 2, py + tileSize / 2);
-          }
-        } else if (tileType === TILE_FLOOR) {
-          targetCtx.fillStyle = inLineOfSight ? "#101014" : "#08080a";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
+          const opacity = inLineOfSight ? 1 : 0.45;
+          this.drawTerrainTile(targetCtx, theme.wallAtlas, theme.wallCrop, px, py,
+            inLineOfSight ? theme.wallColor : "#111111", opacity);
+        } else if (tileType === TILE_CHEST) {
+          this.drawTerrainTile(targetCtx, null, null, px, py,
+            theme.floorColor, inLineOfSight ? 1 : 0.4);
+          this.drawChestSprite(targetCtx, px, py, inLineOfSight ? 1 : 0.4);
+        } else if (tileType === TILE_FLOOR || tileType === TILE_ENTRANCE || tileType === TILE_EXIT) {
+          this.drawTerrainTile(targetCtx, null, null, px, py, theme.floorColor,
+            inLineOfSight ? 1 : 0.4);
         } else if (tileType === TILE_OUT_OF_BOUNDS) {
-          targetCtx.fillStyle = "#050508";
-          targetCtx.fillRect(px, py, tileSize, tileSize);
+          this.drawTerrainTile(targetCtx, null, null, px, py, theme.boundaryColor,
+            inLineOfSight ? 1 : 0.45);
         }
 
         targetCtx.strokeStyle = inLineOfSight ? "#2e2e34" : "#141416";
@@ -956,59 +1401,46 @@ class Renderer {
       }
     }
 
+    this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
+
+    // Dibujado individual y certero de cada enemigo
     this.dungeon.enemies.forEach(enemy => {
-      if (!enemy.cells) return;
+      if (!enemy.cells || enemy.cells.length === 0) return;
+
+      let minScreenX = 999;
+      let minScreenY = 999;
+      let hasVisibleCell = false;
+
       enemy.cells.forEach(cell => {
         const { screenX, screenY } = CameraTransformer.worldToScreen(cell.x, cell.y, this.player);
         if (screenX >= 0 && screenX < cols && screenY >= 0 && screenY < rows) {
-          const visible = VisibilitySystem.hasLineOfSight(
-            playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
-          );
-          if (visible) {
-            const px = screenX * tileSize;
-            const py = screenY * tileSize;
-
-            if (enemy.isMegaBoss) {
-              targetCtx.fillStyle = "#800020";
-              targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-              targetCtx.strokeStyle = "#ffd700";
-              targetCtx.lineWidth = 2;
-              targetCtx.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-            } else if (enemy.isBoss) {
-              targetCtx.fillStyle = "#cc0029";
-              targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
-              targetCtx.strokeStyle = "#ffffff";
-              targetCtx.lineWidth = 1.5;
-              targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
-            } else {
-              const cx = px + tileSize / 2;
-              const cy = py + tileSize / 2;
-              targetCtx.fillStyle = enemy.fearCooldown > 0 ? "#ff99bb" : "#ff3333";
-              targetCtx.beginPath();
-              targetCtx.arc(cx, cy, 7, 0, Math.PI * 2);
-              targetCtx.fill();
-            }
+          if (VisibilitySystem.hasLineOfSight(playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player)) {
+            hasVisibleCell = true;
           }
         }
+        if (screenX < minScreenX) minScreenX = screenX;
+        if (screenY < minScreenY) minScreenY = screenY;
       });
+
+      if (!hasVisibleCell) return;
+      if (minScreenX + enemy.size <= 0 || minScreenX >= cols || minScreenY + enemy.size <= 0 || minScreenY >= rows) return;
+
+      this.drawEnemySprite(targetCtx, enemy, minScreenX * tileSize, minScreenY * tileSize);
     });
 
-    const liorPx = playerScreenX * tileSize + tileSize / 2;
-    const liorPy = playerScreenY * tileSize + tileSize / 2;
+    this.dungeon.npcs.forEach(npc => {
+      const { screenX, screenY } = CameraTransformer.worldToScreen(npc.x, npc.y, this.player);
+      if (screenX < 0 || screenX >= cols || screenY < 0 || screenY >= rows) return;
+      const visible = VisibilitySystem.hasLineOfSight(
+        playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
+      );
+      if (visible) this.drawGoldenBunny(targetCtx, npc, screenX, screenY);
+    });
 
-    targetCtx.fillStyle = this.player.hp > 0 ? "#00b0ff" : "#555555";
-    targetCtx.beginPath();
-    targetCtx.arc(liorPx, liorPy, tileSize * 0.35, 0, Math.PI * 2);
-    targetCtx.fill();
-
-    if (this.player.hp > 0) {
-      targetCtx.strokeStyle = "#ffffff";
-      targetCtx.lineWidth = 2.5;
-      targetCtx.beginPath();
-      targetCtx.moveTo(liorPx, liorPy);
-      targetCtx.lineTo(liorPx, liorPy - tileSize * 0.65);
-      targetCtx.stroke();
-    }
+    // Lior se dibuja siempre en primer plano
+    const liorCellPx = playerScreenX * tileSize;
+    const liorCellPy = playerScreenY * tileSize;
+    this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
   }
 }
 
@@ -1038,17 +1470,13 @@ class CombatSystem {
       return Math.hypot(dx, dy) <= weapon.range;
     }
 
-    let forward = 0;
-    let lateral = 0;
+    const basis = CameraTransformer.getBasis(player.direction);
+    const forward = dx * basis.forward.x + dy * basis.forward.y;
+    const lateral = dx * basis.right.x + dy * basis.right.y;
 
-    switch (player.direction) {
-      case 0: forward = -dy; lateral = dx; break;
-      case 1: forward = dx; lateral = dy; break;
-      case 2: forward = dy; lateral = -dx; break;
-      case 3: forward = -dx; lateral = -dy; break;
-    }
-
-    return (forward >= 1 && forward <= weapon.range && Math.abs(lateral) <= 1);
+    const leftEdge = -Math.floor(weapon.width / 2);
+    const rightEdge = leftEdge + weapon.width - 1;
+    return forward >= 1 && forward <= weapon.range && lateral >= leftEdge && lateral <= rightEdge;
   }
 
   static executeAttack(game) {
@@ -1063,22 +1491,22 @@ class CombatSystem {
     const hitBonus = game.hitBonus;
     const dmgBonus = game.dmgBonus;
 
-    if (weapon.ammoType === "pistol") {
-      if (player.ammoPistol <= 0) {
-        game.log(I18N.logs.noAmmoPistol);
+    if (weapon.ammoProperty) {
+      if (player[weapon.ammoProperty] <= 0) {
+        const noAmmoMessage = {
+          pistol: I18N.logs.noAmmoPistol,
+          musket: I18N.logs.noAmmoMusket,
+          blunderbuss: I18N.logs.noAmmoBlunderbuss
+        }[weapon.id];
+        game.log(noAmmoMessage);
         return;
       }
-      player.ammoPistol--;
-      sounds.playShot(false);
-    } else if (weapon.ammoType === "musket") {
-      if (player.ammoMusket <= 0) {
-        game.log(I18N.logs.noAmmoMusket);
-        return;
-      }
-      player.ammoMusket--;
-      sounds.playShot(true);
+      player[weapon.ammoProperty]--;
+      sounds.playShot(weapon.id !== "pistol");
+      game.renderer?.playShot(weapon.id);
     } else {
       sounds.playSword();
+      game.renderer?.playSwordSpin();
     }
 
     let deadMiniBosses = [];
@@ -1200,18 +1628,14 @@ class GameController {
   constructor() {
     this.floor = 1;
     this.canvas = document.getElementById("viewport");
-    this.shopModal = document.getElementById("shop-modal");
     this.victoryScreen = document.getElementById("victory-screen");
     this.deathScreen = document.getElementById("death-screen");
-    this.isShopOpen = false;
     this.isVictory = false;
     this.megaBossEmptyTurns = 0;
-    this.shopSelectedIndex = 0;
     this.controlDevice = "touch";
 
     this.initDungeonFloor();
     this.bindEvents();
-    this.bindShopEvents();
     this.initDeviceDetection();
     this.startGamepadLoop();
   }
@@ -1228,7 +1652,6 @@ class GameController {
     return this.tier;
   }
 
-  // Daño adicional plano escala de +1 a +20 del piso 1 al 100
   get dmgBonus() {
     return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99));
   }
@@ -1306,6 +1729,7 @@ class GameController {
     } else {
       this.player.x = this.dungeon.entrance.x;
       this.player.y = this.dungeon.entrance.y;
+      this.player.direction = 0;
       this.player.hasUsedLayOnHands = false;
       this.player.mistyStepCharges = 2;
     }
@@ -1349,7 +1773,9 @@ class GameController {
     if (elDir) elDir.textContent = I18N.cardinals[this.player.direction];
     if (elHp) elHp.textContent = this.player.hp;
     if (elGold) elGold.textContent = this.player.gold;
-    if (elAmmo) elAmmo.textContent = `P:${this.player.ammoPistol} | M:${this.player.ammoMusket}`;
+    if (elAmmo) {
+      elAmmo.textContent = `P:${this.player.ammoPistol} | M:${this.player.ammoMusket} | T:${this.player.ammoBlunderbuss}`;
+    }
     if (elWeapon) elWeapon.textContent = this.player.equippedWeapon.name;
     if (elMisty) elMisty.textContent = this.player.mistyStepCharges;
 
@@ -1371,104 +1797,8 @@ class GameController {
     const layBtn = document.getElementById("btn-c");
     if (layBtn) layBtn.disabled = this.player.hasUsedLayOnHands || this.player.hp <= 0;
 
-    const shopGold = document.getElementById("shop-gold-display");
-    if (shopGold) shopGold.textContent = this.player.gold;
-  }
-
-  openShop() {
-    this.isShopOpen = true;
-    this.shopSelectedIndex = 0;
-    this.shopModal.classList.remove("hidden");
-    this.updateHUD();
-    sounds.playCoin();
-    this.updateShopFocus();
-    this.log(I18N.logs.shopEnter);
-  }
-
-  closeShop() {
-    this.isShopOpen = false;
-    this.shopModal.classList.add("hidden");
-    this.removeShopFocus();
-    this.renderer.draw();
-  }
-
-  getShopElements() {
-    return [
-      { row: document.querySelectorAll(".shop-item")[0], btn: document.getElementById("buy-pistol-ammo") },
-      { row: document.querySelectorAll(".shop-item")[1], btn: document.getElementById("buy-musket-ammo") },
-      { row: document.querySelectorAll(".shop-item")[2], btn: document.getElementById("buy-potion") },
-      { row: document.getElementById("close-shop"), btn: document.getElementById("close-shop") }
-    ];
-  }
-
-  updateShopFocus() {
-    const items = this.getShopElements();
-    items.forEach((item, idx) => {
-      if (idx === this.shopSelectedIndex) {
-        if (item.row) item.row.classList.add("focused");
-        if (item.btn) item.btn.focus();
-      } else {
-        if (item.row) item.row.classList.remove("focused");
-      }
-    });
-  }
-
-  removeShopFocus() {
-    const items = this.getShopElements();
-    items.forEach(item => {
-      if (item.row) item.row.classList.remove("focused");
-    });
-  }
-
-  navigateShop(direction) {
-    const items = this.getShopElements();
-    this.shopSelectedIndex = (this.shopSelectedIndex + direction + items.length) % items.length;
-    sounds.playStep();
-    this.updateShopFocus();
-  }
-
-  confirmShopSelection() {
-    const items = this.getShopElements();
-    const current = items[this.shopSelectedIndex];
-    if (current && current.btn) current.btn.click();
-  }
-
-  bindShopEvents() {
-    document.getElementById("buy-pistol-ammo").addEventListener("click", () => {
-      if (this.player.gold >= 1) {
-        this.player.gold -= 1;
-        this.player.ammoPistol += 4;
-        sounds.playCoin();
-        this.log("+4 balas Pistola (-1 PO)");
-        this.updateHUD();
-      }
-    });
-
-    document.getElementById("buy-musket-ammo").addEventListener("click", () => {
-      if (this.player.gold >= 1) {
-        this.player.gold -= 1;
-        this.player.ammoMusket += 2;
-        sounds.playCoin();
-        this.log("+2 balas Mosquete (-1 PO)");
-        this.updateHUD();
-      }
-    });
-
-    document.getElementById("buy-potion").addEventListener("click", () => {
-      if (this.player.gold >= 2) {
-        if (this.player.hp >= this.player.maxHp) return;
-        this.player.gold -= 2;
-        sounds.playHeal();
-        const heal = rollDie(8) + 5;
-        this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
-        this.log(`+${heal} HP (-2 PO)`);
-        this.updateHUD();
-      }
-    });
-
-    document.getElementById("close-shop").addEventListener("click", () => {
-      this.closeShop();
-    });
+    const weaponBtn = document.getElementById("btn-d");
+    if (weaponBtn) weaponBtn.disabled = this.player.unlockedWeapons.size <= 1 || this.player.hp <= 0;
   }
 
   spawnMegaBossAdds(megaBoss) {
@@ -1566,7 +1896,7 @@ class GameController {
   }
 
   castMistyStep() {
-    if (this.isShopOpen || this.isVictory || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
 
     sounds.playMisty();
     this.player.mistyStepCharges--;
@@ -1592,7 +1922,7 @@ class GameController {
       const tile = this.dungeon.getTile(cx, cy);
       if (tile === TILE_WALL) {
         encounteredObstacle = true;
-      } else if (encounteredObstacle && tile === TILE_FLOOR) {
+      } else if (encounteredObstacle && (tile === TILE_FLOOR || tile === TILE_CHEST)) {
         targetX = cx;
         targetY = cy;
         foundOpenTile = true;
@@ -1605,20 +1935,24 @@ class GameController {
       this.player.y = targetY;
     } else {
       const freeStep = this.player.getNextForwardPos(3);
-      if (this.dungeon.isInsideBounds(freeStep.x, freeStep.y) && this.dungeon.getTile(freeStep.x, freeStep.y) === TILE_FLOOR) {
+      const freeStepTile = this.dungeon.getTile(freeStep.x, freeStep.y);
+      if (this.dungeon.isInsideBounds(freeStep.x, freeStep.y)
+        && (freeStepTile === TILE_FLOOR || freeStepTile === TILE_CHEST)) {
         this.player.x = freeStep.x;
         this.player.y = freeStep.y;
       }
     }
 
+    this.renderer.playMistyStep();
     this.updateHUD();
-    this.renderer.draw();
+    this.handleTileInteractions();
   }
 
   useLayOnHands() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
     if (this.player.useLayOnHands()) {
       sounds.playHeal();
+      this.renderer.playHealing();
       this.log(I18N.logs.layHealed);
       this.updateHUD();
     } else {
@@ -1627,26 +1961,65 @@ class GameController {
   }
 
   cycleWeapon() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
+    if (this.player.unlockedWeapons.size < 2) return;
     this.player.cycleWeapon();
+    this.renderer.playWeaponChange();
     sounds.playStep();
     this.updateHUD();
   }
 
   turnLeft() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
     this.player.turnLeft();
     sounds.playStep();
     this.updateHUD();
-    this.renderer.animateTurn(-1);
+    this.renderer.draw();
   }
 
   turnRight() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
     this.player.turnRight();
     sounds.playStep();
     this.updateHUD();
-    this.renderer.animateTurn(1);
+    this.renderer.draw();
+  }
+
+  moveGoldenBunny(bunny) {
+    const seesPlayer = VisibilitySystem.hasWorldLineOfSight(
+      bunny.x, bunny.y, this.player.x, this.player.y, this.dungeon
+    );
+    if (!seesPlayer) {
+      bunny.isFleeing = false;
+      return;
+    }
+
+    bunny.isFleeing = true;
+    bunny.fleeStartedAt = performance.now();
+    const directions = [
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 }
+    ].sort((a, b) => {
+      const distanceA = Math.hypot(bunny.x + a.dx - this.player.x, bunny.y + a.dy - this.player.y);
+      const distanceB = Math.hypot(bunny.x + b.dx - this.player.x, bunny.y + b.dy - this.player.y);
+      return distanceB - distanceA;
+    });
+
+    for (const direction of directions) {
+      const x = bunny.x + direction.dx;
+      const y = bunny.y + direction.dy;
+      if (!this.dungeon.isInsideBounds(x, y) || this.dungeon.getTile(x, y) !== TILE_FLOOR) continue;
+      if (x === this.player.x && y === this.player.y) continue;
+      if (this.dungeon.enemies.some(enemy => enemy.cells.some(cell => cell.x === x && cell.y === y))) continue;
+      if (this.dungeon.npcs.some(other => other !== bunny && other.x === x && other.y === y)) continue;
+
+      bunny.x = x;
+      bunny.y = y;
+      bunny.fleeDirection = direction;
+      return;
+    }
   }
 
   processEnemiesTurn() {
@@ -1757,11 +2130,14 @@ class GameController {
       }
     });
 
+    if (this.player.hp > 0) {
+      this.dungeon.npcs.forEach(npc => this.moveGoldenBunny(npc));
+    }
     if (this.player.hp <= 0) this.triggerGameOver();
   }
 
   moveForward() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
 
     const next = this.player.getNextForwardPos(1);
     if (!this.dungeon.isInsideBounds(next.x, next.y)) {
@@ -1783,10 +2159,11 @@ class GameController {
     sounds.playStep();
     this.processEnemiesTurn();
     this.handleTileInteractions();
+    this.renderer.draw();
   }
 
   moveBackward() {
-    if (this.isShopOpen || this.isVictory || this.player.hp <= 0) return;
+    if (this.isVictory || this.player.hp <= 0) return;
 
     const prev = this.player.getNextBackwardPos();
     if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
@@ -1808,19 +2185,48 @@ class GameController {
     sounds.playStep();
     this.processEnemiesTurn();
     this.handleTileInteractions();
+    this.renderer.draw();
+  }
+
+  openChest() {
+    const chestKey = this.dungeon.getKey(this.player.x, this.player.y);
+    if (!this.dungeon.chests.has(chestKey)) return;
+
+    this.dungeon.chests.delete(chestKey);
+    this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
+    this.renderer.playChestOpening(this.player.x, this.player.y);
+    sounds.playCoin();
+
+    if (Math.random() < 0.5) {
+      const healing = rollDie(4) + rollDie(4) + 4;
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + healing);
+      sounds.playHeal();
+      this.renderer.playDrinkPotion();
+      this.log(I18N.logs.chestPotion(healing));
+    } else {
+      const weaponOptions = [WEAPONS.PISTOL, WEAPONS.MUSKET, WEAPONS.BLUNDERBUSS];
+      const weapon = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
+      const ammoDice = { pistol: 6, musket: 4, blunderbuss: 2 }[weapon.id];
+      const ammo = rollDie(ammoDice);
+      const isNewWeapon = !this.player.unlockedWeapons.has(weapon.id);
+      this.player.unlockedWeapons.add(weapon.id);
+      this.player[weapon.ammoProperty] += ammo;
+
+      if (isNewWeapon) {
+        this.player.equippedWeapon = weapon;
+        this.renderer.playWeaponChange();
+        this.log(I18N.logs.chestWeapon(weapon.name, ammo));
+      } else {
+        this.log(I18N.logs.chestAmmo(weapon.name, ammo));
+      }
+    }
+
+    this.updateHUD();
   }
 
   handleTileInteractions() {
-    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_HEAL_FOUNTAIN) {
-      const heal = rollDie(6);
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
-      sounds.playHeal();
-      this.log(I18N.logs.fountain(heal));
-      this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
-    }
-
-    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_SHOP) {
-      this.openShop();
+    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_CHEST) {
+      this.openChest();
     }
 
     this.updateHUD();
@@ -1854,7 +2260,6 @@ class GameController {
     document.getElementById("btn-c").addEventListener("click", () => this.useLayOnHands());
     document.getElementById("btn-b").addEventListener("click", () => this.castMistyStep());
     document.getElementById("btn-a").addEventListener("click", () => {
-      if (this.isShopOpen) return;
       CombatSystem.executeAttack(this);
     });
 
@@ -1862,23 +2267,6 @@ class GameController {
     if (restartBtn) restartBtn.addEventListener("click", () => location.reload());
 
     window.addEventListener("keydown", (e) => {
-      if (this.isShopOpen) {
-        if (e.key === "Escape" || e.key === "b" || e.key === "B") {
-          e.preventDefault();
-          this.closeShop();
-        } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-          e.preventDefault();
-          this.navigateShop(-1);
-        } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-          e.preventDefault();
-          this.navigateShop(1);
-        } else if (e.key === "Enter" || e.key === " " || e.key === "j" || e.key === "J") {
-          e.preventDefault();
-          this.confirmShopSelection();
-        }
-        return;
-      }
-
       if (this.isVictory) return;
 
       switch (e.key) {
@@ -1947,23 +2335,15 @@ class GameController {
         const threshold = 0.5;
         const btnStates = gp.buttons.map(b => b.pressed);
 
-        if (this.isShopOpen) {
-          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.navigateShop(-1);
-          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.navigateShop(1);
+        if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
+        else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
+        else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
+        else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
 
-          if (btnStates[0] && !this.lastGamepadButtons[0]) this.confirmShopSelection();
-          if ((btnStates[1] && !this.lastGamepadButtons[1]) || (btnStates[9] && !this.lastGamepadButtons[9])) this.closeShop();
-        } else {
-          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
-          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
-          else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
-          else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
-
-          if (btnStates[0] && !this.lastGamepadButtons[0]) CombatSystem.executeAttack(this);
-          if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();
-          if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();
-          if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();
-        }
+        if (btnStates[0] && !this.lastGamepadButtons[0]) CombatSystem.executeAttack(this);
+        if (btnStates[1] && !this.lastGamepadButtons[1]) this.castMistyStep();
+        if (btnStates[2] && !this.lastGamepadButtons[2]) this.useLayOnHands();
+        if (btnStates[3] && !this.lastGamepadButtons[3]) this.cycleWeapon();
 
         this.lastGamepadAxes.x = (axisX < -threshold || dpadLeft) ? -1 : (axisX > threshold || dpadRight ? 1 : 0);
         this.lastGamepadAxes.y = (axisY < -threshold || dpadUp) ? -1 : (axisY > threshold || dpadDown ? 1 : 0);
@@ -1975,14 +2355,20 @@ class GameController {
   }
 }
 
-// INICIALIZACIÓN CON PANTALLA SPLASH
+// INITIUM CUM VELO APERIENTI
 window.addEventListener("DOMContentLoaded", () => {
   const splashScreen = document.getElementById("splash-screen");
+  const introVideo = document.getElementById("intro-video");
+  const splashLogo = splashScreen?.querySelector(".splash-logo");
+  const skipIntro = document.getElementById("skip-intro");
   let gameStarted = false;
+  let fallbackTimer;
 
   function startGame() {
     if (gameStarted) return;
     gameStarted = true;
+    clearTimeout(fallbackTimer);
+    introVideo?.pause();
 
     if (splashScreen) {
       splashScreen.classList.add("fade-out");
@@ -1995,11 +2381,29 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function showLogoFallback() {
+    if (gameStarted || !splashLogo) return;
+    introVideo?.classList.add("hidden");
+    splashLogo.classList.remove("hidden");
+    fallbackTimer = setTimeout(startGame, 1200);
+  }
+
   if (splashScreen) {
-    splashScreen.classList.add("fade-in");
+    if (introVideo && splashLogo) {
+      splashLogo.classList.add("hidden");
+      introVideo.addEventListener("ended", startGame, { once: true });
+      introVideo.addEventListener("error", showLogoFallback, { once: true });
+      introVideo.addEventListener("canplay", () => clearTimeout(fallbackTimer), { once: true });
+      fallbackTimer = setTimeout(showLogoFallback, 10000);
+      introVideo.play().catch(showLogoFallback);
+    }
+
     splashScreen.addEventListener("click", startGame);
     splashScreen.addEventListener("touchstart", startGame, { passive: true });
   }
 
-  setTimeout(startGame, 1200);
+  skipIntro?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    startGame();
+  });
 });
