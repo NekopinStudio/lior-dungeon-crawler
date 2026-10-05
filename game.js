@@ -692,8 +692,13 @@ class DungeonGenerator {
     }
   }
 
-  placeGoldenBunny() {
-    if (Math.random() >= 0.1) return;
+ placeGoldenBunny() {
+    // Contamos los minijefes que realmente se generaron en el piso
+    const miniBossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
+    const spawnChance = miniBossCount * 0.10;
+
+    // Si la tirada aleatoria no supera la probabilidad acumulada, no aparece
+    if (Math.random() >= spawnChance) return;
 
     for (let attempts = 0; attempts < 300; attempts++) {
       const x = Math.floor(Math.random() * (this.dungeon.width - 2)) + 1;
