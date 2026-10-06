@@ -1,3 +1,6 @@
+/**
+ * SISTEMA DE INTERNACIONALIZACIÓN (i18n)
+ */
 const IS_SPANISH = (navigator.language || navigator.userLanguage || "es").toLowerCase().startsWith("es");
 
 const I18N = {
@@ -689,7 +692,6 @@ class DungeonGenerator {
 
   placeGoldenBunny() {
     const miniBossCount = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss).length;
-    // Si no hay minijefes, no aparece; de lo contrario, 10% por cada uno hasta el 100%
     const spawnChance = Math.min(1.0, miniBossCount * 0.10);
 
     if (spawnChance <= 0 || Math.random() >= spawnChance) return;
@@ -961,7 +963,7 @@ class Renderer {
       const y = Math.floor(pixel / sprite.width);
       if (x > 0) enqueue(pixel - 1);
       if (x + 1 < sprite.width) enqueue(pixel + 1);
-      if (y > 0) enqueue(pixel - mouseLeft);
+      if (y > 0) enqueue(pixel - sprite.width);
       if (y + 1 < sprite.height) enqueue(pixel + sprite.width);
     }
 
