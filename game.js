@@ -2173,6 +2173,10 @@ class GameController {
 
     this.player.moveForward();
     sounds.playStep();
+
+    // Si Lior se abalanza sobre la casilla del conejo, lo atrapa antes de que huya
+    this.checkGoldenBunnyCapture();
+
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
@@ -2181,29 +2185,33 @@ class GameController {
   moveBackward() {
     if (this.isVictory || this.player.hp <= 0) return;
 
-    const prev = this.player.getNextBackwardPos();
-    if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
-      this.log(I18N.logs.backOutOfBounds);
+    const next = this.player.getNextForwardPos(1);
+    if (!this.dungeon.isInsideBounds(next.x, next.y)) {
+      this.log(I18N.logs.outOfBounds);
       return;
     }
-    if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
-      this.log(I18N.logs.wallBack);
+    if (this.dungeon.getTile(next.x, next.y) === TILE_WALL) {
+      this.log(I18N.logs.wallFront);
       return;
     }
 
-    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y));
+    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === next.x && c.y === next.y));
     if (enemyBlocking) {
-      this.log(I18N.logs.enemyBlockBack);
+      this.log(I18N.logs.enemyBlock);
       return;
     }
 
-    this.player.moveBackward();
+    this.player.moveForward();
     sounds.playStep();
+
+    // Si Lior se abalanza sobre la casilla del conejo, lo atrapa antes de que huya
+    this.checkGoldenBunnyCapture();
+
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
   }
-
+  
   openChest() {
     const chestKey = this.dungeon.getKey(this.player.x, this.player.y);
     if (!this.dungeon.chests.has(chestKey)) return;
@@ -2240,7 +2248,8 @@ class GameController {
     this.updateHUD();
   }
 
-  checkGoldenBunnyCapture() {
+checkGoldenBunnyCapture() {
+    // Se considera atrapado si Lior pisa su casilla o si logra ponerse encima de él
     const bunnyIndex = this.dungeon.npcs.findIndex(
       npc => npc.id === "golden-bunny" && npc.x === this.player.x && npc.y === this.player.y
     );
@@ -2251,7 +2260,9 @@ class GameController {
       sounds.playCoin();
       this.log(I18N.logs.bunnyCaught);
       this.updateHUD();
+      return true;
     }
+    return false;
   }
 
   handleTileInteractions() {
