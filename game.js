@@ -56,6 +56,8 @@ const I18N = {
     wallBack: IS_SPANISH ? "Un muro a tu espalda te impide retroceder." : "A wall behind you blocks your retreat.",
     enemyBlock: IS_SPANISH ? "¡Un enemigo bloquea el paso! Ataca para despejarlo." : "An enemy blocks your way! Attack to clear.",
     enemyBlockBack: IS_SPANISH ? "Un enemigo te bloquea el paso por la espalda." : "An enemy blocks your path from behind.",
+    merchantPeace: IS_SPANISH ? "Baja tu arma, tengo cosas buenas para ti." : "Lower your weapon, I have good wares for you.",
+    merchantNoAttack: IS_SPANISH ? "No puedes atacar en el santuario del mercader." : "You cannot attack in the merchant's sanctuary.",
     noAmmoPistol: IS_SPANISH ? "¡Sin balas de Pistola! Cambia de arma." : "Out of Pistol ammo! Switch weapons.",
     noAmmoMusket: IS_SPANISH ? "¡Sin balas de Mosquete! Cambia de arma." : "Out of Musket ammo! Switch weapons.",
     noAmmoBlunderbuss: IS_SPANISH ? "¡Sin balas de Trabuco! Cambia de arma." : "Out of Blunderbuss ammo! Switch weapons.",
@@ -73,7 +75,7 @@ const I18N = {
     layUsed: IS_SPANISH ? "Manos Curativas ya fue usado en este piso." : "Lay on Hands was already used on this floor.",
     layHealed: IS_SPANISH ? "Manos Curativas: +6 HP restaurados." : "Lay on Hands: +6 HP restored.",
     exitLocked: (cnt) => IS_SPANISH ? `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.` : `The gate is sealed! Slay the remaining ${cnt} threats.`,
-    exitDescend: IS_SPANISH ? "¡Piso purificado! Descendiendo al siguiente nivel..." : "Floor purified! Descending to the next floor...",
+    exitDescend: IS_SPANISH ? "¡Descendiendo al siguiente nivel...!" : "Descending to the next floor...",
     floorIntro: (floor, tier, w, h, ac, hit, dmg) => IS_SPANISH
       ? `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`
       : `Floor ${floor} (Tier ${tier}): ${w}x${h}. Lior AC: ${ac}, Hit bonus: +${hit}, Flat Dmg: +${dmg}.`,
@@ -330,10 +332,10 @@ const CAMERA_CONFIG = {
 };
 
 const CAMERA_CARDINAL_BASIS = [
-  { forward: { x: 0, y: -1 }, right: { x: 1, y: 0 } },  // 0: Norte
-  { forward: { x: 1, y: 0 },  right: { x: 0, y: 1 } },  // 1: Este
-  { forward: { x: 0, y: 1 },  right: { x: -1, y: 0 } }, // 2: Sur
-  { forward: { x: -1, y: 0 }, right: { x: 0, y: -1 } }  // 3: Oeste
+  { forward: { x: 0, y: -1 }, right: { x: 1, y: 0 } },
+  { forward: { x: 1, y: 0 },  right: { x: 0, y: 1 } },
+  { forward: { x: 0, y: 1 },  right: { x: -1, y: 0 } },
+  { forward: { x: -1, y: 0 }, right: { x: 0, y: -1 } }
 ];
 
 const ENEMY_SPRITES = {
@@ -429,6 +431,7 @@ class Dungeon {
     this.enemies = [];
     this.npcs = [];
     this.chests = new Set();
+    this.isMerchantRoom = false;
 
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
@@ -451,10 +454,6 @@ class Dungeon {
     if (this.isInsideBounds(x, y)) {
       this.tiles.set(this.getKey(x, y), type);
     }
-  }
-
-  hasTile(x, y) {
-    return this.tiles.has(this.getKey(x, y));
   }
 
   markRevealed(x, y) {
@@ -538,6 +537,11 @@ class DungeonGenerator {
     this.floorNumber = floorNumber;
     this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
 
+    if (this.dungeon.isMerchantRoom) {
+      this.generateMerchantRoom();
+      return;
+    }
+
     const area = dungeon.width * dungeon.height;
     this.totalEnemies = Math.max(2, Math.floor(area / 20));
 
@@ -551,6 +555,32 @@ class DungeonGenerator {
     this.placeChests();
     this.placeGoldenBunny();
     this.ensureStartingEnemyVisible();
+  }
+
+  generateMerchantRoom() {
+    for (let y = 0; y < 5; y++) {
+      for (let x = 0; x < 5; x++) {
+        if (x === 0 || x === 4 || y === 0 || y === 4) {
+          this.dungeon.setTile(x, y, TILE_WALL);
+        } else {
+          this.dungeon.setTile(x, y, TILE_FLOOR);
+        }
+      }
+    }
+
+    this.dungeon.entrance = { x: 2, y: 3 };
+    this.dungeon.exit = { x: 2, y: 1 };
+    this.dungeon.setTile(2, 3, TILE_ENTRANCE);
+    this.dungeon.setTile(2, 1, TILE_EXIT);
+
+    // Mantiene libre el corredor entre la entrada y la salida.
+    this.dungeon.npcs.push({
+      id: "merchant",
+      name: "Mercader de Sombras",
+      x: 1,
+      y: 2,
+      isMerchant: true
+    });
   }
 
   generateTile(x, y) {
@@ -886,6 +916,7 @@ class Renderer {
     };
     this.enemySpriteSheet = this.loadTerrainTexture("Assets/Enemy/enemy-spriteSheet.jpg");
     this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
+    this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
     this.keyedSpriteCache = new Map();
 
     this.liorSpritesheet = this.loadTerrainTexture("Assets/Lior/lior_spritesheet.png");
@@ -1065,6 +1096,38 @@ class Renderer {
     targetCtx.restore();
   }
 
+  drawMerchantSprite(targetCtx, px, py) {
+    const tileSize = CAMERA_CONFIG.tileSize;
+    const frame = { x: 12, y: 9, w: 37, h: 47 };
+    const sprite = this.getKeyedSprite(this.merchantSpriteSheet, frame, "gray");
+    if (sprite) {
+      const height = tileSize * 1.25;
+      const width = height * (frame.w / frame.h);
+      targetCtx.save();
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.drawImage(sprite, px + (tileSize - width) / 2,
+        py + tileSize - height, width, height);
+      targetCtx.restore();
+      return;
+    }
+
+    targetCtx.save();
+    targetCtx.fillStyle = "#ffd700";
+    targetCtx.strokeStyle = "#ffffff";
+    targetCtx.lineWidth = 2;
+    targetCtx.beginPath();
+    targetCtx.arc(px + tileSize / 2, py + tileSize / 2, tileSize * 0.4, 0, Math.PI * 2);
+    targetCtx.fill();
+    targetCtx.stroke();
+
+    targetCtx.fillStyle = "#000000";
+    targetCtx.font = "bold 16px monospace";
+    targetCtx.textAlign = "center";
+    targetCtx.textBaseline = "middle";
+    targetCtx.fillText("✦", px + tileSize / 2, py + tileSize / 2);
+    targetCtx.restore();
+  }
+
   getTerrainTheme() {
     const floorNumber = this.generator?.floorNumber || 1;
     const themeIndex = Math.min(2, Math.floor((floorNumber - 1) / 34));
@@ -1083,11 +1146,6 @@ class Renderer {
         x, y, CAMERA_CONFIG.tileSize, CAMERA_CONFIG.tileSize);
     }
     targetCtx.restore();
-  }
-
-  getDecorationSeed(x, y) {
-    const floorNumber = this.generator?.floorNumber || 1;
-    return (Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(floorNumber, 83492791)) >>> 0;
   }
 
   drawChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
@@ -1290,10 +1348,6 @@ class Renderer {
     this.generator = generator;
   }
 
-  animateTurn(deltaQuarterTurns) {
-    this.draw();
-  }
-
   draw() {
     this.drawBase(this.ctx);
   }
@@ -1356,9 +1410,7 @@ class Renderer {
       return;
     }
 
-    const enemiesRemain = this.dungeon.enemies.length > 0;
     const theme = this.getTerrainTheme();
-
     this.dungeon.markRevealed(this.player.x, this.player.y);
 
     for (let sy = 0; sy < rows; sy++) {
@@ -1436,7 +1488,13 @@ class Renderer {
       const visible = VisibilitySystem.hasLineOfSight(
         playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
       );
-      if (visible) this.drawGoldenBunny(targetCtx, npc, screenX, screenY);
+      if (!visible) return;
+
+      if (npc.isMerchant) {
+        this.drawMerchantSprite(targetCtx, screenX * tileSize, screenY * tileSize);
+      } else {
+        this.drawGoldenBunny(targetCtx, npc, screenX, screenY);
+      }
     });
 
     const liorCellPx = playerScreenX * tileSize;
@@ -1485,6 +1543,11 @@ class CombatSystem {
 
     if (player.hp <= 0) {
       game.log(I18N.logs.deadPlayer);
+      return;
+    }
+
+    if (dungeon.isMerchantRoom) {
+      game.log(I18N.logs.merchantNoAttack);
       return;
     }
 
@@ -1628,15 +1691,18 @@ class CombatSystem {
 class GameController {
   constructor() {
     this.floor = 1;
+    this.inMerchantFloor = false;
     this.canvas = document.getElementById("viewport");
     this.victoryScreen = document.getElementById("victory-screen");
     this.deathScreen = document.getElementById("death-screen");
+    this.shopModal = document.getElementById("shop-modal");
     this.isVictory = false;
     this.megaBossEmptyTurns = 0;
     this.controlDevice = "touch";
 
     this.initDungeonFloor();
     this.bindEvents();
+    this.initShopEvents();
     this.initDeviceDetection();
     this.startGamepadLoop();
   }
@@ -1719,10 +1785,20 @@ class GameController {
     }
   }
 
-  initDungeonFloor() {
-    const { width, height } = getRandomDungeonDimensions(10, 30, this.floor);
-    this.dungeon = new Dungeon(width, height);
-    this.generator = new DungeonGenerator(this.dungeon, this.floor);
+  initDungeonFloor(isMerchantTransition = false) {
+    this.inMerchantFloor = isMerchantTransition;
+
+    if (isMerchantTransition) {
+      this.dungeon = new Dungeon(5, 5);
+      this.dungeon.isMerchantRoom = true;
+      this.generator = new DungeonGenerator(this.dungeon, this.floor);
+    } else {
+      const { width, height } = getRandomDungeonDimensions(10, 30, this.floor);
+      this.dungeon = new Dungeon(width, height);
+      this.dungeon.isMerchantRoom = false;
+      this.generator = new DungeonGenerator(this.dungeon, this.floor);
+    }
+
     this.megaBossEmptyTurns = 0;
 
     if (!this.player) {
@@ -1747,23 +1823,115 @@ class GameController {
     this.updateHUD();
     this.updateButtonLabels();
 
-    this.log(I18N.logs.floorIntro(this.floor, this.tier, width, height, this.player.ac, this.hitBonus, this.dmgBonus));
+    if (isMerchantTransition) {
+      this.log(`[MERCADER]: «${I18N.logs.merchantPeace}»`);
+      setTimeout(() => this.openShop(), 350);
+    } else {
+      this.log(I18N.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus, this.dmgBonus));
+    }
+
     this.renderer.draw();
   }
 
   resetGame() {
     this.floor = 1;
+    this.inMerchantFloor = false;
     this.isVictory = false;
     this.megaBossEmptyTurns = 0;
 
     this.deathScreen.classList.remove("visible");
     this.deathScreen.classList.add("hidden");
+    this.closeShop();
 
     const logBox = document.getElementById("log-entries");
     if (logBox) logBox.innerHTML = "";
 
     this.player = null;
-    this.initDungeonFloor();
+    this.initDungeonFloor(false);
+  }
+
+  openShop() {
+    if (!this.shopModal) return;
+    this.updateShopHUD();
+    this.shopModal.classList.remove("hidden");
+  }
+
+  closeShop() {
+    if (!this.shopModal) return;
+    this.shopModal.classList.add("hidden");
+  }
+
+  updateShopHUD() {
+    const goldDisplay = document.getElementById("shop-gold-display");
+    if (goldDisplay) goldDisplay.textContent = this.player.gold;
+  }
+
+  initShopEvents() {
+    const btnClose = document.getElementById("close-shop");
+    if (btnClose) btnClose.addEventListener("click", () => this.closeShop());
+
+    const buyPistol = document.getElementById("buy-pistol-ammo");
+    if (buyPistol) {
+      buyPistol.addEventListener("click", () => {
+        if (this.player.gold >= 1) {
+          this.player.gold -= 1;
+          this.player.ammoPistol += 4;
+          this.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
+          sounds.playCoin();
+          this.updateHUD();
+          this.updateShopHUD();
+          this.log("Compraste 4 balas de Pistola (-1 PO).");
+        }
+      });
+    }
+
+    const buyMusket = document.getElementById("buy-musket-ammo");
+    if (buyMusket) {
+      buyMusket.addEventListener("click", () => {
+        if (this.player.gold >= 1) {
+          this.player.gold -= 1;
+          this.player.ammoMusket += 2;
+          this.player.unlockedWeapons.add(WEAPONS.MUSKET.id);
+          sounds.playCoin();
+          this.updateHUD();
+          this.updateShopHUD();
+          this.log("Compraste 2 balas de Mosquete (-1 PO).");
+        }
+      });
+    }
+
+    const buyBlunderbuss = document.getElementById("buy-blunderbuss-ammo");
+    if (buyBlunderbuss) {
+      buyBlunderbuss.addEventListener("click", () => {
+        if (this.player.gold >= 1) {
+          const ammo = rollDie(2);
+          this.player.gold -= 1;
+          this.player.ammoBlunderbuss += ammo;
+          this.player.unlockedWeapons.add(WEAPONS.BLUNDERBUSS.id);
+          sounds.playCoin();
+          this.updateHUD();
+          this.updateShopHUD();
+          this.log(`Compraste ${ammo} ${ammo === 1 ? "bala" : "balas"} de Trabuco (-1 PO).`);
+        }
+      });
+    }
+
+    const buyPotion = document.getElementById("buy-potion");
+    if (buyPotion) {
+      buyPotion.addEventListener("click", () => {
+        if (this.player.gold >= 2) {
+          const heal = rollDie(8) + 5;
+          if (this.player.hp < this.player.maxHp) {
+            this.player.gold -= 2;
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+            sounds.playHeal();
+            this.updateHUD();
+            this.updateShopHUD();
+            this.log(`Bebiste una poción: +${heal} HP (-2 PO).`);
+          }
+        }
+      });
+    }
   }
 
   log(message) {
@@ -1785,7 +1953,7 @@ class GameController {
     const elWeapon = document.getElementById("hud-weapon");
     const elMisty = document.getElementById("misty-charges");
 
-    if (elFloor) elFloor.textContent = this.floor;
+    if (elFloor) elFloor.textContent = this.inMerchantFloor ? `${this.floor} (Refugio)` : this.floor;
     if (elDir) elDir.textContent = I18N.cardinals[this.player.direction];
     if (elHp) elHp.textContent = this.player.hp;
     if (elGold) elGold.textContent = this.player.gold;
@@ -1805,6 +1973,11 @@ class GameController {
         doorEl.textContent = I18N.doorOpen;
         doorEl.className = "door-open";
       }
+    }
+
+    const attackBtn = document.getElementById("btn-a");
+    if (attackBtn) {
+      attackBtn.disabled = this.inMerchantFloor || this.player.hp <= 0;
     }
 
     const mistyBtn = document.getElementById("btn-b");
@@ -2039,7 +2212,7 @@ class GameController {
   }
 
   processEnemiesTurn() {
-    if (this.player.hp <= 0 || this.isVictory) return;
+    if (this.player.hp <= 0 || this.isVictory || this.inMerchantFloor) return;
 
     const megaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
     if (megaBoss) {
@@ -2147,7 +2320,9 @@ class GameController {
     });
 
     if (this.player.hp > 0) {
-      this.dungeon.npcs.forEach(npc => this.moveGoldenBunny(npc));
+      this.dungeon.npcs.forEach(npc => {
+        if (!npc.isMerchant) this.moveGoldenBunny(npc);
+      });
     }
     if (this.player.hp <= 0) this.triggerGameOver();
   }
@@ -2171,12 +2346,17 @@ class GameController {
       return;
     }
 
+    // Interacción con el Mercader en 5x5
+    const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === next.x && npc.y === next.y);
+    if (merchant) {
+      this.openShop();
+      return;
+    }
+
     this.player.moveForward();
     sounds.playStep();
 
-    // Si Lior se abalanza sobre la casilla del conejo, lo atrapa antes de que huya
     this.checkGoldenBunnyCapture();
-
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
@@ -2185,33 +2365,36 @@ class GameController {
   moveBackward() {
     if (this.isVictory || this.player.hp <= 0) return;
 
-    const next = this.player.getNextForwardPos(1);
-    if (!this.dungeon.isInsideBounds(next.x, next.y)) {
-      this.log(I18N.logs.outOfBounds);
+    const prev = this.player.getNextBackwardPos();
+    if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
+      this.log(I18N.logs.backOutOfBounds);
       return;
     }
-    if (this.dungeon.getTile(next.x, next.y) === TILE_WALL) {
-      this.log(I18N.logs.wallFront);
+    if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
+      this.log(I18N.logs.wallBack);
       return;
     }
 
-    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === next.x && c.y === next.y));
+    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y));
     if (enemyBlocking) {
-      this.log(I18N.logs.enemyBlock);
+      this.log(I18N.logs.enemyBlockBack);
       return;
     }
 
-    this.player.moveForward();
+    const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === prev.x && npc.y === prev.y);
+    if (merchant) {
+      this.openShop();
+      return;
+    }
+
+    this.player.moveBackward();
     sounds.playStep();
-
-    // Si Lior se abalanza sobre la casilla del conejo, lo atrapa antes de que huya
     this.checkGoldenBunnyCapture();
-
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
   }
-  
+
   openChest() {
     const chestKey = this.dungeon.getKey(this.player.x, this.player.y);
     if (!this.dungeon.chests.has(chestKey)) return;
@@ -2248,8 +2431,7 @@ class GameController {
     this.updateHUD();
   }
 
-checkGoldenBunnyCapture() {
-    // Se considera atrapado si Lior pisa su casilla o si logra ponerse encima de él
+  checkGoldenBunnyCapture() {
     const bunnyIndex = this.dungeon.npcs.findIndex(
       npc => npc.id === "golden-bunny" && npc.x === this.player.x && npc.y === this.player.y
     );
@@ -2281,10 +2463,18 @@ checkGoldenBunnyCapture() {
           this.startVictorySequence();
           return;
         }
+
         sounds.playCoin();
         this.log(I18N.logs.exitDescend);
-        this.floor++;
-        setTimeout(() => this.initDungeonFloor(), 600);
+
+        // Si estamos en la sala del mercader, pasamos al siguiente piso regular
+        if (this.inMerchantFloor) {
+          this.floor++;
+          setTimeout(() => this.initDungeonFloor(false), 500);
+        } else {
+          // Cada nivel purificado conduce a la sala 5x5 del mercader
+          setTimeout(() => this.initDungeonFloor(true), 500);
+        }
         return;
       }
     }
@@ -2348,6 +2538,9 @@ checkGoldenBunnyCapture() {
         case "i":
         case "I":
           this.cycleWeapon();
+          break;
+        case "Escape":
+          this.closeShop();
           break;
       }
     });

@@ -27,7 +27,7 @@
       <div class="hud-item">HP: <span id="hud-hp">61</span>/61</div>
       <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
       <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
-      <div class="hud-item">BALAS: <span id="hud-ammo">P:10 | M:4</span></div>
+      <div class="hud-item">BALAS: <span id="hud-ammo">P:0 | M:0 | T:0</span></div>
       <div class="hud-item door-item">SALIDA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
     </header>
 
@@ -50,8 +50,7 @@
         <div id="victory-stats-display" class="victory-stats"></div>
         <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
       </div>
-
-      <!-- MODAL DE LA TIENDA -->
+<!-- MODAL DE LA TIENDA -->
       <div id="shop-modal" class="hidden">
         <div class="shop-content">
           <h3>✦ MERCADER DE SOMBRAS ✦</h3>
@@ -65,6 +64,11 @@
           <div class="shop-item">
             <span>Mosquete: 2 balas</span>
             <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+          </div>
+
+          <div class="shop-item">
+            <span>Trabuco: 1d2 balas</span>
+            <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
           </div>
 
           <div class="shop-item">
