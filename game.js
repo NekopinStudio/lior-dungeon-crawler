@@ -2362,7 +2362,8 @@ class GameController {
     let deadMiniBosses = [];
 
     if (hitEnemy) {
-      const blastDamage = 10 + this.dmgBonus;
+      // Daño fijo establecido exactamente en 11 puntos, sin modificadores
+      const blastDamage = 11;
       hitEnemy.hp -= blastDamage;
       this.log(I18N.logs.blastFired(hitEnemy.name, blastDamage));
 
@@ -2382,7 +2383,7 @@ class GameController {
 
     if (deadMiniBosses.length > 0) {
       deadMiniBosses.forEach(mb => {
-        this.dungeon.enemies.forEach(other => {
+        dungeon.enemies.forEach(other => {
           if (!other.isBoss) {
             if (Math.hypot(other.x - mb.x, other.y - mb.y) <= 2.2) {
               other.fearCooldown = 2;
