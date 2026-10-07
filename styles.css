@@ -81,6 +81,66 @@ html, body {
   object-fit: contain;
 }
 
+/* CUADRO DE DIÁLOGO DEL MERCADER */
+#merchant-dialog-modal {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  z-index: 60;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.dialog-box {
+  background: linear-gradient(180deg, #181922 0%, #0d0e14 100%);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  padding: 12px 14px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 215, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: dialogPop 0.2s ease-out;
+}
+
+@keyframes dialogPop {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.dialog-speaker {
+  font-size: clamp(10px, 3vw, 12px);
+  font-weight: bold;
+  color: #ffd700;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+.dialog-text {
+  font-size: clamp(11px, 3.2vw, 13px);
+  color: #f0f0f0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.dialog-prompt {
+  align-self: flex-end;
+  font-size: clamp(8px, 2.3vw, 10px);
+  color: #88c0d0;
+  animation: promptBlink 1s infinite alternate;
+}
+
+@keyframes promptBlink {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
 /* BITÁCORA / CONSOLA DE REGISTROS DINÁMICA */
 #log-container {
   width: 100%;
@@ -105,9 +165,7 @@ html, body {
   color: #00ff88;
 }
 
-/* =========================================================
-   DOCK DE CONTROLES: ESCALADO FLUIDO SEGÚN EL ANCHO DEL MÓVIL
-========================================================= */
+/* CONTROLES INFERIORES */
 #control-dock {
   display: flex;
   justify-content: space-between;
@@ -119,7 +177,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* CRUCETA DIRECCIONAL FLUIDA */
 .dpad {
   display: grid;
   grid-template-columns: repeat(3, clamp(34px, 11vw, 44px));
@@ -127,10 +184,7 @@ html, body {
   gap: 2px;
 }
 
-.dpad-slot {
-  width: 100%;
-  height: 100%;
-}
+.dpad-slot { width: 100%; height: 100%; }
 
 .dpad-btn {
   width: 100%;
@@ -161,7 +215,6 @@ html, body {
   border-radius: 4px;
 }
 
-/* ROMBOIDE DE ACCIONES FLUIDO */
 .diamond-pad {
   position: relative;
   width: clamp(110px, 35vw, 140px);
@@ -176,14 +229,13 @@ html, body {
   justify-content: center;
 }
 
-/* Posicionamiento porcentual centrado para que nunca se desborde */
 .btn-slot.top { top: 0; left: 50%; transform: translateX(-50%); }
 .btn-slot.bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
 .btn-slot.left { left: 0; top: 50%; transform: translateY(-50%); }
 .btn-slot.right { right: 0; top: 50%; transform: translateY(-50%); }
 
-/* BOTÓN ARCADE FLUIDO */
 .arcade-btn {
+  position: relative;
   width: clamp(34px, 11vw, 44px);
   height: clamp(34px, 11vw, 44px);
   border-radius: 50%;
@@ -197,6 +249,7 @@ html, body {
   background-color: #141418;
   border: 2px solid #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
 }
 
 .arcade-btn:active {
@@ -204,7 +257,6 @@ html, body {
   filter: brightness(1.3);
 }
 
-/* COLORES TIPO XBOX */
 .btn-xbox-a {
   border-color: #107c10 !important;
   color: #00ff55 !important;
@@ -217,19 +269,75 @@ html, body {
   text-shadow: 0 0 6px #d81b2a;
 }
 
-.btn-xbox-x {
-  border-color: #0078d7 !important;
-  color: #00b0ff !important;
-  text-shadow: 0 0 6px #0078d7;
-}
-
 .btn-xbox-y {
   border-color: #f7b500 !important;
   color: #ffd700 !important;
   text-shadow: 0 0 6px #f7b500;
 }
 
-.arcade-btn:disabled {
+/* BOTÓN DE ELDRITCH BLAST Y LLENADO RADIAL */
+.btn-eldritch {
+  border: 2px solid #3d3452 !important;
+  color: #6d6480 !important;
+  background: conic-gradient(
+    #9333ea calc(var(--charge-pct, 0) * 1%),
+    #181922 0%
+  ) !important;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.25s ease, color 0.25s ease, filter 0.25s ease;
+}
+
+/* Capa interna para conservar el fondo legible tras la letra */
+.arcade-btn-inner {
+  position: absolute;
+  inset: 3px;
+  background: #0f1015;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* ESTADO EN CARGA (Grisáceo y atenuado) */
+.btn-eldritch.btn-charging {
+  filter: grayscale(0.9) brightness(0.7);
+  border-color: #3b3c45 !important;
+  color: #666875 !important;
+  cursor: not-allowed;
+}
+
+.btn-eldritch.btn-charging:active {
+  transform: none;
+  filter: grayscale(0.9) brightness(0.7);
+}
+
+/* ESTADO LISTO (Color completo, luminoso y palpitante) */
+.btn-eldritch.btn-ready {
+  filter: grayscale(0) brightness(1.2);
+  border-color: #c084fc !important;
+  color: #ffffff !important;
+  text-shadow: 0 0 8px #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.65);
+  animation: eldritchPulse 1.2s infinite alternate ease-in-out;
+}
+
+.btn-eldritch.btn-ready .arcade-btn-inner {
+  background: radial-gradient(circle, #2b104a 0%, #110820 100%);
+}
+
+@keyframes eldritchPulse {
+  from {
+    box-shadow: 0 0 6px rgba(147, 51, 234, 0.45);
+    border-color: #a855f7;
+  }
+  to {
+    box-shadow: 0 0 16px rgba(192, 132, 252, 0.95);
+    border-color: #e9d5ff;
+  }
+}
+
+.arcade-btn:disabled:not(.btn-eldritch) {
   border-color: #333333 !important;
   color: #555555 !important;
   text-shadow: none !important;
@@ -245,9 +353,6 @@ html, body {
   white-space: nowrap;
 }
 
-/* =========================================================
-   PANTALLAS GRANDES Y MODO PAISAJE (DESKTOP / LANDSCAPE)
-========================================================= */
 @media (min-width: 768px) or (orientation: landscape) and (max-height: 520px) {
   #app-wrapper {
     max-width: 900px;
@@ -266,9 +371,7 @@ html, body {
   #game-container { grid-area: game; height: 100%; }
   #log-container { grid-area: log; max-width: 100%; height: 32px; }
 
-  #control-dock {
-    display: contents;
-  }
+  #control-dock { display: contents; }
 
   .dpad {
     grid-area: dpad;
@@ -291,7 +394,7 @@ html, body {
   }
 }
 
-/* MODAL DE TIENDA Y DIÁLOGOS FLUIDOS */
+/* MODAL DE TIENDA */
 #shop-modal {
   position: absolute;
   inset: 0;
@@ -325,11 +428,6 @@ html, body {
   border-radius: 4px;
 }
 
-.shop-item.focused {
-  border-color: #ffd700;
-  background-color: #1a1605;
-}
-
 .shop-btn {
   background-color: #ffd700;
   color: #000000;
@@ -352,7 +450,7 @@ html, body {
   cursor: pointer;
 }
 
-/* PANTALLA DE MUERTE Y REINICIO */
+/* PANTALLA DE MUERTE */
 #death-screen {
   position: absolute;
   inset: 0;

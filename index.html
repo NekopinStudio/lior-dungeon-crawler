@@ -35,6 +35,15 @@
     <main id="game-container">
       <canvas id="viewport" width="294" height="504"></canvas>
 
+      <!-- CUADRO DE DIÁLOGO DEL MERCADER -->
+      <div id="merchant-dialog-modal" class="hidden">
+        <div class="dialog-box">
+          <div class="dialog-speaker">✦ MERCADER DE SOMBRAS ✦</div>
+          <div id="dialog-text" class="dialog-text">«Baja tu arma, viajero... Tengo mercancías selectas para tu travesía.»</div>
+          <div class="dialog-prompt">▼ Toca la pantalla para continuar</div>
+        </div>
+      </div>
+
       <!-- VENTANA DE MUERTE / REINICIO -->
       <div id="death-screen" class="hidden">
         <div class="death-title">HAS CAÍDO</div>
@@ -50,29 +59,30 @@
         <div id="victory-stats-display" class="victory-stats"></div>
         <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
       </div>
-<!-- MODAL DE LA TIENDA -->
+
+      <!-- MODAL DE LA TIENDA -->
       <div id="shop-modal" class="hidden">
         <div class="shop-content">
           <h3>✦ MERCADER DE SOMBRAS ✦</h3>
           <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
           
           <div class="shop-item">
-            <span>Pistola: 4 balas</span>
+            <span>Pistola: 6 balas</span>
             <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
           </div>
           
           <div class="shop-item">
-            <span>Mosquete: 2 balas</span>
+            <span>Mosquete: 4 balas</span>
             <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
           </div>
 
           <div class="shop-item">
-            <span>Trabuco: 1d2 balas</span>
+            <span>Trabuco: 2 balas</span>
             <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
           </div>
 
           <div class="shop-item">
-            <span>Poción de Vida (+1d8+5 HP)</span>
+            <span>Poción de Vida (2d4+4 HP)</span>
             <button id="buy-potion" class="shop-btn">2 PO</button>
           </div>
 
@@ -108,8 +118,10 @@
           <span id="caption-d" class="btn-caption">ARMA</span>
         </div>
         <div class="btn-slot left">
-          <button id="btn-c" class="arcade-btn btn-xbox-x">X</button>
-          <span id="caption-c" class="btn-caption">CURAR</span>
+          <button id="btn-c" class="arcade-btn btn-eldritch btn-ready" style="--charge-pct: 100;">
+            <span class="arcade-btn-inner">X</span>
+          </button>
+          <span id="caption-c" class="btn-caption">E. BLAST (<span id="blast-counter">10/10</span>)</span>
         </div>
         <div class="btn-slot right">
           <button id="btn-b" class="arcade-btn btn-xbox-b">B</button>
