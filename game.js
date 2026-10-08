@@ -361,13 +361,13 @@ const ENEMY_ROSTER = {
   minion: [
     { name: "Kobold", src: "Assets/Enemy/1x1/1. kobold.jpg" },
     { name: "Goblin", src: "Assets/Enemy/1x1/2. Goblin.jpg" },
-    { name: "Esqueleto", src: "Assets/Enemy/1x1/3.Skelleton.jpg" },
+    { name: "Esqueleto", src: "Assets/Enemy/1x1/3.Skelleton.jpg", ranged: true },
     { name: "Zombi", src: "Assets/Enemy/1x1/4. Zombie.jpg" },
     { name: "Orco", src: "Assets/Enemy/1x1/5. orc.jpg" },
     { name: "Gnoll", src: "Assets/Enemy/1x1/6. Gnoll.jpg" },
     { name: "Hobgoblin", src: "Assets/Enemy/1x1/7. hobgoblin.jpg" },
     { name: "Hombre lagarto", src: "Assets/Enemy/1x1/8. lizardfolk.jpg" },
-    { name: "Diablillo", src: "Assets/Enemy/1x1/9. imp.jpg" },
+    { name: "Diablillo", src: "Assets/Enemy/1x1/9. imp.jpg", ranged: true },
     { name: "Osgo", src: "Assets/Enemy/1x1/10. bugbear.jpg" }
   ],
   miniBoss: [
@@ -395,6 +395,18 @@ const ENEMY_ROSTER = {
     { name: "Dragón solar", src: "Assets/Enemy/4x4/10. solarDragon.jpg" }
   ]
 };
+
+// Milisegundos por frame de cada estado de la máquina de animación de enemigos.
+const ENEMY_ANIM_MS = { idle: 175, attack: 110, hurt: 100, death: 130 };
+
+// disparos.jpg: 3 filas (calibres) x 3 columnas (carga, vuelo, impacto).
+const PROJECTILE_SHEET = {
+  src: "Assets/Enemy/disparos.jpg",
+  rows: { small: 0, medium: 1, large: 2 },
+  sizes: { small: 0.9, medium: 1.3, large: 2.2 }
+};
+const PROJECTILE_LAUNCH_DELAY_MS = 220;
+const PROJECTILE_IMPACT_MS = 180;
 
 const BUNNY_SPRITES = {
   bunnyIdle: { x: 0, y: 64, w: 256, h: 256 },
@@ -483,6 +495,7 @@ function createMinion(tier, x, y, visionRange = 2) {
     ac: 8 + tier,
     visionRange,
     attackRange: 1,
+    ranged: !!entry.ranged,
     isMegaBoss: false,
     isBoss: false,
     size: 1,
@@ -523,6 +536,8 @@ class Dungeon {
     this.chests = new Set();
     this.isMerchantRoom = false;
     this.isBossRoom = false;
+    this.turnCount = 0;
+    this.dyingEnemies = [];
 
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
@@ -729,37 +744,32 @@ class DungeonGenerator {
   placeMegaBoss() {
     const entry = ENEMY_ROSTER.megaBoss[Math.min(ENEMY_ROSTER.megaBoss.length, this.floorNumber / 10) - 1];
 
-    for (let attempts = 0; attempts < 1000; attempts++) {
-      const mx = Math.floor(Math.random() * (this.dungeon.width - 6)) + 2;
-      const my = Math.floor(Math.random() * (this.dungeon.height - 6)) + 2;
+    // Patrulla superior fija: x=6, y=2 en la arena de 15x15.
+    const mx = 6;
+    const my = 2;
+    const bossCells = this.generateCells(mx, my, 4);
+    bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-      if (Math.hypot(mx - this.dungeon.entrance.x, my - this.dungeon.entrance.y) <= 6.0) continue;
-      if (Math.hypot(mx - this.dungeon.exit.x, my - this.dungeon.exit.y) <= 4.0) continue;
+    const megaBossHp = 18 + this.tier * 6;
 
-      const bossCells = this.generateCells(mx, my, 4);
-      bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
-
-      const megaBossHp = 18 + this.tier * 6;
-
-      this.dungeon.enemies.push({
-        id: Math.random().toString(36).substring(2, 9),
-        x: mx, y: my,
-        startX: mx, startY: my,
-        name: entry.name,
-        spriteSrc: entry.src,
-        hp: megaBossHp,
-        maxHp: megaBossHp,
-        ac: 12 + this.tier,
-        visionRange: 4,
-        attackRange: 4,
-        isMegaBoss: true,
-        isBoss: true,
-        size: 4,
-        cells: bossCells,
-        fearCooldown: 0
-      });
-      return;
-    }
+    this.dungeon.enemies.push({
+      id: Math.random().toString(36).substring(2, 9),
+      x: mx, y: my,
+      startX: mx, startY: my,
+      name: entry.name,
+      spriteSrc: entry.src,
+      hp: megaBossHp,
+      maxHp: megaBossHp,
+      ac: 12 + this.tier,
+      visionRange: 4,
+      attackRange: 2,
+      bossAttackReady: true,
+      isMegaBoss: true,
+      isBoss: true,
+      size: 4,
+      cells: bossCells,
+      fearCooldown: 0
+    });
   }
 
   populateEnemies() {
@@ -803,7 +813,7 @@ class DungeonGenerator {
             maxHp: miniBossHp,
             ac: 10 + this.tier,
             visionRange: 3,
-            attackRange: 2,
+            attackRange: 1.5,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
@@ -1019,12 +1029,15 @@ class Renderer {
     this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
     this.keyedSpriteCache = new Map();
 
-    this.liorSheet = this.loadTerrainTexture("Assets/Lior/lior.png.png");
+    this.liorSheet = this.loadTerrainTexture("Assets/Lior/lior.png");
     this.effectImages = Object.fromEntries(
       Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
     );
     this.enemyImages = new Map();
-    this.enemySpriteCache = new Map();
+    this.enemyAnimCache = new Map();
+    this.enemyProjectiles = [];
+    this.animUntil = 0;
+    this.animLoopActive = false;
 
     this.playerAnimation = null;
     this.playerAnimationFrame = null;
@@ -1035,7 +1048,7 @@ class Renderer {
     // Ciclo de reposo (IDLE) de Lior.
     setInterval(() => {
       if (!this.playerAnimation && !this.chestOpening) this.draw();
-    }, 450);
+    }, 100);
   }
 
   loadTerrainTexture(src) {
@@ -1170,11 +1183,46 @@ class Renderer {
     }
   }
 
-  // Localiza el primer sprite (pose de reposo) de una hoja de enemigo: componentes conexos en baja resolución.
-  findFirstSprite(image) {
+  // Tramos consecutivos de `counts` con al menos `minCount`; une huecos de hasta `maxGap` posiciones.
+  static findRuns(counts, minCount, maxGap) {
+    const runs = [];
+    let current = null;
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] < minCount) continue;
+      if (current && i - current.end - 1 <= maxGap) current.end = i;
+      else { current = { start: i, end: i }; runs.push(current); }
+    }
+    return runs;
+  }
+
+  // Une los tramos estrechos (restos de un mismo frame) con su vecino más cercano.
+  static mergeNarrowRuns(runs) {
+    const widths = runs.map(r => r.end - r.start + 1).sort((a, b) => a - b);
+    const median = widths[Math.floor(widths.length / 2)] || 0;
+    const result = [...runs];
+    for (let i = 0; i < result.length && result.length > 1;) {
+      const run = result[i];
+      if (run.end - run.start + 1 >= median * 0.3) { i++; continue; }
+      const prevGap = i > 0 ? run.start - result[i - 1].end : Infinity;
+      const nextGap = i < result.length - 1 ? result[i + 1].start - run.end : Infinity;
+      const neighbor = prevGap <= nextGap ? result[i - 1] : result[i + 1];
+      neighbor.start = Math.min(neighbor.start, run.start);
+      neighbor.end = Math.max(neighbor.end, run.end);
+      result.splice(i, 1);
+    }
+    return result;
+  }
+
+  /**
+   * Segmenta una hoja sobre fondo magenta: franjas horizontales de contenido y, dentro de cada una, frames.
+   * Devuelve filas de canvas ya sin fondo (null si no hay contenido).
+   */
+  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true } = {}) {
     const STEP = 4;
     const width = Math.floor(image.naturalWidth / STEP);
     const height = Math.floor(image.naturalHeight / STEP);
+    if (width < 4 || height < 4) return null;
+
     const probe = document.createElement("canvas");
     probe.width = width;
     probe.height = height;
@@ -1184,149 +1232,215 @@ class Renderer {
     const bgRef = Renderer.getBackgroundReference(data);
 
     const solid = new Uint8Array(width * height);
-    for (let i = 0; i < solid.length; i++) {
-      solid[i] = Renderer.isBackgroundPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2], bgRef) ? 0 : 1;
-    }
-
-    // La erosión elimina rótulos y líneas finas de la cuadrícula.
-    const core = new Uint8Array(width * height);
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
+    const rowCounts = new Uint32Array(height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
         const i = y * width + x;
-        if (solid[i] && solid[i - 1] && solid[i + 1]
-          && solid[i - width] && solid[i + width]
-          && solid[i - width - 1] && solid[i - width + 1]
-          && solid[i + width - 1] && solid[i + width + 1]) core[i] = 1;
-      }
-    }
-
-    const minArea = Math.max(30, width * height * 0.0012);
-    const seen = new Uint8Array(width * height);
-    const queue = new Int32Array(width * height);
-    const components = [];
-    for (let start = 0; start < core.length; start++) {
-      if (!core[start] || seen[start]) continue;
-      let tail = 0;
-      queue[tail++] = start;
-      seen[start] = 1;
-      let minX = width, maxX = 0, minY = height, maxY = 0;
-      for (let head = 0; head < tail; head++) {
-        const pixel = queue[head];
-        const x = pixel % width;
-        const y = (pixel - x) / width;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        const neighbors = [x > 0 ? pixel - 1 : -1, x + 1 < width ? pixel + 1 : -1,
-          y > 0 ? pixel - width : -1, y + 1 < height ? pixel + width : -1];
-        for (const next of neighbors) {
-          if (next >= 0 && core[next] && !seen[next]) { seen[next] = 1; queue[tail++] = next; }
-        }
-      }
-      if (tail >= minArea) components.push({ minX, maxX, minY, maxY, area: tail });
-    }
-
-    // Descarta rótulos (área pequeña) y une las partes de un mismo sprite que quedaron separadas.
-    const largest = components.reduce((max, c) => Math.max(max, c.area), 0);
-    let groups = components.filter(c => c.area >= largest * 0.08);
-    const MERGE_GAP = 1;
-    const touches = (a, b) => a.minX - MERGE_GAP <= b.maxX && b.minX - MERGE_GAP <= a.maxX
-      && a.minY - MERGE_GAP <= b.maxY && b.minY - MERGE_GAP <= a.maxY;
-    for (let merged = true; merged;) {
-      merged = false;
-      for (let i = 0; i < groups.length && !merged; i++) {
-        for (let j = i + 1; j < groups.length && !merged; j++) {
-          if (!touches(groups[i], groups[j])) continue;
-          const a = groups[i], b = groups[j];
-          groups[i] = {
-            minX: Math.min(a.minX, b.minX), maxX: Math.max(a.maxX, b.maxX),
-            minY: Math.min(a.minY, b.minY), maxY: Math.max(a.maxY, b.maxY),
-            area: a.area + b.area
-          };
-          groups.splice(j, 1);
-          merged = true;
+        if (!Renderer.isBackgroundPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2], bgRef)) {
+          solid[i] = 1;
+          rowCounts[y]++;
         }
       }
     }
-    const largestGroup = groups.reduce((max, c) => Math.max(max, c.area), 0);
-    groups = groups.filter(c => c.area >= largestGroup * 0.3);
 
-    let chosen = null;
-    if (groups.length > 0) {
-      const centerY = c => (c.minY + c.maxY) / 2;
-      const topmost = groups.reduce((best, c) => centerY(c) < centerY(best) ? c : best);
-      const tolerance = (topmost.maxY - topmost.minY) * 0.5;
-      chosen = groups
-        .filter(c => Math.abs(centerY(c) - centerY(topmost)) <= tolerance)
-        .reduce((best, c) => c.minX < best.minX ? c : best);
-    }
+    // Descarta rótulos y ruido: franjas mucho más bajas que la mayor.
+    let bands = Renderer.findRuns(rowCounts, 3, rowGap);
+    const tallest = bands.reduce((max, b) => Math.max(max, b.end - b.start + 1), 0);
+    bands = bands.filter(b => b.end - b.start + 1 >= tallest * 0.2);
 
-    const rect = chosen
-      ? {
-        x: Math.max(0, (chosen.minX - 2) * STEP),
-        y: Math.max(0, (chosen.minY - 2) * STEP),
-        w: 0, h: 0
+    const rows = bands.map(band => {
+      const colCounts = new Uint32Array(width);
+      for (let y = band.start; y <= band.end; y++) {
+        for (let x = 0; x < width; x++) colCounts[x] += solid[y * width + x];
       }
-      : { x: 0, y: 0, w: 0, h: 0 };
-    const endX = chosen ? Math.min(image.naturalWidth, (chosen.maxX + 3) * STEP) : image.naturalWidth;
-    const endY = chosen ? Math.min(image.naturalHeight, (chosen.maxY + 3) * STEP) : image.naturalHeight;
-    rect.w = endX - rect.x;
-    rect.h = endY - rect.y;
-    return { rect, bgRef };
+      let segments = Renderer.findRuns(colCounts, 2, colGap);
+      if (mergeNarrow && segments.length > 1) segments = Renderer.mergeNarrowRuns(segments);
+
+      const y0 = Math.max(0, band.start * STEP - 2);
+      const y1 = Math.min(image.naturalHeight, (band.end + 1) * STEP + 2);
+      return segments.map(segment => {
+        const x0 = Math.max(0, segment.start * STEP - 2);
+        const x1 = Math.min(image.naturalWidth, (segment.end + 1) * STEP + 2);
+        return this.getKeyedSprite(image, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, "magenta", { bgRef });
+      }).filter(Boolean);
+    }).filter(frames => frames.length > 0);
+
+    return rows.length > 0 ? rows : null;
   }
 
-  getEnemySprite(src) {
-    if (this.enemySpriteCache.has(src)) return this.enemySpriteCache.get(src);
-
+  loadSheetImage(src) {
     let image = this.enemyImages.get(src);
     if (!image) {
       image = this.loadTerrainTexture(src);
       this.enemyImages.set(src, image);
     }
-    if (!image.complete || image.naturalWidth === 0) return null;
-
-    const { rect, bgRef } = this.findFirstSprite(image);
-    const keyed = this.getKeyedSprite(image, rect, "magenta", { trim: true, bgRef });
-    const sprite = keyed ? this.removeSpecks(keyed) : null;
-    this.enemySpriteCache.set(src, sprite);
-    return sprite;
+    return image.complete && image.naturalWidth > 0 ? image : null;
   }
 
-  // Elimina restos de rótulos o de sprites vecinos que quedaron dentro del recorte.
-  removeSpecks(sprite, ratio = 0.03) {
-    const { width, height } = sprite;
-    const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
-    const imageData = spriteCtx.getImageData(0, 0, width, height);
-    const { data } = imageData;
-    const seen = new Uint8Array(width * height);
-    const components = [];
+  // Ciclos del enemigo: fila superior = idle, siguiente = ataque, última = daño y muerte.
+  getEnemyAnimation(src) {
+    if (this.enemyAnimCache.has(src)) return this.enemyAnimCache.get(src);
+    const image = this.loadSheetImage(src);
+    if (!image) return null;
 
-    for (let start = 0; start < seen.length; start++) {
-      if (seen[start] || data[start * 4 + 3] <= 16) continue;
-      const members = [start];
-      seen[start] = 1;
-      for (let head = 0; head < members.length; head++) {
-        const x = members[head] % width;
-        const y = (members[head] - x) / width;
-        for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny++) {
-          for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx++) {
-            const next = ny * width + nx;
-            if (seen[next] || data[next * 4 + 3] <= 16) continue;
-            seen[next] = 1;
-            members.push(next);
-          }
-        }
-      }
-      components.push(members);
+    const rows = this.segmentSheet(image);
+    let animation = null;
+    if (rows) {
+      const idle = rows[0];
+      const attack = rows.length > 1 ? rows[1] : idle;
+      const last = rows.length > 2 ? rows[rows.length - 1] : attack;
+      const hurtCount = last.length > 2 ? Math.min(2, Math.ceil(last.length / 2)) : last.length;
+      animation = {
+        idle,
+        attack,
+        hurt: last.slice(0, hurtCount),
+        death: last.length > 2 ? last.slice(hurtCount) : last,
+        refWidth: Math.max(...idle.map(f => f.width)),
+        refHeight: Math.max(...idle.map(f => f.height))
+      };
+    }
+    this.enemyAnimCache.set(src, animation);
+    return animation;
+  }
+
+  // Duración total (ms) de la animación de muerte, o un valor por defecto si la hoja aún no carga.
+  getEnemyDeathDuration(enemy) {
+    const animation = this.getEnemyAnimation(enemy.spriteSrc);
+    return (animation ? animation.death.length : 4) * ENEMY_ANIM_MS.death + 250;
+  }
+
+  playEnemyAnim(enemy, state) {
+    if (!enemy || enemy.anim?.state === "death") return;
+    enemy.anim = { state, startedAt: performance.now() };
+    this.keepAnimating(ENEMY_ANIM_MS[state] * 8);
+  }
+
+  startEnemyDeath(enemy) {
+    enemy.anim = { state: "death", startedAt: performance.now() };
+    if (!this.dungeon.dyingEnemies.includes(enemy)) this.dungeon.dyingEnemies.push(enemy);
+    this.keepAnimating(this.getEnemyDeathDuration(enemy) + 100);
+  }
+
+  pruneDyingEnemies(now) {
+    this.dungeon.dyingEnemies = this.dungeon.dyingEnemies.filter(
+      enemy => now - enemy.anim.startedAt < this.getEnemyDeathDuration(enemy)
+    );
+  }
+
+  // Redibuja a cada frame del navegador mientras haya animaciones de enemigos o proyectiles.
+  keepAnimating(durationMs) {
+    this.animUntil = Math.max(this.animUntil, performance.now() + durationMs);
+    if (this.animLoopActive) return;
+    this.animLoopActive = true;
+    const step = () => {
+      this.draw();
+      if (performance.now() < this.animUntil) requestAnimationFrame(step);
+      else this.animLoopActive = false;
+    };
+    requestAnimationFrame(step);
+  }
+
+  getEnemyFrame(enemy, animation, now) {
+    const state = enemy.anim;
+    if (state) {
+      const frames = animation[state.state];
+      const index = Math.floor((now - state.startedAt) / ENEMY_ANIM_MS[state.state]);
+      if (index < frames.length) return frames[index];
+      if (state.state === "death") return frames[frames.length - 1];
+      enemy.anim = null;
+    }
+    enemy.animOffset ??= Math.random() * 1000;
+    return animation.idle[Math.floor((now + enemy.animOffset) / ENEMY_ANIM_MS.idle) % animation.idle.length];
+  }
+
+  // Proyectil enemigo: calibre pequeño/mediano/grande = fila de disparos.jpg; fases 0 carga, 1 vuelo, 2 impacto.
+  getProjectileSprite(caliber, phase) {
+    if (this.projectileRows === undefined) {
+      const image = this.loadSheetImage(PROJECTILE_SHEET.src);
+      if (!image) return null;
+      this.projectileRows = this.segmentSheet(image, {
+        rowGap: Math.floor(image.naturalHeight / 4 * 0.05),
+        colGap: Math.floor(image.naturalWidth / 4 * 0.1),
+        mergeNarrow: false
+      });
+    }
+    return this.projectileRows?.[PROJECTILE_SHEET.rows[caliber]]?.[phase] ?? null;
+  }
+
+  // Lanza un proyectil hacia Lior; devuelve los ms hasta el impacto para sincronizar el daño visual.
+  fireEnemyProjectile(enemy, hit) {
+    const caliber = enemy.size >= 4 ? "large" : (enemy.size === 2 ? "medium" : "small");
+    const cells = enemy.cells;
+    const from = {
+      x: cells.reduce((sum, c) => sum + c.x, 0) / cells.length,
+      y: cells.reduce((sum, c) => sum + c.y, 0) / cells.length
+    };
+    const to = { x: this.player.x, y: this.player.y };
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    const travelMs = Math.min(420, 150 + distance * 70);
+
+    // Un disparo fallado sobrepasa a Lior y no deja destello.
+    if (!hit && distance > 0) {
+      const overshoot = 1.5 / distance;
+      to.x += (to.x - from.x) * overshoot;
+      to.y += (to.y - from.y) * overshoot;
     }
 
-    const largest = components.reduce((max, c) => Math.max(max, c.length), 0);
-    components.forEach(members => {
-      if (members.length < largest * ratio) members.forEach(pixel => { data[pixel * 4 + 3] = 0; });
+    const launchAt = performance.now() + PROJECTILE_LAUNCH_DELAY_MS;
+    this.enemyProjectiles.push({ caliber, from, to, hit, launchAt, travelMs });
+    this.keepAnimating(PROJECTILE_LAUNCH_DELAY_MS + travelMs + PROJECTILE_IMPACT_MS + 100);
+    return PROJECTILE_LAUNCH_DELAY_MS + travelMs;
+  }
+
+  drawEnemyProjectiles(targetCtx, now) {
+    const tileSize = CAMERA_CONFIG.tileSize;
+    const toScreen = point => {
+      const { screenX, screenY } = CameraTransformer.worldToScreen(point.x, point.y, this.player);
+      return { x: (screenX + 0.5) * tileSize, y: (screenY + 0.5) * tileSize };
+    };
+    const drawSprite = (sprite, center, sizeTiles, angle, alpha = 1) => {
+      if (!sprite) return false;
+      const scale = (sizeTiles * tileSize) / Math.max(sprite.width, sprite.height);
+      targetCtx.save();
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.globalAlpha = alpha;
+      targetCtx.translate(center.x, center.y);
+      targetCtx.rotate(angle);
+      targetCtx.drawImage(sprite, -sprite.width * scale / 2, -sprite.height * scale / 2,
+        sprite.width * scale, sprite.height * scale);
+      targetCtx.restore();
+      return true;
+    };
+
+    this.enemyProjectiles = this.enemyProjectiles.filter(shot => {
+      const flightEnd = shot.launchAt + shot.travelMs;
+      return now < flightEnd + (shot.hit ? PROJECTILE_IMPACT_MS : 0);
     });
-    spriteCtx.putImageData(imageData, 0, 0);
-    return this.trimCanvas(sprite);
+
+    this.enemyProjectiles.forEach(shot => {
+      if (now < shot.launchAt) return;
+      const size = PROJECTILE_SHEET.sizes[shot.caliber];
+      const origin = toScreen(shot.from);
+      const target = toScreen(shot.to);
+      const flightEnd = shot.launchAt + shot.travelMs;
+
+      if (now < flightEnd) {
+        const t = (now - shot.launchAt) / shot.travelMs;
+        const angle = Math.atan2(target.y - origin.y, target.x - origin.x);
+        const center = { x: origin.x + (target.x - origin.x) * t, y: origin.y + (target.y - origin.y) * t };
+        if (!drawSprite(this.getProjectileSprite(shot.caliber, 1), center, size, angle)) {
+          targetCtx.fillStyle = "#ffb347";
+          targetCtx.beginPath();
+          targetCtx.arc(center.x, center.y, size * tileSize * 0.25, 0, Math.PI * 2);
+          targetCtx.fill();
+        }
+        return;
+      }
+
+      // Destello en la casilla de Lior antes de que se muestre el daño.
+      const progress = (now - flightEnd) / PROJECTILE_IMPACT_MS;
+      drawSprite(this.getProjectileSprite(shot.caliber, 2), target, size * 1.6, 0, 1 - progress * 0.5);
+    });
   }
 
   getLiorFrame(rect) {
@@ -1349,17 +1463,19 @@ class Renderer {
   }
 
   drawEnemySprite(targetCtx, enemy, px, py) {
-    const sprite = this.getEnemySprite(enemy.spriteSrc);
+    const animation = this.getEnemyAnimation(enemy.spriteSrc);
     const tileSize = CAMERA_CONFIG.tileSize;
     const drawSize = enemy.size * tileSize;
 
-    if (!sprite) {
+    if (!animation) {
       targetCtx.fillStyle = enemy.isBoss ? "#cc0029" : "#ff3333";
       targetCtx.fillRect(px + 2, py + 2, drawSize - 4, drawSize - 4);
       return;
     }
 
-    const scale = Math.min(drawSize / sprite.width, drawSize / sprite.height);
+    const sprite = this.getEnemyFrame(enemy, animation, performance.now());
+    // Escala común a todo el ciclo, calculada con el reposo, para que el sprite no "respire" entre frames.
+    const scale = Math.min(drawSize / animation.refWidth, drawSize / animation.refHeight);
     const width = sprite.width * scale;
     const height = sprite.height * scale;
 
@@ -1663,13 +1779,13 @@ class Renderer {
   }
 
   // El golpe espera a que termine la animación en curso para no taparla.
-  playHurt(isFatal) {
+  playHurt(isFatal, minDelay = 0) {
     const start = () => {
       this.damageFlashUntil = performance.now() + 180;
       if (isFatal) this.playRow("DEFEAT", 150);
       else this.playRow("HURT", 70);
     };
-    const delay = this.getAnimationRemaining();
+    const delay = Math.max(minDelay, this.getAnimationRemaining());
     if (delay > 0) setTimeout(start, delay);
     else start();
   }
@@ -1886,7 +2002,9 @@ class Renderer {
 
     this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
 
-    this.dungeon.enemies.forEach(enemy => {
+    const frameNow = performance.now();
+    this.pruneDyingEnemies(frameNow);
+    [...this.dungeon.enemies, ...this.dungeon.dyingEnemies].forEach(enemy => {
       if (!enemy.cells || enemy.cells.length === 0) return;
 
       let minScreenX = 999;
@@ -1928,6 +2046,7 @@ class Renderer {
     const liorCellPx = playerScreenX * tileSize;
     const liorCellPy = playerScreenY * tileSize;
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
+    this.drawEnemyProjectiles(targetCtx, frameNow);
     this.drawDamageFlash(targetCtx);
   }
 }
@@ -2049,6 +2168,7 @@ class CombatSystem {
 
     if (d20 === 20 || attackTotal >= target.ac) {
       target.hp -= damage;
+      if (target.hp > 0) game.renderer?.playEnemyAnim(target, "hurt");
       game.log(TEXT.logs.attackHit(attackTotal, target.ac, damage, target.name, Math.max(0, target.hp)));
     } else {
       game.log(TEXT.logs.attackDefended(attackTotal, target.ac, target.name));
@@ -2069,6 +2189,7 @@ class CombatSystem {
       game.log(TEXT.logs.goldDrop(goldDrop, enemy.name));
     });
     game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
+    dead.forEach(enemy => game.renderer?.startEnemyDeath(enemy));
     return dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
   }
 
@@ -2526,8 +2647,8 @@ class GameController {
     if (weaponBtn) weaponBtn.disabled = this.player.unlockedWeapons.size <= 1 || this.player.hp <= 0;
   }
 
-  // Arena de mega jefe: repone 1 esbirro por turno hasta completar la cuota.
-  replenishBossRoomMinions() {
+  // Arena de mega jefe: invoca 1 esbirro en una celda libre distante si hay menos del límite vivos.
+  summonBossRoomMinion() {
     const limit = getBossRoomMinionLimit(this.tier);
     const alive = this.dungeon.enemies.filter(e => !e.isBoss).length;
     if (alive >= limit) return;
@@ -2566,7 +2687,7 @@ class GameController {
 
       this.deathScreen.classList.remove("hidden");
       this.deathScreen.classList.add("visible");
-    }, 500);
+    }, 1200);
   }
 
   startVictorySequence() {
@@ -2705,6 +2826,7 @@ class GameController {
       // Daño fijo establecido exactamente en 11 puntos, sin modificadores
       const blastDamage = 11;
       hitEnemy.hp -= blastDamage;
+      if (hitEnemy.hp > 0) this.renderer.playEnemyAnim(hitEnemy, "hurt");
       this.log(TEXT.logs.blastFired(hitEnemy.name, blastDamage));
       CombatSystem.applyPanic(this, CombatSystem.processDeaths(this, [hitEnemy]));
     } else {
@@ -2789,6 +2911,8 @@ class GameController {
     const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const enemySnapshot = [...this.dungeon.enemies];
     let tookDamage = false;
+    let hurtDelay = 0;
+    this.dungeon.turnCount++;
 
     enemySnapshot.forEach(enemy => {
       if (this.player.hp <= 0) return;
@@ -2801,12 +2925,26 @@ class GameController {
       const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
       if (hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0) {
+        // Mega jefe: ataca un turno sí y uno no; el turno de pausa es la ventana de contraataque.
+        if (enemy.isMegaBoss) {
+          if (!enemy.bossAttackReady) {
+            enemy.bossAttackReady = true;
+            return;
+          }
+          enemy.bossAttackReady = false;
+        }
+
         const eD20 = rollDie(20);
         const hitMod = this.hitBonus;
         const dmgMod = this.dmgBonus;
         const totalAtk = eD20 + hitMod;
+        const hit = totalAtk >= this.player.ac;
 
-        if (totalAtk >= this.player.ac) {
+        this.renderer.playEnemyAnim(enemy, "attack");
+        const isRanged = enemy.isBoss || enemy.ranged || distToPlayer > 1;
+        if (isRanged) hurtDelay = Math.max(hurtDelay, this.renderer.fireEnemyProjectile(enemy, hit));
+
+        if (hit) {
           sounds.playHurt();
           const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
           const totalDmg = baseDmg + dmgMod;
@@ -2835,14 +2973,20 @@ class GameController {
       // Arenas de mega jefe: persecución directa en cada turno, sin patrullas ni huidas.
       if (this.dungeon.isBossRoom) mode = "chase";
 
-      const directions = [
+      let directions = [
         { dx: 0, dy: -1 },
         { dx: 1, dy: 0 },
         { dx: 0, dy: 1 },
         { dx: -1, dy: 0 }
       ];
 
-      if (mode === "flee") {
+      if (enemy.isMegaBoss) {
+        // Patrulla superior: solo eje X, alineado con la columna de Lior; nunca baja en Y.
+        const lastCol = Math.max(...enemy.cells.map(c => c.x));
+        if (this.player.x < enemy.x) directions = [{ dx: -1, dy: 0 }];
+        else if (this.player.x > lastCol) directions = [{ dx: 1, dy: 0 }];
+        else directions = [];
+      } else if (mode === "flee") {
         directions.sort((a, b) => {
           const dA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
           const dB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
@@ -2883,10 +3027,12 @@ class GameController {
       }
     });
 
-    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0);
+    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0, hurtDelay);
 
-    if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.enemies.some(e => e.isMegaBoss)) {
-      this.replenishBossRoomMinions();
+    // Cada 4 turnos el mega jefe invoca exactamente 1 esbirro.
+    if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.turnCount % 4 === 0
+      && this.dungeon.enemies.some(e => e.isMegaBoss)) {
+      this.summonBossRoomMinion();
     }
 
     if (this.player.hp > 0) {
