@@ -586,50 +586,26 @@ html, body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: opacity 0.4s ease;
-}
-
-.splash-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000000;
 }
 
 #splash-screen.fade-out {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.7s ease;
 }
 
 .splash-logo {
-  position: relative;
-  max-width: 200px;
-  max-height: 200px;
+  width: min(60vw, 320px);
+  height: auto;
   object-fit: contain;
-  z-index: 1;
-  color: #ffffff;
-  font: bold 22px/1.3 monospace;
-  letter-spacing: 2px;
-  text-align: center;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 0.7s ease;
 }
 
-#skip-intro {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  z-index: 2;
-  padding: 10px 14px;
-  border: 1px solid #aaaaaa;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #ffffff;
-  font: bold 12px monospace;
-  cursor: pointer;
+.splash-logo.show {
+  opacity: 1;
 }
-
 .hidden {
   display: none !important;
 }

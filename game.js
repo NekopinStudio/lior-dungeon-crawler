@@ -1,133 +1,125 @@
 /**
- * SISTEMA DE INTERNACIONALIZACIÓN (i18n)
+ * TEXTOS DEL JUEGO (español neutro)
  */
-const IS_SPANISH = (navigator.language || navigator.userLanguage || "es").toLowerCase().startsWith("es");
-
-const I18N = {
-  cardinals: IS_SPANISH
-    ? ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"]
-    : ["North (▲)", "East (▶)", "South (▼)", "West (◀)"],
-  doorLocked: (count) => IS_SPANISH ? `BLOQUEADA (${count})` : `LOCKED (${count})`,
-  doorOpen: IS_SPANISH ? "ABIERTA" : "OPEN",
+const TEXT = {
+  cardinals: ["Norte (▲)", "Este (▶)", "Sur (▼)", "Oeste (◀)"],
+  doorLocked: (count) => `BLOQUEADA (${count})`,
+  doorOpen: "ABIERTA",
   weaponNames: {
-    sword: IS_SPANISH ? "Espada" : "Sword",
-    pistol: IS_SPANISH ? "Pistola" : "Pistol",
-    musket: IS_SPANISH ? "Mosquete" : "Musket",
-    blunderbuss: IS_SPANISH ? "Trabuco" : "Blunderbuss"
+    sword: "Espada",
+    pistol: "Pistola",
+    musket: "Mosquete",
+    blunderbuss: "Trabuco"
   },
   weaponLabels: {
-    sword: IS_SPANISH ? "Espada (área c/c 1.5)" : "Longsword (1.5 AoE)",
-    pistol: IS_SPANISH ? "Pistola (frente 3x3)" : "Pistol (front 3x3)",
-    musket: IS_SPANISH ? "Mosquete (frente 5x3)" : "Musket (front 5x3)",
-    blunderbuss: IS_SPANISH ? "Trabuco (frente 2x4)" : "Blunderbuss (front 2x4)"
+    sword: "Espada (área c/c 1.5)",
+    pistol: "Pistola (frente 3x3)",
+    musket: "Mosquete (frente 5x3)",
+    blunderbuss: "Trabuco (frente 2x5)"
   },
   captions: {
-    weapon: IS_SPANISH ? "ARMA" : "WEAPON",
-    blast: IS_SPANISH ? "E. BLAST" : "E. BLAST",
-    mist: IS_SPANISH ? "BRUMA" : "MIST",
-    attack: IS_SPANISH ? "ATACAR" : "ATTACK"
+    weapon: "ARMA",
+    blast: "E. BLAST",
+    mist: "BRUMA",
+    attack: "ATACAR"
   },
   captionsKeyboard: {
-    weapon: IS_SPANISH ? "ARMA (I)" : "WEAPON (I)",
-    blast: IS_SPANISH ? "E. BLAST (J)" : "E. BLAST (J)",
-    mist: IS_SPANISH ? "BRUMA (L)" : "MIST (L)",
-    attack: IS_SPANISH ? "ATACAR (K)" : "ATTACK (K)"
+    weapon: "ARMA (I)",
+    blast: "E. BLAST (J)",
+    mist: "BRUMA (L)",
+    attack: "ATACAR (K)"
   },
   death: {
-    title: IS_SPANISH ? "HAS CAÍDO" : "YOU DIED",
-    desc: IS_SPANISH ? "Las sombras del calabozo han consumido a Lior." : "The dungeon shadows have consumed Lior.",
-    btn: IS_SPANISH ? "☠ INTENTAR DE NUEVO" : "☠ TRY AGAIN",
-    stats: (floor, kills, gold) => IS_SPANISH
-      ? `Alcanzaste el Piso: ${floor}<br>Enemigos purificados: ${kills}<br>Oro acumulado: ${gold} PO`
-      : `Reached Floor: ${floor}<br>Enemies defeated: ${kills}<br>Total Gold: ${gold} GP`
+    title: "HAS CAÍDO",
+    desc: "Las sombras del calabozo han consumido a Lior.",
+    btn: "☠ INTENTAR DE NUEVO",
+    stats: (floor, kills, gold) =>
+      `Alcanzaste el Piso: ${floor}<br>Enemigos purificados: ${kills}<br>Oro acumulado: ${gold} PO`
   },
   victory: {
-    title: IS_SPANISH ? "¡PURIFICACIÓN!" : "VICTORY!",
-    desc: IS_SPANISH ? "Lior Kurogane ha emergido a la superficie.<br>La luz del sol baña los 100 pisos conquistados." : "Lior Kurogane has reached the surface.<br>Warm sunlight cleanses the 100 conquered floors.",
-    btn: IS_SPANISH ? "REINICIAR VIAJE" : "PLAY AGAIN",
-    stats: (kills, gold) => IS_SPANISH
-      ? `Pisos purificados: 100<br>Enemigos eliminados: ${kills}<br>Oro reunido: ${gold} PO`
-      : `Floors cleared: 100<br>Enemies purged: ${kills}<br>Gold gathered: ${gold} GP`
+    title: "¡PURIFICACIÓN!",
+    desc: "Lior Kurogane ha emergido a la superficie.<br>La luz del sol baña los 100 pisos conquistados.",
+    btn: "REINICIAR VIAJE",
+    stats: (kills, gold) =>
+      `Pisos purificados: 100<br>Enemigos eliminados: ${kills}<br>Oro reunido: ${gold} PO`
   },
   logs: {
-    outOfBounds: IS_SPANISH ? "El muro exterior te detiene." : "The outer perimeter stops you.",
-    backOutOfBounds: IS_SPANISH ? "Un muro exterior detiene tu retroceso." : "An outer perimeter wall blocks your retreat.",
-    wallFront: IS_SPANISH ? "Un muro blanco bloquea el camino." : "A white wall blocks your path.",
-    wallBack: IS_SPANISH ? "Un muro a tu espalda te impide retroceder." : "A wall behind you blocks your retreat.",
-    enemyBlock: IS_SPANISH ? "¡Un enemigo bloquea el paso! Ataca para despejarlo." : "An enemy blocks your way! Attack to clear.",
-    enemyBlockBack: IS_SPANISH ? "Un enemigo te bloquea el paso por la espalda." : "An enemy blocks your path from behind.",
-    merchantPeace: IS_SPANISH ? "Baja tu arma, tengo cosas buenas para ti." : "Lower your weapon, I have good wares for you.",
-    merchantNoAttack: IS_SPANISH ? "No puedes atacar en el santuario del mercader." : "You cannot attack in the merchant's sanctuary.",
-    noAmmoPistol: IS_SPANISH ? "¡Sin balas de Pistola! Cambia de arma." : "Out of Pistol ammo! Switch weapons.",
-    noAmmoMusket: IS_SPANISH ? "¡Sin balas de Mosquete! Cambia de arma." : "Out of Musket ammo! Switch weapons.",
-    noAmmoBlunderbuss: IS_SPANISH ? "¡Sin balas de Trabuco! Cambia de arma." : "Out of Blunderbuss ammo! Switch weapons.",
-    chestPotion: (heal) => IS_SPANISH ? `Encontraste una poción: +${heal} HP.` : `You found a potion: +${heal} HP.`,
-    chestWeapon: (weapon, ammo) => IS_SPANISH
-      ? `Encontraste ${weapon} y ${ammo} ${ammo === 1 ? "bala" : "balas"}.`
-      : `You found a ${weapon} and ${ammo} ${ammo === 1 ? "round" : "rounds"}.`,
-    chestAmmo: (weapon, ammo) => IS_SPANISH
-      ? `El cofre tenía ${ammo} ${ammo === 1 ? "bala" : "balas"} de ${weapon}.`
-      : `The chest had ${ammo} ${ammo === 1 ? "round" : "rounds"} for your ${weapon}.`,
-    swordWhiff: IS_SPANISH ? "Blandes tu espada en círculo, pero no hay enemigos al alcance." : "You swing your sword in an arc, but no enemies are near.",
-    shotWhiff: (weapon) => IS_SPANISH ? `Disparas tu ${weapon}... pero la bala se pierde sin impactar.` : `You fire your ${weapon}... but the shot finds no target.`,
-    panic: IS_SPANISH ? "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen." : "The leader fell! Nearby minions panic and flee.",
-    deadPlayer: IS_SPANISH ? "Lior ha caído en combate. Fin de la partida." : "Lior has fallen in battle. Game Over.",
-    blastCharging: (rem) => IS_SPANISH ? `Eldritch Blast cargando (${rem} acciones restantes).` : `Eldritch Blast is charging (${rem} actions left).`,
-    blastWhiff: IS_SPANISH ? "Liberas un rayo de Eldritch Blast, pero no hay objetivos en tu línea de visión." : "You unleash an Eldritch Blast, but no enemies are in line of sight.",
-    blastFired: (target, dmg) => IS_SPANISH ? `¡Eldritch Blast impacta a ${target} por ${dmg} de daño arcano!` : `Eldritch Blast strikes ${target} for ${dmg} force damage!`,
-    exitLocked: (cnt) => IS_SPANISH ? `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.` : `The gate is sealed! Slay the remaining ${cnt} threats.`,
-    exitDescend: IS_SPANISH ? "¡Descendiendo al siguiente nivel...!" : "Descending to the next floor...",
-    floorIntro: (floor, tier, w, h, ac, hit, dmg) => IS_SPANISH
-      ? `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`
-      : `Floor ${floor} (Tier ${tier}): ${w}x${h}. Lior AC: ${ac}, Hit bonus: +${hit}, Flat Dmg: +${dmg}.`,
-    bunnyCaught: IS_SPANISH
-      ? "¡Atrapaste al Conejo Dorado! Obtienes 5 monedas de oro."
-      : "You caught the Golden Bunny! You receive 5 gold coins."
+    outOfBounds: "El muro exterior te detiene.",
+    backOutOfBounds: "Un muro exterior detiene tu retroceso.",
+    wallFront: "Un muro blanco bloquea el camino.",
+    wallBack: "Un muro a tu espalda te impide retroceder.",
+    enemyBlock: "¡Un enemigo bloquea el paso! Ataca para despejarlo.",
+    enemyBlockBack: "Un enemigo te bloquea el paso por la espalda.",
+    merchantPeace: "Baja tu arma, tengo cosas buenas para ti.",
+    merchantNoAttack: "No puedes atacar en el santuario del mercader.",
+    noAmmoPistol: "¡Sin balas de Pistola! Cambia de arma.",
+    noAmmoMusket: "¡Sin balas de Mosquete! Cambia de arma.",
+    noAmmoBlunderbuss: "¡Sin balas de Trabuco! Cambia de arma.",
+    chestPotion: (heal) => `Encontraste una poción: +${heal} HP.`,
+    chestWeapon: (weapon, ammo) => `Encontraste ${weapon} y ${ammo} ${ammo === 1 ? "bala" : "balas"}.`,
+    chestAmmo: (weapon, ammo) => `El cofre tenía ${ammo} ${ammo === 1 ? "bala" : "balas"} de ${weapon}.`,
+    swordWhiff: "Blandes tu espada en círculo, pero no hay enemigos al alcance.",
+    shotWhiff: (weapon) => `Disparas tu ${weapon}... pero la bala se pierde sin impactar.`,
+    wallImpact: (weapon) => `Tu disparo de ${weapon} impacta contra un muro.`,
+    attackHit: (total, ac, dmg, name, hp) => `[${total} vs CA ${ac}]: ${dmg} DMG -> ${name} (HP: ${hp})`,
+    attackDefended: (total, ac, name) => `[${total} vs CA ${ac}] ${name} se defiende.`,
+    enemyHit: (name, total, ac, dmg) => `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} HP.`,
+    goldDrop: (gold, name) => `+${gold} PO (${name})`,
+    panic: "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen.",
+    deadPlayer: "Lior ha caído en combate. Fin de la partida.",
+    blastCharging: (rem) => `Eldritch Blast cargando (${rem} acciones restantes).`,
+    blastWhiff: "Liberas un rayo de Eldritch Blast, pero no hay objetivos en tu línea de visión.",
+    blastFired: (target, dmg) => `¡Eldritch Blast impacta a ${target} por ${dmg} de daño arcano!`,
+    exitLocked: (cnt) => `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.`,
+    exitDescend: "¡Descendiendo al siguiente nivel...!",
+    floorIntro: (floor, tier, w, h, ac, hit, dmg) =>
+      `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`,
+    bossArena: (name) => `¡${name} te espera en la arena! Sus esbirros acuden sin descanso.`,
+    bunnyCaught: "¡Atrapaste al Conejo Dorado! Obtienes 5 monedas de oro.",
+    boughtPistol: "Compraste 6 balas de Pistola (-1 PO).",
+    boughtMusket: "Compraste 4 balas de Mosquete (-1 PO).",
+    boughtBlunderbuss: "Compraste 2 balas de Trabuco (-1 PO).",
+    boughtPotion: (heal) => `Bebiste una poción: +${heal} HP (-2 PO).`
   }
 };
 
 /**
- * ATLAS PRO IMAGINIBUS LIORIS KUROGANE
+ * LIOR: hoja principal (fila por fila según los rótulos). Cada frame es
+ * { x, y, w, h } en píxeles de lior.png; el recorte fino lo hace el Renderer.
  */
-const LIOR_SPRITES = {
-  IDLE: {
-    SWORD:       { x: 51,  y: 52, w: 132, h: 197 },
-    PISTOL:      { x: 286, y: 62, w: 114, h: 187 },
-    MUSKET:      { x: 496, y: 35, w: 163, h: 223 },
-    BLUNDERBUSS: { x: 720, y: 61, w: 114, h: 185 }
-  },
-  SWORD_SPIN: [
-    { x: 903,  y: 80, w: 151, h: 178 },
-    { x: 1048, y: 52, w: 297, h: 214 },
-    { x: 1372, y: 81, w: 119, h: 177 }
-  ],
-  MISTY_STEP: [
-    { x: 700, y: 545, w: 112, h: 180 },
-    { x: 810, y: 535, w: 94, h: 185 },
-    { x: 900, y: 545, w: 100, h: 160 }
-  ],
-  HEAL: [
-    { x: 1260, y: 535, w: 120, h: 190 },
-    { x: 1390, y: 535, w: 132, h: 190 }
-  ],
-  DRINK_POTION: [
-    { x: 1020, y: 538, w: 92, h: 188 },
-    { x: 1135, y: 545, w: 108, h: 183 }
-  ],
-  WEAPON_CHANGE: { x: 50, y: 800, w: 116, h: 190 },
-  PISTOL_SHOT: {
-    sprite: { x: 35, y: 298, w: 132, h: 154 },
-    muzzle: { x: 155, y: 322, w: 74, h: 80 },
-    projectile: { x: 243, y: 340, w: 62, h: 58 },
-    trail: { x: 328, y: 360, w: 230, h: 32 },
-    impact: { x: 594, y: 340, w: 91, h: 100 }
-  },
-  MUSKET_SHOT: {
-    sprite: { x: 15, y: 540, w: 135, h: 164 },
-    muzzle: { x: 142, y: 564, w: 67, h: 84 },
-    projectile: { x: 202, y: 585, w: 130, h: 50 },
-    trail: { x: 328, y: 600, w: 224, h: 32 },
-    impact: { x: 568, y: 562, w: 120, h: 145 }
+const LIOR_ROWS = {
+  IDLE:           { y0: 14,   y1: 128,  xs: [[194, 267], [301, 374], [408, 483]] },
+  WALK:           { y0: 135,  y1: 274,  xs: [[302, 380], [408, 490], [519, 598], [640, 725], [760, 844], [873, 964], [995, 1086], [1117, 1207]] },
+  SWORD_SPIN:     { y0: 278,  y1: 414,  xs: [[208, 328], [375, 549], [599, 759], [867, 968]] },
+  ELDRITCH_BLAST: { y0: 418,  y1: 574,  xs: [[256, 386], [463, 625], [736, 864], [921, 1011]] },
+  HEAL:           { y0: 576,  y1: 708,  xs: [[271, 349], [439, 516], [599, 678], [761, 843]] },
+  MISTY_STEP:     { y0: 712,  y1: 842,  xs: [[263, 365], [442, 538], [608, 703], [762, 844]] },
+  GUN_RECOIL:     { y0: 846,  y1: 974,  xs: [[243, 356], [419, 512], [600, 683], [749, 842], [918, 1020], [1078, 1179]] },
+  HURT:           { y0: 976,  y1: 1090, xs: [[230, 324], [419, 508], [590, 683]] },
+  DEFEAT:         { y0: 1092, y1: 1186, xs: [[216, 322], [402, 528], [544, 753], [771, 833], [863, 1060]] }
+};
+
+const LIOR_SPRITES = Object.fromEntries(Object.entries(LIOR_ROWS).map(([name, row]) => [
+  name,
+  row.xs.map(([x0, x1]) => ({ x: x0, y: row.y0, w: x1 - x0 + 1, h: row.y1 - row.y0 + 1 }))
+]));
+
+/**
+ * EFECTOS DE ARMAS: 3 fases por hoja. "cols" = columnas iguales; "panels" = recortes
+ * manuales (el trabuco dibuja un panel completo de 5x2 casillas).
+ */
+const EFFECT_SHEETS = {
+  eblast:      { src: "Assets/Lior/EBlast.jpg",        cols: 3, trim: false },
+  pistol:      { src: "Assets/Lior/PistolShot.jpg",    cols: 3, trim: true },
+  musket:      { src: "Assets/Lior/MosqueteShot.jpg",  cols: 3, trim: true },
+  blunderbuss: {
+    src: "Assets/Lior/trabucoShot.jpg",
+    trim: false,
+    panels: [
+      { x: 36,   y: 410, w: 1023, h: 453 },
+      { x: 1106, y: 410, w: 1027, h: 453 },
+      { x: 2176, y: 410, w: 1052, h: 453 }
+    ]
   }
 };
 
@@ -365,14 +357,46 @@ const CAMERA_CARDINAL_BASIS = [
   { forward: { x: -1, y: 0 }, right: { x: 0, y: -1 } }
 ];
 
-const ENEMY_SPRITES = {
-  small: [
-    { x: 0, y: 96, w: 144, h: 144 },
-    { x: 624, y: 96, w: 144, h: 144 },
-    { x: 1248, y: 96, w: 144, h: 144 }
+const ENEMY_ROSTER = {
+  minion: [
+    { name: "Kobold", src: "Assets/Enemy/1x1/1. kobold.jpg" },
+    { name: "Goblin", src: "Assets/Enemy/1x1/2. Goblin.jpg" },
+    { name: "Esqueleto", src: "Assets/Enemy/1x1/3.Skelleton.jpg" },
+    { name: "Zombi", src: "Assets/Enemy/1x1/4. Zombie.jpg" },
+    { name: "Orco", src: "Assets/Enemy/1x1/5. orc.jpg" },
+    { name: "Gnoll", src: "Assets/Enemy/1x1/6. Gnoll.jpg" },
+    { name: "Hobgoblin", src: "Assets/Enemy/1x1/7. hobgoblin.jpg" },
+    { name: "Hombre lagarto", src: "Assets/Enemy/1x1/8. lizardfolk.jpg" },
+    { name: "Diablillo", src: "Assets/Enemy/1x1/9. imp.jpg" },
+    { name: "Osgo", src: "Assets/Enemy/1x1/10. bugbear.jpg" }
   ],
-  miniBoss: { x: 1880, y: 104, w: 176, h: 176 },
-  megaBoss: { x: 2568, y: 770, w: 220, h: 236 },
+  miniBoss: [
+    { name: "Ogro", src: "Assets/Enemy/2x2/1. ogre.png" },
+    { name: "Trol", src: "Assets/Enemy/2x2/2. troll.jpg" },
+    { name: "Minotauro", src: "Assets/Enemy/2x2/3. minotaur.jpg" },
+    { name: "Osobúho", src: "Assets/Enemy/2x2/4. owlbear.jpg" },
+    { name: "Mantícora", src: "Assets/Enemy/2x2/5. manticore.jpg" },
+    { name: "Basilisco", src: "Assets/Enemy/2x2/6. basilisk.jpg" },
+    { name: "Quimera", src: "Assets/Enemy/2x2/7. chimera.jpg" },
+    { name: "Bulette", src: "Assets/Enemy/2x2/8. bulette.jpg" },
+    { name: "Gigante de las colinas", src: "Assets/Enemy/2x2/9. hillGiant.jpg" },
+    { name: "Dragón joven", src: "Assets/Enemy/2x2/10. youngDragon.jpg" }
+  ],
+  megaBoss: [
+    { name: "Roc", src: "Assets/Enemy/4x4/1. roc.jpg" },
+    { name: "Tarrasca", src: "Assets/Enemy/4x4/2. tarrasque.jpg" },
+    { name: "Gólem de hierro", src: "Assets/Enemy/4x4/3. ironGolem.jpg" },
+    { name: "Kraken", src: "Assets/Enemy/4x4/4. kraken.jpg" },
+    { name: "Gigante de tormenta", src: "Assets/Enemy/4x4/5. stormGigant.jpg" },
+    { name: "Beholder", src: "Assets/Enemy/4x4/6. beholder.jpg" },
+    { name: "Gusano púrpura", src: "Assets/Enemy/4x4/7. purpleworm.jpg" },
+    { name: "Balor", src: "Assets/Enemy/4x4/8. Balor.jpg" },
+    { name: "Dragón rojo ancestral", src: "Assets/Enemy/4x4/9. AncientRedDragon.jpg" },
+    { name: "Dragón solar", src: "Assets/Enemy/4x4/10. solarDragon.jpg" }
+  ]
+};
+
+const BUNNY_SPRITES = {
   bunnyIdle: { x: 0, y: 64, w: 256, h: 256 },
   bunnyFlee: [
     { x: 1672, y: 940, w: 288, h: 224 },
@@ -386,8 +410,8 @@ const CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 0, w: 16, h: 16 }));
 const WEAPONS = {
   SWORD: {
     id: "sword",
-    name: I18N.weaponNames.sword,
-    label: I18N.weaponLabels.sword,
+    name: TEXT.weaponNames.sword,
+    label: TEXT.weaponLabels.sword,
     damage: 2,
     range: 1.5,
     isMelee: true,
@@ -395,8 +419,8 @@ const WEAPONS = {
   },
   PISTOL: {
     id: "pistol",
-    name: I18N.weaponNames.pistol,
-    label: I18N.weaponLabels.pistol,
+    name: TEXT.weaponNames.pistol,
+    label: TEXT.weaponLabels.pistol,
     damage: 4,
     range: 3,
     width: 3,
@@ -406,8 +430,8 @@ const WEAPONS = {
   },
   MUSKET: {
     id: "musket",
-    name: I18N.weaponNames.musket,
-    label: I18N.weaponLabels.musket,
+    name: TEXT.weaponNames.musket,
+    label: TEXT.weaponLabels.musket,
     damage: 6,
     range: 5,
     width: 3,
@@ -417,11 +441,11 @@ const WEAPONS = {
   },
   BLUNDERBUSS: {
     id: "blunderbuss",
-    name: I18N.weaponNames.blunderbuss,
-    label: I18N.weaponLabels.blunderbuss,
+    name: TEXT.weaponNames.blunderbuss,
+    label: TEXT.weaponLabels.blunderbuss,
     damage: 8,
     range: 2,
-    width: 4,
+    width: 5,
     isMelee: false,
     ammoType: "blunderbuss",
     ammoProperty: "ammoBlunderbuss"
@@ -432,9 +456,44 @@ function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
+function getTierForFloor(floorNumber) {
+  return Math.min(10, Math.floor((floorNumber - 1) / 10) + 1);
+}
+
+// Población acumulativa: en el tier N pueden aparecer las entradas 1..N.
+function pickCumulativeEntry(list, tier) {
+  return list[Math.floor(Math.random() * Math.min(tier, list.length))];
+}
+
+function getBossRoomMinionLimit(tier) {
+  return 10 + (tier - 1);
+}
+
+function createMinion(tier, x, y, visionRange = 2) {
+  const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, tier);
+  const hp = 2 + Math.floor((tier - 1) / 2);
+  return {
+    id: Math.random().toString(36).substring(2, 9),
+    x, y,
+    startX: x, startY: y,
+    name: entry.name,
+    spriteSrc: entry.src,
+    hp,
+    maxHp: hp,
+    ac: 8 + tier,
+    visionRange,
+    attackRange: 1,
+    isMegaBoss: false,
+    isBoss: false,
+    size: 1,
+    cells: [{ x, y }],
+    fearCooldown: 0
+  };
+}
+
 function getRandomDungeonDimensions(min = 10, max = 30, floorNumber = 1) {
   if (floorNumber % 10 === 0) {
-    return { width: 22, height: 16 };
+    return { width: 15, height: 15 };
   }
 
   const absoluteMin = 10;
@@ -463,6 +522,7 @@ class Dungeon {
     this.npcs = [];
     this.chests = new Set();
     this.isMerchantRoom = false;
+    this.isBossRoom = false;
 
     this.entrance = { x: 1, y: height - 1 };
     this.exit = { x: width - 2, y: 0 };
@@ -572,12 +632,14 @@ class DungeonGenerator {
   constructor(dungeon, floorNumber = 1) {
     this.dungeon = dungeon;
     this.floorNumber = floorNumber;
-    this.tier = Math.min(10, Math.floor((this.floorNumber - 1) / 10) + 1);
+    this.tier = getTierForFloor(this.floorNumber);
 
     if (this.dungeon.isMerchantRoom) {
       this.generateMerchantRoom();
       return;
     }
+
+    this.dungeon.isBossRoom = this.floorNumber % 10 === 0;
 
     const area = dungeon.width * dungeon.height;
     this.totalEnemies = Math.max(2, Math.floor(area / 20));
@@ -650,7 +712,7 @@ class DungeonGenerator {
       return;
     }
 
-    const isWall = Math.random() < 0.20;
+    const isWall = !this.dungeon.isBossRoom && Math.random() < 0.20;
     this.dungeon.setTile(x, y, isWall ? TILE_WALL : TILE_FLOOR);
   }
 
@@ -664,44 +726,51 @@ class DungeonGenerator {
     return cells;
   }
 
-  populateEnemies() {
-    if (this.floorNumber % 10 === 0 && this.dungeon.width >= 10 && this.dungeon.height >= 10) {
-      let megaBossPlaced = false;
-      for (let attempts = 0; attempts < 1000 && !megaBossPlaced; attempts++) {
-        const mx = Math.floor(Math.random() * (this.dungeon.width - 6)) + 2;
-        const my = Math.floor(Math.random() * (this.dungeon.height - 6)) + 2;
+  placeMegaBoss() {
+    const entry = ENEMY_ROSTER.megaBoss[Math.min(ENEMY_ROSTER.megaBoss.length, this.floorNumber / 10) - 1];
 
-        if (Math.hypot(mx - this.dungeon.entrance.x, my - this.dungeon.entrance.y) <= 6.0) continue;
-        if (Math.hypot(mx - this.dungeon.exit.x, my - this.dungeon.exit.y) <= 4.0) continue;
+    for (let attempts = 0; attempts < 1000; attempts++) {
+      const mx = Math.floor(Math.random() * (this.dungeon.width - 6)) + 2;
+      const my = Math.floor(Math.random() * (this.dungeon.height - 6)) + 2;
 
-        const bossCells = this.generateCells(mx, my, 4);
-        bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
+      if (Math.hypot(mx - this.dungeon.entrance.x, my - this.dungeon.entrance.y) <= 6.0) continue;
+      if (Math.hypot(mx - this.dungeon.exit.x, my - this.dungeon.exit.y) <= 4.0) continue;
 
-        const megaBossHp = 18 + this.tier * 6;
+      const bossCells = this.generateCells(mx, my, 4);
+      bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-        this.dungeon.enemies.push({
-          id: Math.random().toString(36).substring(2, 9),
-          x: mx, y: my,
-          startX: mx, startY: my,
-          name: "MEGA BOSS (4x4)",
-          hp: megaBossHp,
-          maxHp: megaBossHp,
-          ac: 12 + this.tier,
-          visionRange: 4,
-          attackRange: 4,
-          isMegaBoss: true,
-          isBoss: true,
-          size: 4,
-          cells: bossCells,
-          fearCooldown: 0
-        });
-        megaBossPlaced = true;
-      }
+      const megaBossHp = 18 + this.tier * 6;
+
+      this.dungeon.enemies.push({
+        id: Math.random().toString(36).substring(2, 9),
+        x: mx, y: my,
+        startX: mx, startY: my,
+        name: entry.name,
+        spriteSrc: entry.src,
+        hp: megaBossHp,
+        maxHp: megaBossHp,
+        ac: 12 + this.tier,
+        visionRange: 4,
+        attackRange: 4,
+        isMegaBoss: true,
+        isBoss: true,
+        size: 4,
+        cells: bossCells,
+        fearCooldown: 0
+      });
+      return;
     }
+  }
 
+  populateEnemies() {
+    const isBossRoom = this.dungeon.isBossRoom;
+    if (isBossRoom) this.placeMegaBoss();
+
+    const count = isBossRoom ? getBossRoomMinionLimit(this.tier) : this.totalEnemies;
     let sequenceCounter = 0;
-    for (let i = 0; i < this.totalEnemies; i++) {
-      const isBoss = (sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6);
+
+    for (let i = 0; i < count; i++) {
+      const isBoss = !isBossRoom && sequenceCounter === 3 && this.dungeon.width >= 6 && this.dungeon.height >= 6;
       const enemySize = isBoss ? 2 : 1;
       let placed = false;
 
@@ -721,13 +790,15 @@ class DungeonGenerator {
         candidateCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
         if (isBoss) {
+          const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
           const miniBossHp = 6 + this.tier * 2;
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
             x: rx, y: ry,
             startX: rx, startY: ry,
-            name: IS_SPANISH ? "Minijefe (2x2)" : "Mini Boss (2x2)",
+            name: entry.name,
+            spriteSrc: entry.src,
             hp: miniBossHp,
             maxHp: miniBossHp,
             ac: 10 + this.tier,
@@ -741,25 +812,7 @@ class DungeonGenerator {
           });
           sequenceCounter = 0;
         } else {
-          const shadowHp = 2 + Math.floor((this.tier - 1) / 2);
-
-          this.dungeon.enemies.push({
-            id: Math.random().toString(36).substring(2, 9),
-            x: rx, y: ry,
-            startX: rx, startY: ry,
-            name: IS_SPANISH ? "Sombra Hostil" : "Hostile Shadow",
-            hp: shadowHp,
-            maxHp: shadowHp,
-            ac: 8 + this.tier,
-            visionRange: 2,
-            attackRange: 1,
-            isMegaBoss: false,
-            isBoss: false,
-            size: 1,
-            spriteSet: Math.floor(Math.random() * ENEMY_SPRITES.small.length),
-            cells: candidateCells,
-            fearCooldown: 0
-          });
+          this.dungeon.enemies.push(createMinion(this.tier, rx, ry));
           sequenceCounter++;
         }
         placed = true;
@@ -962,17 +1015,27 @@ class Renderer {
     this.mapDecorations = {
       chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png")
     };
-    this.enemySpriteSheet = this.loadTerrainTexture("Assets/Enemy/enemy-spriteSheet.jpg");
     this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
     this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
     this.keyedSpriteCache = new Map();
 
-    this.liorSpritesheet = this.loadTerrainTexture("Assets/Lior/lior_spritesheet.png");
+    this.liorSheet = this.loadTerrainTexture("Assets/Lior/lior.png.png");
+    this.effectImages = Object.fromEntries(
+      Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
+    );
+    this.enemyImages = new Map();
+    this.enemySpriteCache = new Map();
 
     this.playerAnimation = null;
     this.playerAnimationFrame = null;
     this.chestOpening = null;
     this.chestOpeningFrame = null;
+    this.damageFlashUntil = 0;
+
+    // Ciclo de reposo (IDLE) de Lior.
+    setInterval(() => {
+      if (!this.playerAnimation && !this.chestOpening) this.draw();
+    }, 450);
   }
 
   loadTerrainTexture(src) {
@@ -982,36 +1045,96 @@ class Renderer {
     return image;
   }
 
-  getKeyedSprite(sheet, sourceRect, backgroundType) {
+  // Magenta puro y sus variantes de compresión JPG / fondos púrpura / rejillas rosadas.
+  static isMagentaPixel(r, g, b) {
+    const minRB = Math.min(r, b);
+    if (minRB < 70 || Math.abs(r - b) > 70) return false;
+    if (g < minRB * 0.45) return true;
+    return r > 200 && b > 200 && g < minRB - 35;
+  }
+
+  static isBackgroundPixel(r, g, b, bgRef) {
+    if (Renderer.isMagentaPixel(r, g, b)) return true;
+    return !!bgRef && Math.abs(r - bgRef[0]) + Math.abs(g - bgRef[1]) + Math.abs(b - bgRef[2]) < 60;
+  }
+
+  // Si la esquina no es magenta, usa su color como fondo alternativo.
+  static getBackgroundReference(data) {
+    const r = data[0], g = data[1], b = data[2];
+    return Renderer.isMagentaPixel(r, g, b) || data[3] === 0 ? null : [r, g, b];
+  }
+
+  trimCanvas(sprite) {
+    const { width, height } = sprite;
+    const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
+    const { data } = spriteCtx.getImageData(0, 0, width, height);
+    const rows = new Uint32Array(height);
+    const cols = new Uint32Array(width);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * 4 + 3] > 16) { rows[y]++; cols[x]++; }
+      }
+    }
+    let minY = 0, maxY = height - 1, minX = 0, maxX = width - 1;
+    while (minY < maxY && rows[minY] < 2) minY++;
+    while (maxY > minY && rows[maxY] < 2) maxY--;
+    while (minX < maxX && cols[minX] < 2) minX++;
+    while (maxX > minX && cols[maxX] < 2) maxX--;
+
+    const trimmed = document.createElement("canvas");
+    trimmed.width = maxX - minX + 1;
+    trimmed.height = maxY - minY + 1;
+    trimmed.getContext("2d").drawImage(sprite, minX, minY, trimmed.width, trimmed.height,
+      0, 0, trimmed.width, trimmed.height);
+    return trimmed;
+  }
+
+  /**
+   * Recorta una región de la hoja y elimina el fondo.
+   * backgroundType: "magenta" (chroma key #FF00FF, PNG o JPG), "alpha" (ya transparente),
+   * "gray" / "black" (relleno por inundación desde los bordes).
+   */
+  getKeyedSprite(sheet, sourceRect, backgroundType, options = {}) {
     if (!sheet.complete || sheet.naturalWidth === 0) return null;
-    const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}`;
+    const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}:${options.trim ? 1 : 0}:${options.bgRef || ""}`;
     if (this.keyedSpriteCache.has(cacheKey)) return this.keyedSpriteCache.get(cacheKey);
 
     const sprite = document.createElement("canvas");
-    sprite.width = sourceRect.w;
-    sprite.height = sourceRect.h;
+    sprite.width = Math.max(1, Math.round(sourceRect.w));
+    sprite.height = Math.max(1, Math.round(sourceRect.h));
     const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
     spriteCtx.drawImage(sheet, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h,
-      0, 0, sourceRect.w, sourceRect.h);
+      0, 0, sprite.width, sprite.height);
 
-    const imageData = spriteCtx.getImageData(0, 0, sprite.width, sprite.height);
-    const { data } = imageData;
-    const visited = new Uint8Array(sprite.width * sprite.height);
-    const queue = new Int32Array(sprite.width * sprite.height);
+    if (backgroundType !== "alpha") {
+      const imageData = spriteCtx.getImageData(0, 0, sprite.width, sprite.height);
+      const { data } = imageData;
+
+      if (backgroundType === "magenta") {
+        for (let offset = 0; offset < data.length; offset += 4) {
+          if (Renderer.isBackgroundPixel(data[offset], data[offset + 1], data[offset + 2], options.bgRef)) {
+            data[offset + 3] = 0;
+          }
+        }
+      } else {
+        this.floodKeyBackground(data, sprite.width, sprite.height, backgroundType);
+      }
+      spriteCtx.putImageData(imageData, 0, 0);
+    }
+
+    const result = options.trim ? this.trimCanvas(sprite) : sprite;
+    this.keyedSpriteCache.set(cacheKey, result);
+    return result;
+  }
+
+  floodKeyBackground(data, width, height, backgroundType) {
+    const visited = new Uint8Array(width * height);
+    const queue = new Int32Array(width * height);
     const background = backgroundType === "gray"
       ? [data[0], data[1], data[2]]
       : [0, 0, 0];
     const isBackground = (pixel) => {
       const offset = pixel * 4;
-      if (backgroundType === "enemy") {
-        const red = data[offset];
-        const green = data[offset + 1];
-        const blue = data[offset + 2];
-        const isBlack = Math.max(red, green, blue) < 30;
-        const isGray = Math.max(red, green, blue) - Math.min(red, green, blue) < 14
-          && red >= 92 && red <= 142;
-        return isBlack || isGray;
-      }
       if (backgroundType === "black") {
         return Math.max(data[offset], data[offset + 1], data[offset + 2]) < 30;
       }
@@ -1026,76 +1149,207 @@ class Renderer {
       visited[pixel] = 1;
       queue[queueEnd++] = pixel;
     };
-    for (let x = 0; x < sprite.width; x++) {
+    for (let x = 0; x < width; x++) {
       enqueue(x);
-      enqueue((sprite.height - 1) * sprite.width + x);
+      enqueue((height - 1) * width + x);
     }
-    for (let y = 0; y < sprite.height; y++) {
-      enqueue(y * sprite.width);
-      enqueue(y * sprite.width + sprite.width - 1);
+    for (let y = 0; y < height; y++) {
+      enqueue(y * width);
+      enqueue(y * width + width - 1);
     }
 
     for (let head = 0; head < queueEnd; head++) {
       const pixel = queue[head];
       data[pixel * 4 + 3] = 0;
-      const x = pixel % sprite.width;
-      const y = Math.floor(pixel / sprite.width);
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
       if (x > 0) enqueue(pixel - 1);
-      if (x + 1 < sprite.width) enqueue(pixel + 1);
-      if (y > 0) enqueue(pixel - sprite.width);
-      if (y + 1 < sprite.height) enqueue(pixel + sprite.width);
+      if (x + 1 < width) enqueue(pixel + 1);
+      if (y > 0) enqueue(pixel - width);
+      if (y + 1 < height) enqueue(pixel + width);
+    }
+  }
+
+  // Localiza el primer sprite (pose de reposo) de una hoja de enemigo: componentes conexos en baja resolución.
+  findFirstSprite(image) {
+    const STEP = 4;
+    const width = Math.floor(image.naturalWidth / STEP);
+    const height = Math.floor(image.naturalHeight / STEP);
+    const probe = document.createElement("canvas");
+    probe.width = width;
+    probe.height = height;
+    const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+    probeCtx.drawImage(image, 0, 0, width, height);
+    const { data } = probeCtx.getImageData(0, 0, width, height);
+    const bgRef = Renderer.getBackgroundReference(data);
+
+    const solid = new Uint8Array(width * height);
+    for (let i = 0; i < solid.length; i++) {
+      solid[i] = Renderer.isBackgroundPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2], bgRef) ? 0 : 1;
     }
 
-    const isMegaBossFrame = backgroundType === "enemy"
-      && sourceRect.x === ENEMY_SPRITES.megaBoss.x
-      && sourceRect.y === ENEMY_SPRITES.megaBoss.y;
-    if (isMegaBossFrame) {
-      const artifactVisited = new Uint8Array(sprite.width * sprite.height);
-      for (let start = 0; start < artifactVisited.length; start++) {
-        if (artifactVisited[start] || data[start * 4 + 3] === 0) continue;
-        artifactVisited[start] = 1;
-        const component = [start];
-        let minX = start % sprite.width;
-        let maxX = minX;
-        let minY = Math.floor(start / sprite.width);
-        let maxY = minY;
-
-        for (let head = 0; head < component.length; head++) {
-          const pixel = component[head];
-          const x = pixel % sprite.width;
-          const y = Math.floor(pixel / sprite.width);
-          minX = Math.min(minX, x);
-          maxX = Math.max(maxX, x);
-          minY = Math.min(minY, y);
-          maxY = Math.max(maxY, y);
-          for (let nextY = Math.max(0, y - 1); nextY <= Math.min(sprite.height - 1, y + 1); nextY++) {
-            for (let nextX = Math.max(0, x - 1); nextX <= Math.min(sprite.width - 1, x + 1); nextX++) {
-              const next = nextY * sprite.width + nextX;
-              if (artifactVisited[next] || data[next * 4 + 3] === 0) continue;
-              artifactVisited[next] = 1;
-              component.push(next);
-            }
-          }
-        }
-
-        const isThinBorderArtifact = maxX - minX <= 1 && component.length <= 24
-          && (minX < 24 || maxX >= sprite.width - 24 || minY < 16 || maxY >= sprite.height - 16);
-        if (isThinBorderArtifact) {
-          component.forEach(pixel => { data[pixel * 4 + 3] = 0; });
-        }
+    // La erosión elimina rótulos y líneas finas de la cuadrícula.
+    const core = new Uint8Array(width * height);
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const i = y * width + x;
+        if (solid[i] && solid[i - 1] && solid[i + 1]
+          && solid[i - width] && solid[i + width]
+          && solid[i - width - 1] && solid[i - width + 1]
+          && solid[i + width - 1] && solid[i + width + 1]) core[i] = 1;
       }
     }
 
-    spriteCtx.putImageData(imageData, 0, 0);
-    this.keyedSpriteCache.set(cacheKey, sprite);
+    const minArea = Math.max(30, width * height * 0.0012);
+    const seen = new Uint8Array(width * height);
+    const queue = new Int32Array(width * height);
+    const components = [];
+    for (let start = 0; start < core.length; start++) {
+      if (!core[start] || seen[start]) continue;
+      let tail = 0;
+      queue[tail++] = start;
+      seen[start] = 1;
+      let minX = width, maxX = 0, minY = height, maxY = 0;
+      for (let head = 0; head < tail; head++) {
+        const pixel = queue[head];
+        const x = pixel % width;
+        const y = (pixel - x) / width;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        const neighbors = [x > 0 ? pixel - 1 : -1, x + 1 < width ? pixel + 1 : -1,
+          y > 0 ? pixel - width : -1, y + 1 < height ? pixel + width : -1];
+        for (const next of neighbors) {
+          if (next >= 0 && core[next] && !seen[next]) { seen[next] = 1; queue[tail++] = next; }
+        }
+      }
+      if (tail >= minArea) components.push({ minX, maxX, minY, maxY, area: tail });
+    }
+
+    // Descarta rótulos (área pequeña) y une las partes de un mismo sprite que quedaron separadas.
+    const largest = components.reduce((max, c) => Math.max(max, c.area), 0);
+    let groups = components.filter(c => c.area >= largest * 0.08);
+    const MERGE_GAP = 1;
+    const touches = (a, b) => a.minX - MERGE_GAP <= b.maxX && b.minX - MERGE_GAP <= a.maxX
+      && a.minY - MERGE_GAP <= b.maxY && b.minY - MERGE_GAP <= a.maxY;
+    for (let merged = true; merged;) {
+      merged = false;
+      for (let i = 0; i < groups.length && !merged; i++) {
+        for (let j = i + 1; j < groups.length && !merged; j++) {
+          if (!touches(groups[i], groups[j])) continue;
+          const a = groups[i], b = groups[j];
+          groups[i] = {
+            minX: Math.min(a.minX, b.minX), maxX: Math.max(a.maxX, b.maxX),
+            minY: Math.min(a.minY, b.minY), maxY: Math.max(a.maxY, b.maxY),
+            area: a.area + b.area
+          };
+          groups.splice(j, 1);
+          merged = true;
+        }
+      }
+    }
+    const largestGroup = groups.reduce((max, c) => Math.max(max, c.area), 0);
+    groups = groups.filter(c => c.area >= largestGroup * 0.3);
+
+    let chosen = null;
+    if (groups.length > 0) {
+      const centerY = c => (c.minY + c.maxY) / 2;
+      const topmost = groups.reduce((best, c) => centerY(c) < centerY(best) ? c : best);
+      const tolerance = (topmost.maxY - topmost.minY) * 0.5;
+      chosen = groups
+        .filter(c => Math.abs(centerY(c) - centerY(topmost)) <= tolerance)
+        .reduce((best, c) => c.minX < best.minX ? c : best);
+    }
+
+    const rect = chosen
+      ? {
+        x: Math.max(0, (chosen.minX - 2) * STEP),
+        y: Math.max(0, (chosen.minY - 2) * STEP),
+        w: 0, h: 0
+      }
+      : { x: 0, y: 0, w: 0, h: 0 };
+    const endX = chosen ? Math.min(image.naturalWidth, (chosen.maxX + 3) * STEP) : image.naturalWidth;
+    const endY = chosen ? Math.min(image.naturalHeight, (chosen.maxY + 3) * STEP) : image.naturalHeight;
+    rect.w = endX - rect.x;
+    rect.h = endY - rect.y;
+    return { rect, bgRef };
+  }
+
+  getEnemySprite(src) {
+    if (this.enemySpriteCache.has(src)) return this.enemySpriteCache.get(src);
+
+    let image = this.enemyImages.get(src);
+    if (!image) {
+      image = this.loadTerrainTexture(src);
+      this.enemyImages.set(src, image);
+    }
+    if (!image.complete || image.naturalWidth === 0) return null;
+
+    const { rect, bgRef } = this.findFirstSprite(image);
+    const keyed = this.getKeyedSprite(image, rect, "magenta", { trim: true, bgRef });
+    const sprite = keyed ? this.removeSpecks(keyed) : null;
+    this.enemySpriteCache.set(src, sprite);
     return sprite;
   }
 
+  // Elimina restos de rótulos o de sprites vecinos que quedaron dentro del recorte.
+  removeSpecks(sprite, ratio = 0.03) {
+    const { width, height } = sprite;
+    const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
+    const imageData = spriteCtx.getImageData(0, 0, width, height);
+    const { data } = imageData;
+    const seen = new Uint8Array(width * height);
+    const components = [];
+
+    for (let start = 0; start < seen.length; start++) {
+      if (seen[start] || data[start * 4 + 3] <= 16) continue;
+      const members = [start];
+      seen[start] = 1;
+      for (let head = 0; head < members.length; head++) {
+        const x = members[head] % width;
+        const y = (members[head] - x) / width;
+        for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny++) {
+          for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx++) {
+            const next = ny * width + nx;
+            if (seen[next] || data[next * 4 + 3] <= 16) continue;
+            seen[next] = 1;
+            members.push(next);
+          }
+        }
+      }
+      components.push(members);
+    }
+
+    const largest = components.reduce((max, c) => Math.max(max, c.length), 0);
+    components.forEach(members => {
+      if (members.length < largest * ratio) members.forEach(pixel => { data[pixel * 4 + 3] = 0; });
+    });
+    spriteCtx.putImageData(imageData, 0, 0);
+    return this.trimCanvas(sprite);
+  }
+
+  getLiorFrame(rect) {
+    return this.getKeyedSprite(this.liorSheet, rect, "alpha", { trim: true });
+  }
+
+  getEffectSprite(sheetKey, phase) {
+    const config = EFFECT_SHEETS[sheetKey];
+    const image = this.effectImages[sheetKey];
+    if (!image.complete || image.naturalWidth === 0) return null;
+
+    let rect;
+    if (config.panels) {
+      rect = config.panels[phase];
+    } else {
+      const frameWidth = image.naturalWidth / config.cols;
+      rect = { x: Math.floor(frameWidth * phase), y: 0, w: Math.floor(frameWidth), h: image.naturalHeight };
+    }
+    return this.getKeyedSprite(image, rect, "magenta", { trim: config.trim });
+  }
+
   drawEnemySprite(targetCtx, enemy, px, py) {
-    const sourceRect = enemy.isMegaBoss
-      ? ENEMY_SPRITES.megaBoss
-      : (enemy.isBoss ? ENEMY_SPRITES.miniBoss : ENEMY_SPRITES.small[enemy.spriteSet || 0]);
-    const sprite = this.getKeyedSprite(this.enemySpriteSheet, sourceRect, "enemy");
+    const sprite = this.getEnemySprite(enemy.spriteSrc);
     const tileSize = CAMERA_CONFIG.tileSize;
     const drawSize = enemy.size * tileSize;
 
@@ -1105,17 +1359,21 @@ class Renderer {
       return;
     }
 
+    const scale = Math.min(drawSize / sprite.width, drawSize / sprite.height);
+    const width = sprite.width * scale;
+    const height = sprite.height * scale;
+
     targetCtx.save();
     targetCtx.imageSmoothingEnabled = false;
-    targetCtx.drawImage(sprite, px, py, drawSize, drawSize);
+    targetCtx.drawImage(sprite, px + (drawSize - width) / 2, py + drawSize - height, width, height);
     targetCtx.restore();
   }
 
   drawGoldenBunny(targetCtx, bunny, screenX, screenY) {
     const fleeing = bunny.isFleeing;
     const frame = fleeing
-      ? ENEMY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % ENEMY_SPRITES.bunnyFlee.length]
-      : ENEMY_SPRITES.bunnyIdle;
+      ? BUNNY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % BUNNY_SPRITES.bunnyFlee.length]
+      : BUNNY_SPRITES.bunnyIdle;
     const sprite = this.getKeyedSprite(this.goldenBunnySheet, frame, "black");
     if (!sprite) return;
 
@@ -1246,37 +1504,28 @@ class Renderer {
     targetCtx.save();
     targetCtx.imageSmoothingEnabled = false;
 
-    if (this.liorSpritesheet && this.liorSpritesheet.complete && this.liorSpritesheet.naturalWidth > 0) {
-      let spriteDef = LIOR_SPRITES.IDLE.SWORD;
-      if (this.player.equippedWeapon.id === "pistol") spriteDef = LIOR_SPRITES.IDLE.PISTOL;
-      else if (this.player.equippedWeapon.id === "musket") spriteDef = LIOR_SPRITES.IDLE.MUSKET;
-      else if (this.player.equippedWeapon.id === "blunderbuss") spriteDef = LIOR_SPRITES.IDLE.BLUNDERBUSS;
+    const now = performance.now();
+    let actionFrame = null;
+    if (this.playerAnimation) {
+      const frameIndex = Math.floor((now - this.playerAnimation.startedAt) / this.playerAnimation.frameDuration);
+      if (frameIndex < this.playerAnimation.frames.length) actionFrame = this.playerAnimation.frames[frameIndex];
+    }
 
-      let actionFrame = null;
-      if (this.playerAnimation) {
-        const frameIndex = Math.floor(
-          (performance.now() - this.playerAnimation.startedAt) / this.playerAnimation.frameDuration
-        );
-        if (frameIndex < this.playerAnimation.frames.length) {
-          actionFrame = this.playerAnimation.frames[frameIndex];
-          spriteDef = actionFrame.sprite || actionFrame;
-        }
-      }
+    let frameRect = actionFrame?.sprite;
+    if (!frameRect) {
+      frameRect = this.player.hp <= 0
+        ? LIOR_SPRITES.DEFEAT[LIOR_SPRITES.DEFEAT.length - 1]
+        : LIOR_SPRITES.IDLE[Math.floor(now / 450) % LIOR_SPRITES.IDLE.length];
+    }
 
-      const renderH = tileSize * 1.35;
-      const renderW = renderH * (spriteDef.w / spriteDef.h);
-      const drawX = px + (tileSize - renderW) / 2;
-      const drawY = py + (tileSize - renderH) + 2;
+    const sprite = this.getLiorFrame(frameRect);
+    const reference = this.getLiorFrame(LIOR_SPRITES.IDLE[0]);
 
-      targetCtx.drawImage(
-        this.liorSpritesheet,
-        spriteDef.x, spriteDef.y, spriteDef.w, spriteDef.h,
-        drawX, drawY, renderW, renderH
-      );
-
-      if (actionFrame?.effects) {
-        this.drawPlayerEffects(targetCtx, actionFrame.effects, px, py, tileSize);
-      }
+    if (sprite && reference) {
+      const scale = (tileSize * 1.35) / reference.height;
+      const renderW = sprite.width * scale;
+      const renderH = sprite.height * scale;
+      targetCtx.drawImage(sprite, px + (tileSize - renderW) / 2, py + tileSize - renderH + 2, renderW, renderH);
     } else {
       const centerX = px + tileSize / 2;
       const centerY = py + tileSize / 2;
@@ -1298,43 +1547,74 @@ class Renderer {
       }
     }
     targetCtx.restore();
+
+    if (actionFrame?.effects) this.drawEffects(targetCtx, actionFrame.effects);
   }
 
-  drawPlayerEffects(targetCtx, effects, px, py, tileSize) {
-    const centerX = px + tileSize / 2;
+  // Los efectos usan coordenadas de pantalla en casillas (la cámara siempre mira hacia arriba).
+  drawEffects(targetCtx, effects) {
+    const tileSize = CAMERA_CONFIG.tileSize;
+
     effects.forEach(effect => {
-      if (effect.type === "muzzle") {
-        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
-          effect.sprite.w, effect.sprite.h, centerX + tileSize * 0.05, py - tileSize * 0.55,
-          tileSize * 0.75, tileSize * 0.75);
-      } else if (effect.type === "projectile") {
-        const projectileY = py - tileSize * effect.distance;
-        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
-          effect.sprite.w, effect.sprite.h, centerX - tileSize * 0.2, projectileY - tileSize * 0.2,
-          tileSize * 0.4, tileSize * 0.4);
-      } else if (effect.type === "trail") {
-        const length = tileSize * effect.distance;
-        targetCtx.save();
-        targetCtx.translate(centerX, py - length / 2);
-        targetCtx.rotate(-Math.PI / 2);
-        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
-          effect.sprite.w, effect.sprite.h, -length / 2, -tileSize * 0.12, length, tileSize * 0.24);
-        targetCtx.restore();
-      } else if (effect.type === "impact") {
-        const impactY = py - tileSize * effect.distance;
-        targetCtx.drawImage(this.liorSpritesheet, effect.sprite.x, effect.sprite.y,
-          effect.sprite.w, effect.sprite.h, centerX - tileSize * 0.65, impactY - tileSize * 0.65,
-          tileSize * 1.3, tileSize * 1.3);
+      const sprite = this.getEffectSprite(effect.sheet, effect.phase);
+      if (!sprite) return;
+
+      targetCtx.save();
+      targetCtx.imageSmoothingEnabled = false;
+      if (effect.clip) {
+        targetCtx.beginPath();
+        effect.clip.forEach(cell => targetCtx.rect(cell.x * tileSize, cell.y * tileSize, tileSize, tileSize));
+        targetCtx.clip();
       }
+
+      if (effect.type === "area") {
+        const { x, y, w, h } = effect.rect;
+        targetCtx.drawImage(sprite, x * tileSize, y * tileSize, w * tileSize, h * tileSize);
+      } else if (effect.type === "beam") {
+        const width = effect.width * tileSize;
+        const bottom = effect.bottom * tileSize;
+        const top = effect.top * tileSize;
+        const height = effect.phase === 2 ? bottom - top : width * (sprite.height / sprite.width);
+        targetCtx.beginPath();
+        targetCtx.rect(0, top, this.canvas.width, bottom - top);
+        targetCtx.clip();
+        targetCtx.drawImage(sprite, effect.x * tileSize - width / 2, bottom - height, width, height);
+      } else {
+        const scale = (effect.size * tileSize) / Math.max(sprite.width, sprite.height);
+        const width = sprite.width * scale;
+        const height = sprite.height * scale;
+        targetCtx.translate(effect.x * tileSize, effect.y * tileSize);
+        targetCtx.rotate(effect.angle || 0);
+        targetCtx.drawImage(sprite, -width / 2, -height / 2, width, height);
+      }
+      targetCtx.restore();
     });
   }
 
-  playSpriteAnimation(frames, frameDuration) {
+  drawDamageFlash(targetCtx) {
+    const remaining = this.damageFlashUntil - performance.now();
+    if (remaining <= 0) return;
+
+    const strength = Math.min(1, remaining / 180);
+    const { width, height } = this.canvas;
+    const vignette = targetCtx.createRadialGradient(
+      width / 2, height / 2, Math.min(width, height) * 0.2,
+      width / 2, height / 2, Math.hypot(width, height) / 2
+    );
+    vignette.addColorStop(0, `rgba(255, 0, 0, ${0.12 * strength})`);
+    vignette.addColorStop(1, `rgba(200, 0, 0, ${0.7 * strength})`);
+    targetCtx.save();
+    targetCtx.fillStyle = vignette;
+    targetCtx.fillRect(0, 0, width, height);
+    targetCtx.restore();
+  }
+
+  playSpriteAnimation(frames, frameDuration, interruptible = false) {
     if (this.playerAnimationFrame !== null) {
       cancelAnimationFrame(this.playerAnimationFrame);
     }
 
-    const animation = { frames, frameDuration, startedAt: performance.now() };
+    const animation = { frames, frameDuration, interruptible, startedAt: performance.now() };
     this.playerAnimation = animation;
     const animate = () => {
       if (this.playerAnimation !== animation) return;
@@ -1352,53 +1632,108 @@ class Renderer {
     animate();
   }
 
+  getAnimationRemaining() {
+    if (!this.playerAnimation || this.playerAnimation.interruptible) return 0;
+    const { frames, frameDuration, startedAt } = this.playerAnimation;
+    return Math.max(0, startedAt + frames.length * frameDuration - performance.now());
+  }
+
   redrawCurrentView() {
     this.draw();
   }
 
+  playRow(rowName, frameDuration, interruptible = false) {
+    this.playSpriteAnimation(LIOR_SPRITES[rowName].map(sprite => ({ sprite })), frameDuration, interruptible);
+  }
+
   playSwordSpin() {
-    this.playSpriteAnimation(LIOR_SPRITES.SWORD_SPIN, 110);
+    this.playRow("SWORD_SPIN", 100);
   }
 
   playMistyStep() {
-    this.playSpriteAnimation(LIOR_SPRITES.MISTY_STEP, 100);
-  }
-
-  playEldritchBlastAnimation(distance) {
-    const shot = LIOR_SPRITES.MUSKET_SHOT;
-    const shooter = LIOR_SPRITES.HEAL[1] || LIOR_SPRITES.IDLE.SWORD;
-    const frames = [
-      { sprite: LIOR_SPRITES.HEAL[0], effects: [{ type: "muzzle", sprite: shot.muzzle }] },
-      { sprite: shooter, effects: [
-        { type: "projectile", sprite: shot.projectile, distance: Math.max(1, distance * 0.5) },
-        { type: "trail", sprite: shot.trail, distance: Math.max(1, distance * 0.5) }
-      ] },
-      { sprite: shooter, effects: [{ type: "impact", sprite: shot.impact, distance: Math.max(1, distance) }] }
-    ];
-    this.playSpriteAnimation(frames, 90);
+    this.playRow("MISTY_STEP", 100);
   }
 
   playDrinkPotion() {
-    this.playSpriteAnimation(LIOR_SPRITES.DRINK_POTION, 160);
+    this.playRow("HEAL", 130);
   }
 
-  playWeaponChange() {
-    this.playSpriteAnimation([LIOR_SPRITES.WEAPON_CHANGE], 220);
+  playWalk() {
+    this.playRow("WALK", 35, true);
   }
 
-  playShot(weaponId) {
-    const shot = weaponId === "pistol" ? LIOR_SPRITES.PISTOL_SHOT : LIOR_SPRITES.MUSKET_SHOT;
-    const distance = weaponId === "pistol" ? 3 : (weaponId === "blunderbuss" ? 2 : 5);
-    const shooter = weaponId === "blunderbuss" ? LIOR_SPRITES.IDLE.BLUNDERBUSS : shot.sprite;
-    const frames = [
-      { sprite: shooter, effects: [{ type: "muzzle", sprite: shot.muzzle }] },
-      { sprite: shooter, effects: [
-        { type: "projectile", sprite: shot.projectile, distance: distance * 0.55 },
-        { type: "trail", sprite: shot.trail, distance: distance * 0.55 }
-      ] },
-      { sprite: shooter, effects: [{ type: "impact", sprite: shot.impact, distance }] }
+  // El golpe espera a que termine la animación en curso para no taparla.
+  playHurt(isFatal) {
+    const start = () => {
+      this.damageFlashUntil = performance.now() + 180;
+      if (isFatal) this.playRow("DEFEAT", 150);
+      else this.playRow("HURT", 70);
+    };
+    const delay = this.getAnimationRemaining();
+    if (delay > 0) setTimeout(start, delay);
+    else start();
+  }
+
+  // beamReach: distancia en casillas desde Lior hasta el final del rayo.
+  playEldritchBlastAnimation(beamReach) {
+    const centerX = CAMERA_CONFIG.playerScreenX + 0.5;
+    const bottom = CAMERA_CONFIG.playerScreenY;
+    const top = CAMERA_CONFIG.playerScreenY + 0.5 - beamReach;
+    const frames = LIOR_SPRITES.ELDRITCH_BLAST.map((sprite, index) => ({
+      sprite,
+      effects: [{ type: "beam", sheet: "eblast", phase: Math.min(2, index), x: centerX, bottom, top, width: 1.4 }]
+    }));
+    this.playSpriteAnimation(frames, 110);
+  }
+
+  /**
+   * shot: { impact: {x, y} mundo, area: [{x, y}] celdas mundo (trabuco) }.
+   * Pistola y mosquete: proyectil rotado hacia el impacto. Trabuco: dispersión sobre el área 2x5.
+   */
+  playRangedAttack(weaponId, shot) {
+    const lior = { x: CAMERA_CONFIG.playerScreenX + 0.5, y: CAMERA_CONFIG.playerScreenY + 0.5 };
+    const frames = LIOR_SPRITES.GUN_RECOIL;
+
+    if (weaponId === "blunderbuss") {
+      const clip = shot.area.map(cell => {
+        const { screenX, screenY } = CameraTransformer.worldToScreen(cell.x, cell.y, this.player);
+        return { x: screenX, y: screenY };
+      });
+      const rect = {
+        x: CAMERA_CONFIG.playerScreenX - 2,
+        y: CAMERA_CONFIG.playerScreenY - 2,
+        w: 5,
+        h: 2
+      };
+      const phases = [0, 0, 1, 1, 2, 2];
+      this.playSpriteAnimation(frames.map((sprite, index) => ({
+        sprite,
+        effects: [{ type: "area", sheet: "blunderbuss", phase: phases[index], rect, clip }]
+      })), 85);
+      return;
+    }
+
+    const target = CameraTransformer.worldToScreen(shot.impact.x, shot.impact.y, this.player);
+    const targetX = target.screenX + 0.5;
+    const targetY = target.screenY + 0.5;
+    const angle = Math.atan2(targetY - lior.y, targetX - lior.x);
+    const sheet = weaponId;
+    const isMusket = weaponId === "musket";
+    const lerp = t => ({ x: lior.x + (targetX - lior.x) * t, y: lior.y + (targetY - lior.y) * t });
+    const muzzle = { type: "point", sheet, phase: 0, size: isMusket ? 1.5 : 1.1, angle,
+      x: lior.x + Math.cos(angle) * 0.7, y: lior.y + Math.sin(angle) * 0.7 };
+    const projectile = t => ({ type: "point", sheet, phase: 1, size: isMusket ? 1.7 : 1.3, angle, ...lerp(t) });
+    const impact = { type: "point", sheet, phase: 2, size: isMusket ? 2.2 : 1.6, x: targetX, y: targetY };
+
+    const effectsByFrame = [
+      [muzzle],
+      [muzzle, projectile(0.3)],
+      [projectile(0.55)],
+      [projectile(0.85)],
+      [impact],
+      [impact]
     ];
-    this.playSpriteAnimation(frames, 100);
+    this.playSpriteAnimation(frames.map((sprite, index) => ({ sprite, effects: effectsByFrame[index] })), 80);
   }
 
   setDungeon(dungeon, generator) {
@@ -1593,6 +1928,7 @@ class Renderer {
     const liorCellPx = playerScreenX * tileSize;
     const liorCellPy = playerScreenY * tileSize;
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
+    this.drawDamageFlash(targetCtx);
   }
 }
 
@@ -1631,150 +1967,173 @@ class CombatSystem {
     return forward >= 1 && forward <= weapon.range && lateral >= leftEdge && lateral <= rightEdge;
   }
 
+  // Línea de tiro: devuelve la primera celda de muro (o límite) entre el origen y el destino, o null si está despejada.
+  static findBlockingCell(dungeon, x0, y0, x1, y1) {
+    let x = x0;
+    let y = y0;
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    while (x !== x1 || y !== y1) {
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x += sx; }
+      if (e2 < dx) { err += dx; y += sy; }
+      const tile = dungeon.getTile(x, y);
+      if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS) return { x, y };
+    }
+    return null;
+  }
+
+  // Resuelve un disparo: objetivos alcanzados, punto de impacto y, en el trabuco, el área cubierta.
+  static resolveShot(player, dungeon, weapon) {
+    const basis = CameraTransformer.getBasis(player.direction);
+    const toWorld = (forward, lateral) => ({
+      x: player.x + basis.forward.x * forward + basis.right.x * lateral,
+      y: player.y + basis.forward.y * forward + basis.right.y * lateral
+    });
+
+    if (weapon.id === "blunderbuss") {
+      const leftEdge = -Math.floor(weapon.width / 2);
+      const area = [];
+      for (let forward = 1; forward <= weapon.range; forward++) {
+        for (let lateral = leftEdge; lateral < leftEdge + weapon.width; lateral++) {
+          const cell = toWorld(forward, lateral);
+          if (!dungeon.isInsideBounds(cell.x, cell.y)) continue;
+          const blocker = CombatSystem.findBlockingCell(dungeon, player.x, player.y, cell.x, cell.y);
+          if (blocker && (blocker.x !== cell.x || blocker.y !== cell.y)) continue;
+          area.push(cell);
+        }
+      }
+      const targets = dungeon.enemies.filter(enemy =>
+        enemy.cells.some(c => area.some(a => a.x === c.x && a.y === c.y))
+      );
+      return { targets, impact: toWorld(1.5, 0), area, hitWall: false };
+    }
+
+    const candidates = [];
+    dungeon.enemies.forEach(enemy => {
+      enemy.cells.forEach(cell => {
+        if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
+          candidates.push({
+            enemy, cell,
+            dist: Math.hypot(cell.x - player.x, cell.y - player.y),
+            blocker: CombatSystem.findBlockingCell(dungeon, player.x, player.y, cell.x, cell.y)
+          });
+        }
+      });
+    });
+    candidates.sort((a, b) => a.dist - b.dist);
+
+    const clear = candidates.find(c => !c.blocker);
+    if (clear) return { targets: [clear.enemy], impact: clear.cell, area: null, hitWall: false };
+    if (candidates.length > 0) return { targets: [], impact: candidates[0].blocker, area: null, hitWall: true };
+
+    // Sin objetivos: la bala sigue recto hasta el muro o el alcance máximo.
+    let impact = { x: player.x, y: player.y };
+    let hitWall = false;
+    for (let step = 1; step <= weapon.range; step++) {
+      const cell = toWorld(step, 0);
+      impact = cell;
+      const tile = dungeon.getTile(cell.x, cell.y);
+      if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS) { hitWall = true; break; }
+    }
+    return { targets: [], impact, area: null, hitWall };
+  }
+
+  static rollAttack(game, target, damage) {
+    const d20 = rollDie(20);
+    const attackTotal = d20 + game.hitBonus;
+
+    if (d20 === 20 || attackTotal >= target.ac) {
+      target.hp -= damage;
+      game.log(TEXT.logs.attackHit(attackTotal, target.ac, damage, target.name, Math.max(0, target.hp)));
+    } else {
+      game.log(TEXT.logs.attackDefended(attackTotal, target.ac, target.name));
+    }
+  }
+
+  // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
+  static processDeaths(game, targets) {
+    const dead = targets.filter(enemy => enemy.hp <= 0);
+    if (dead.length === 0) return [];
+
+    sounds.playCoin();
+    const deadIds = new Set(dead.map(enemy => enemy.id));
+    dead.forEach(enemy => {
+      game.player.kills++;
+      const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
+      game.player.gold += goldDrop;
+      game.log(TEXT.logs.goldDrop(goldDrop, enemy.name));
+    });
+    game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
+    return dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
+  }
+
+  static applyPanic(game, deadMiniBosses) {
+    if (deadMiniBosses.length === 0) return;
+    deadMiniBosses.forEach(miniBoss => {
+      game.dungeon.enemies.forEach(other => {
+        if (!other.isBoss && Math.hypot(other.x - miniBoss.x, other.y - miniBoss.y) <= 2.2) {
+          other.fearCooldown = 2;
+        }
+      });
+    });
+    game.log(TEXT.logs.panic);
+  }
+
   static executeAttack(game) {
     const { player, dungeon } = game;
     game.showWeaponRange = false;
 
     if (player.hp <= 0 || game.isPausedForDialog) {
-      if (player.hp <= 0) game.log(I18N.logs.deadPlayer);
+      if (player.hp <= 0) game.log(TEXT.logs.deadPlayer);
       return;
     }
 
     if (dungeon.isMerchantRoom) {
-      game.log(I18N.logs.merchantNoAttack);
+      game.log(TEXT.logs.merchantNoAttack);
       return;
     }
 
     player.advanceAction();
 
     const weapon = player.equippedWeapon;
-    const hitBonus = game.hitBonus;
-    const dmgBonus = game.dmgBonus;
 
-    if (weapon.ammoProperty) {
-      if (player[weapon.ammoProperty] <= 0) {
-        const noAmmoMessage = {
-          pistol: I18N.logs.noAmmoPistol,
-          musket: I18N.logs.noAmmoMusket,
-          blunderbuss: I18N.logs.noAmmoBlunderbuss
-        }[weapon.id];
-        game.log(noAmmoMessage);
-        return;
-      }
-      player[weapon.ammoProperty]--;
-      sounds.playShot(weapon.id !== "pistol");
-      game.renderer?.playShot(weapon.id);
-    } else {
-      sounds.playSword();
-      game.renderer?.playSwordSpin();
+    if (weapon.ammoProperty && player[weapon.ammoProperty] <= 0) {
+      const noAmmoMessage = {
+        pistol: TEXT.logs.noAmmoPistol,
+        musket: TEXT.logs.noAmmoMusket,
+        blunderbuss: TEXT.logs.noAmmoBlunderbuss
+      }[weapon.id];
+      game.log(noAmmoMessage);
+      return;
     }
 
-    let deadMiniBosses = [];
+    let targets = [];
 
     if (weapon.isMelee) {
-      const targetsHit = [];
-      dungeon.enemies.forEach(enemy => {
-        if (!enemy.cells) return;
-        const touches = enemy.cells.some(cell => Math.hypot(cell.x - player.x, cell.y - player.y) <= 1.5);
-        if (touches) targetsHit.push(enemy);
-      });
-
-      if (targetsHit.length === 0) {
-        game.log(I18N.logs.swordWhiff);
-      } else {
-        targetsHit.forEach(target => {
-          const d20 = rollDie(20);
-          const attackTotal = d20 + hitBonus;
-
-          if (d20 === 20 || attackTotal >= target.ac) {
-            const totalDmg = weapon.damage + dmgBonus;
-            target.hp -= totalDmg;
-            game.log(`> [${attackTotal} vs CA ${target.ac}]: ${totalDmg} DMG -> ${target.name} (HP: ${Math.max(0, target.hp)})`);
-          } else {
-            game.log(`> [${attackTotal} vs CA ${target.ac}] Defended by ${target.name}.`);
-          }
-        });
-
-        const deadEnemyIds = new Set();
-        targetsHit.forEach(e => {
-          if (e.hp <= 0) {
-            deadEnemyIds.add(e.id);
-            player.kills++;
-            if (e.isBoss && !e.isMegaBoss) deadMiniBosses.push(e);
-          }
-        });
-
-        if (deadEnemyIds.size > 0) {
-          sounds.playCoin();
-          dungeon.enemies = dungeon.enemies.filter(e => {
-            if (deadEnemyIds.has(e.id)) {
-              let goldDrop = e.isMegaBoss ? 10 : (e.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-              player.gold += goldDrop;
-              game.log(`+${goldDrop} PO (${e.name})`);
-              return false;
-            }
-            return true;
-          });
-        }
-      }
+      sounds.playSword();
+      game.renderer?.playSwordSpin();
+      targets = dungeon.enemies.filter(enemy =>
+        enemy.cells && enemy.cells.some(cell => Math.hypot(cell.x - player.x, cell.y - player.y) <= 1.5)
+      );
+      if (targets.length === 0) game.log(TEXT.logs.swordWhiff);
     } else {
-      let target = null;
-      let minDist = 999;
-
-      dungeon.enemies.forEach(enemy => {
-        if (!enemy.cells) return;
-        enemy.cells.forEach(cell => {
-          if (CombatSystem.isCellInWeaponRange(player, cell.x, cell.y, weapon)) {
-            if (VisibilitySystem.hasWorldLineOfSight(player.x, player.y, cell.x, cell.y, dungeon)) {
-              const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
-              if (dist < minDist) {
-                minDist = dist;
-                target = enemy;
-              }
-            }
-          }
-        });
-      });
-
-      if (!target) {
-        game.log(I18N.logs.shotWhiff(weapon.name));
-      } else {
-        const d20 = rollDie(20);
-        const attackTotal = d20 + hitBonus;
-
-        if (d20 === 20 || attackTotal >= target.ac) {
-          const totalDmg = weapon.damage + dmgBonus;
-          target.hp -= totalDmg;
-          game.log(`> [${attackTotal} vs CA ${target.ac}]: ${totalDmg} DMG -> ${target.name} (HP: ${Math.max(0, target.hp)})`);
-
-          if (target.hp <= 0) {
-            sounds.playCoin();
-            player.kills++;
-            let goldDrop = target.isMegaBoss ? 10 : (target.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-            player.gold += goldDrop;
-            game.log(`+${goldDrop} PO (${target.name})`);
-
-            if (target.isBoss && !target.isMegaBoss) deadMiniBosses.push(target);
-            dungeon.enemies = dungeon.enemies.filter(e => e.id !== target.id);
-          }
-        } else {
-          game.log(`> [${attackTotal} vs CA ${target.ac}] Defended by ${target.name}.`);
-        }
+      player[weapon.ammoProperty]--;
+      sounds.playShot(weapon.id !== "pistol");
+      const shot = CombatSystem.resolveShot(player, dungeon, weapon);
+      game.renderer?.playRangedAttack(weapon.id, shot);
+      targets = shot.targets;
+      if (targets.length === 0) {
+        game.log(shot.hitWall ? TEXT.logs.wallImpact(weapon.name) : TEXT.logs.shotWhiff(weapon.name));
       }
     }
 
-    if (deadMiniBosses.length > 0) {
-      deadMiniBosses.forEach(mb => {
-        dungeon.enemies.forEach(other => {
-          if (!other.isBoss) {
-            if (Math.hypot(other.x - mb.x, other.y - mb.y) <= 2.2) {
-              other.fearCooldown = 2;
-            }
-          }
-        });
-      });
-      game.log(I18N.logs.panic);
-    }
+    targets.forEach(target => CombatSystem.rollAttack(game, target, weapon.damage + game.dmgBonus));
+    CombatSystem.applyPanic(game, CombatSystem.processDeaths(game, targets));
 
     game.processEnemiesTurn();
     game.updateHUD();
@@ -1795,7 +2154,6 @@ class GameController {
     this.isPausedForDialog = false;
     this.showWeaponRange = false;
     this.dialogCallback = null;
-    this.megaBossEmptyTurns = 0;
     this.gamepadMapping = "standard";
     this.controlDevice = "touch";
 
@@ -1874,9 +2232,9 @@ class GameController {
       btnB.textContent = ACTION_BINDINGS.keyboard.mist;
       btnA.textContent = ACTION_BINDINGS.keyboard.attack;
 
-      capD.textContent = I18N.captionsKeyboard.weapon;
-      capB.textContent = I18N.captionsKeyboard.mist;
-      capA.textContent = I18N.captionsKeyboard.attack;
+      capD.textContent = TEXT.captionsKeyboard.weapon;
+      capB.textContent = TEXT.captionsKeyboard.mist;
+      capA.textContent = TEXT.captionsKeyboard.attack;
     } else {
       btnUp.textContent = "▲";
       btnDown.textContent = "▼";
@@ -1891,15 +2249,15 @@ class GameController {
       btnB.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.mist);
       btnA.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.attack);
 
-      capD.textContent = I18N.captions.weapon;
-      capB.textContent = I18N.captions.mist;
-      capA.textContent = I18N.captions.attack;
+      capD.textContent = TEXT.captions.weapon;
+      capB.textContent = TEXT.captions.mist;
+      capA.textContent = TEXT.captions.attack;
     }
 
     if (capC) {
       const baseCaption = this.controlDevice === "keyboard"
-        ? I18N.captionsKeyboard.blast
-        : I18N.captions.blast;
+        ? TEXT.captionsKeyboard.blast
+        : TEXT.captions.blast;
       const cur = this.player ? this.player.blastCurrentCharges : 10;
       const max = this.player ? this.player.blastMaxCharges : 10;
       capC.innerHTML = `${baseCaption} (<span id="blast-counter">${cur}/${max}</span>)`;
@@ -1920,8 +2278,6 @@ class GameController {
       this.dungeon.isMerchantRoom = false;
       this.generator = new DungeonGenerator(this.dungeon, this.floor);
     }
-
-    this.megaBossEmptyTurns = 0;
 
     const startX = isMerchantTransition ? 2 : this.dungeon.entrance.x;
     const startY = isMerchantTransition ? 3 : this.dungeon.entrance.y;
@@ -1949,14 +2305,16 @@ class GameController {
     this.updateButtonLabels();
 
     if (isMerchantTransition) {
-      this.log(`[MERCADER]: «${I18N.logs.merchantPeace}»`);
+      this.log(`[MERCADER]: «${TEXT.logs.merchantPeace}»`);
       setTimeout(() => {
-        this.showMerchantDialog(`«${I18N.logs.merchantPeace}»`, () => {
+        this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
           this.openShop();
         });
       }, 300);
     } else {
-      this.log(I18N.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus, this.dmgBonus));
+      this.log(TEXT.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus, this.dmgBonus));
+      const arenaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
+      if (arenaBoss) this.log(TEXT.logs.bossArena(arenaBoss.name));
     }
 
     this.renderer.draw();
@@ -1993,7 +2351,6 @@ class GameController {
     this.isVictory = false;
     this.isPausedForDialog = false;
     this.showWeaponRange = false;
-    this.megaBossEmptyTurns = 0;
 
     this.deathScreen.classList.remove("visible");
     this.deathScreen.classList.add("hidden");
@@ -2042,7 +2399,7 @@ class GameController {
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log("Compraste 6 balas de Pistola (-1 PO).");
+          this.log(TEXT.logs.boughtPistol);
         }
       });
     }
@@ -2057,7 +2414,7 @@ class GameController {
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log("Compraste 4 balas de Mosquete (-1 PO).");
+          this.log(TEXT.logs.boughtMusket);
         }
       });
     }
@@ -2072,7 +2429,7 @@ class GameController {
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log("Compraste 2 balas de Trabuco (-1 PO).");
+          this.log(TEXT.logs.boughtBlunderbuss);
         }
       });
     }
@@ -2088,7 +2445,7 @@ class GameController {
             sounds.playHeal();
             this.updateHUD();
             this.updateShopHUD();
-            this.log(`Bebiste una poción: +${heal} HP (-2 PO).`);
+            this.log(TEXT.logs.boughtPotion(heal));
           }
         }
       });
@@ -2115,7 +2472,7 @@ class GameController {
     const elMisty = document.getElementById("misty-charges");
 
     if (elFloor) elFloor.textContent = this.inMerchantFloor ? `${this.floor} (Refugio)` : this.floor;
-    if (elDir) elDir.textContent = I18N.cardinals[this.player.direction];
+    if (elDir) elDir.textContent = TEXT.cardinals[this.player.direction];
     if (elHp) elHp.textContent = this.player.hp;
     if (elGold) elGold.textContent = this.player.gold;
     if (elAmmo) {
@@ -2128,10 +2485,10 @@ class GameController {
     if (doorEl) {
       const enemiesRemain = this.dungeon.enemies.length > 0;
       if (enemiesRemain) {
-        doorEl.textContent = I18N.doorLocked(this.dungeon.enemies.length);
+        doorEl.textContent = TEXT.doorLocked(this.dungeon.enemies.length);
         doorEl.className = "door-locked";
       } else {
-        doorEl.textContent = I18N.doorOpen;
+        doorEl.textContent = TEXT.doorOpen;
         doorEl.className = "door-open";
       }
     }
@@ -2169,48 +2526,32 @@ class GameController {
     if (weaponBtn) weaponBtn.disabled = this.player.unlockedWeapons.size <= 1 || this.player.hp <= 0;
   }
 
-  spawnMegaBossAdds(megaBoss) {
-    const addsToSpawn = rollDie(Math.min(5, Math.max(1, Math.floor(this.floor / 20) + 1)));
-    this.log(`[Mega Boss] +${addsToSpawn} reinforcements!`);
-    let spawned = 0;
+  // Arena de mega jefe: repone 1 esbirro por turno hasta completar la cuota.
+  replenishBossRoomMinions() {
+    const limit = getBossRoomMinionLimit(this.tier);
+    const alive = this.dungeon.enemies.filter(e => !e.isBoss).length;
+    if (alive >= limit) return;
 
-    for (let dy = -3; dy <= 6 && spawned < addsToSpawn; dy++) {
-      for (let dx = -3; dx <= 6 && spawned < addsToSpawn; dx++) {
-        const sx = megaBoss.x + dx;
-        const sy = megaBoss.y + dy;
-
-        if (!this.dungeon.isInsideBounds(sx, sy)) continue;
-        if (this.dungeon.getTile(sx, sy) === TILE_WALL) continue;
-        if (sx === this.player.x && sy === this.player.y) continue;
-
-        const isOccupied = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === sx && c.y === sy));
-        if (isOccupied) continue;
-
-        const shadowHp = 2 + Math.floor((this.tier - 1) / 2);
-        this.dungeon.enemies.push({
-          id: Math.random().toString(36).substring(2, 9),
-          x: sx, y: sy,
-          startX: sx, startY: sy,
-          name: IS_SPANISH ? "Sombra Invocada" : "Summoned Shadow",
-          hp: shadowHp,
-          maxHp: shadowHp,
-          ac: 8 + this.tier,
-          visionRange: 3,
-          attackRange: 1,
-          isMegaBoss: false,
-          isBoss: false,
-          size: 1,
-          cells: [{ x: sx, y: sy }],
-          fearCooldown: 0
-        });
-        spawned++;
+    const freeCells = [];
+    for (let y = 0; y < this.dungeon.height; y++) {
+      for (let x = 0; x < this.dungeon.width; x++) {
+        if (this.dungeon.getTile(x, y) !== TILE_FLOOR) continue;
+        if (x === this.player.x && y === this.player.y) continue;
+        if (this.dungeon.enemies.some(e => e.cells.some(c => c.x === x && c.y === y))) continue;
+        freeCells.push({ x, y });
       }
     }
+    if (freeCells.length === 0) return;
+
+    const distant = freeCells.filter(c => Math.hypot(c.x - this.player.x, c.y - this.player.y) >= 3);
+    const pool = distant.length > 0 ? distant : freeCells;
+    const spot = pool[Math.floor(Math.random() * pool.length)];
+    this.dungeon.enemies.push(createMinion(this.tier, spot.x, spot.y, 3));
   }
 
   triggerGameOver() {
     sounds.playDeath();
-    this.log(I18N.logs.deadPlayer);
+    this.log(TEXT.logs.deadPlayer);
 
     setTimeout(() => {
       const stats = document.getElementById("death-stats-display");
@@ -2218,10 +2559,10 @@ class GameController {
       const desc = document.querySelector(".death-desc");
       const btn = document.getElementById("btn-restart-game");
 
-      if (title) title.textContent = I18N.death.title;
-      if (desc) desc.textContent = I18N.death.desc;
-      if (btn) btn.textContent = I18N.death.btn;
-      if (stats) stats.innerHTML = I18N.death.stats(this.floor, this.player.kills, this.player.gold);
+      if (title) title.textContent = TEXT.death.title;
+      if (desc) desc.textContent = TEXT.death.desc;
+      if (btn) btn.textContent = TEXT.death.btn;
+      if (stats) stats.innerHTML = TEXT.death.stats(this.floor, this.player.kills, this.player.gold);
 
       this.deathScreen.classList.remove("hidden");
       this.deathScreen.classList.add("visible");
@@ -2252,10 +2593,10 @@ class GameController {
           const stats = document.getElementById("victory-stats-display");
           const btn = document.querySelector(".victory-restart-btn");
 
-          if (title) title.textContent = I18N.victory.title;
-          if (desc) desc.innerHTML = I18N.victory.desc;
-          if (stats) stats.innerHTML = I18N.victory.stats(this.player.kills, this.player.gold);
-          if (btn) btn.textContent = I18N.victory.btn;
+          if (title) title.textContent = TEXT.victory.title;
+          if (desc) desc.innerHTML = TEXT.victory.desc;
+          if (stats) stats.innerHTML = TEXT.victory.stats(this.player.kills, this.player.gold);
+          if (btn) btn.textContent = TEXT.victory.btn;
 
           this.victoryScreen.classList.remove("hidden");
           this.victoryScreen.classList.add("visible");
@@ -2325,73 +2666,49 @@ class GameController {
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
     if (this.inMerchantFloor) {
-      this.log(I18N.logs.merchantNoAttack);
+      this.log(TEXT.logs.merchantNoAttack);
       return;
     }
 
     if (!this.player.isBlastReady()) {
       const remaining = this.player.blastMaxCharges - this.player.blastCurrentCharges;
-      this.log(I18N.logs.blastCharging(remaining));
+      this.log(TEXT.logs.blastCharging(remaining));
       return;
     }
 
     const dirVec = DIR_VECTORS[this.player.direction];
     let hitEnemy = null;
-    let hitDistance = 0;
+    let beamReach = 8;
 
     for (let dist = 1; dist <= 8; dist++) {
       const targetX = this.player.x + dirVec.x * dist;
       const targetY = this.player.y + dirVec.y * dist;
 
       if (!this.dungeon.isInsideBounds(targetX, targetY) || this.dungeon.getTile(targetX, targetY) === TILE_WALL) {
+        beamReach = dist - 0.5;
         break;
       }
 
       const enemyAtCell = this.dungeon.enemies.find(e => e.cells && e.cells.some(c => c.x === targetX && c.y === targetY));
       if (enemyAtCell) {
         hitEnemy = enemyAtCell;
-        hitDistance = dist;
+        beamReach = dist;
         break;
       }
     }
 
     sounds.playEldritchBlast();
     this.player.blastCurrentCharges = 0;
-    this.renderer.playEldritchBlastAnimation(hitDistance || 3);
-
-    let deadMiniBosses = [];
+    this.renderer.playEldritchBlastAnimation(beamReach);
 
     if (hitEnemy) {
       // Daño fijo establecido exactamente en 11 puntos, sin modificadores
       const blastDamage = 11;
       hitEnemy.hp -= blastDamage;
-      this.log(I18N.logs.blastFired(hitEnemy.name, blastDamage));
-
-      if (hitEnemy.hp <= 0) {
-        sounds.playCoin();
-        this.player.kills++;
-        let goldDrop = hitEnemy.isMegaBoss ? 10 : (hitEnemy.isBoss ? rollDie(3) : 1);
-        this.player.gold += goldDrop;
-        this.log(`+${goldDrop} PO (${hitEnemy.name})`);
-
-        if (hitEnemy.isBoss && !hitEnemy.isMegaBoss) deadMiniBosses.push(hitEnemy);
-        this.dungeon.enemies = this.dungeon.enemies.filter(e => e.id !== hitEnemy.id);
-      }
+      this.log(TEXT.logs.blastFired(hitEnemy.name, blastDamage));
+      CombatSystem.applyPanic(this, CombatSystem.processDeaths(this, [hitEnemy]));
     } else {
-      this.log(I18N.logs.blastWhiff);
-    }
-
-    if (deadMiniBosses.length > 0) {
-      deadMiniBosses.forEach(mb => {
-        dungeon.enemies.forEach(other => {
-          if (!other.isBoss) {
-            if (Math.hypot(other.x - mb.x, other.y - mb.y) <= 2.2) {
-              other.fearCooldown = 2;
-            }
-          }
-        });
-      });
-      this.log(I18N.logs.panic);
+      this.log(TEXT.logs.blastWhiff);
     }
 
     this.processEnemiesTurn();
@@ -2404,7 +2721,6 @@ class GameController {
     if (this.player.unlockedWeapons.size < 2) return;
     this.player.cycleWeapon();
     this.showWeaponRange = true;
-    this.renderer.playWeaponChange();
     sounds.playStep();
     this.updateHUD();
     this.renderer.draw();
@@ -2470,27 +2786,15 @@ class GameController {
   processEnemiesTurn() {
     if (this.player.hp <= 0 || this.isVictory || this.inMerchantFloor) return;
 
-    const megaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
-    if (megaBoss) {
-      const otherEnemiesCount = this.dungeon.enemies.filter(e => !e.isMegaBoss).length;
-      if (otherEnemiesCount === 0) {
-        this.megaBossEmptyTurns++;
-        if (this.megaBossEmptyTurns > 1) {
-          this.spawnMegaBossAdds(megaBoss);
-          this.megaBossEmptyTurns = 0;
-        }
-      } else {
-        this.megaBossEmptyTurns = 0;
-      }
-    }
-
     const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const enemySnapshot = [...this.dungeon.enemies];
+    let tookDamage = false;
 
     enemySnapshot.forEach(enemy => {
       if (this.player.hp <= 0) return;
       if (!this.dungeon.enemies.includes(enemy) || !enemy.cells || enemy.cells.length === 0) return;
 
+      if (this.dungeon.isBossRoom) enemy.fearCooldown = 0;
       if (enemy.fearCooldown > 0) enemy.fearCooldown--;
 
       const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
@@ -2507,7 +2811,8 @@ class GameController {
           const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
           const totalDmg = baseDmg + dmgMod;
           this.player.hp = Math.max(0, this.player.hp - totalDmg);
-          this.log(`> [${enemy.name}] HIT [${totalAtk} vs CA ${this.player.ac}] -${totalDmg} HP.`);
+          tookDamage = true;
+          this.log(TEXT.logs.enemyHit(enemy.name, totalAtk, this.player.ac, totalDmg));
         }
         return;
       }
@@ -2526,6 +2831,9 @@ class GameController {
           mode = hasAlly ? "chase" : "flee";
         }
       }
+
+      // Arenas de mega jefe: persecución directa en cada turno, sin patrullas ni huidas.
+      if (this.dungeon.isBossRoom) mode = "chase";
 
       const directions = [
         { dx: 0, dy: -1 },
@@ -2575,6 +2883,12 @@ class GameController {
       }
     });
 
+    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0);
+
+    if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.enemies.some(e => e.isMegaBoss)) {
+      this.replenishBossRoomMinions();
+    }
+
     if (this.player.hp > 0) {
       this.dungeon.npcs.forEach(npc => {
         if (!npc.isMerchant) this.moveGoldenBunny(npc);
@@ -2589,23 +2903,23 @@ class GameController {
 
     const next = this.player.getNextForwardPos(1);
     if (!this.dungeon.isInsideBounds(next.x, next.y)) {
-      this.log(I18N.logs.outOfBounds);
+      this.log(TEXT.logs.outOfBounds);
       return;
     }
     if (this.dungeon.getTile(next.x, next.y) === TILE_WALL) {
-      this.log(I18N.logs.wallFront);
+      this.log(TEXT.logs.wallFront);
       return;
     }
 
     const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === next.x && c.y === next.y));
     if (enemyBlocking) {
-      this.log(I18N.logs.enemyBlock);
+      this.log(TEXT.logs.enemyBlock);
       return;
     }
 
     const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === next.x && npc.y === next.y);
     if (merchant) {
-      this.showMerchantDialog(`«${I18N.logs.merchantPeace}»`, () => {
+      this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
         this.openShop();
       });
       return;
@@ -2614,6 +2928,7 @@ class GameController {
     this.player.advanceAction();
     this.player.moveForward();
     sounds.playStep();
+    this.renderer.playWalk();
 
     this.checkGoldenBunnyCapture();
     this.processEnemiesTurn();
@@ -2627,23 +2942,23 @@ class GameController {
 
     const prev = this.player.getNextBackwardPos();
     if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
-      this.log(I18N.logs.backOutOfBounds);
+      this.log(TEXT.logs.backOutOfBounds);
       return;
     }
     if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
-      this.log(I18N.logs.wallBack);
+      this.log(TEXT.logs.wallBack);
       return;
     }
 
     const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y));
     if (enemyBlocking) {
-      this.log(I18N.logs.enemyBlockBack);
+      this.log(TEXT.logs.enemyBlockBack);
       return;
     }
 
     const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === prev.x && npc.y === prev.y);
     if (merchant) {
-      this.showMerchantDialog(`«${I18N.logs.merchantPeace}»`, () => {
+      this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
         this.openShop();
       });
       return;
@@ -2652,6 +2967,7 @@ class GameController {
     this.player.advanceAction();
     this.player.moveBackward();
     sounds.playStep();
+    this.renderer.playWalk();
     this.checkGoldenBunnyCapture();
     this.processEnemiesTurn();
     this.handleTileInteractions();
@@ -2672,7 +2988,7 @@ class GameController {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + healing);
       sounds.playHeal();
       this.renderer.playDrinkPotion();
-      this.log(I18N.logs.chestPotion(healing));
+      this.log(TEXT.logs.chestPotion(healing));
     } else {
       const weaponOptions = [WEAPONS.PISTOL, WEAPONS.MUSKET, WEAPONS.BLUNDERBUSS];
       const weapon = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
@@ -2684,10 +3000,9 @@ class GameController {
 
       if (isNewWeapon) {
         this.player.equippedWeapon = weapon;
-        this.renderer.playWeaponChange();
-        this.log(I18N.logs.chestWeapon(weapon.name, ammo));
+        this.log(TEXT.logs.chestWeapon(weapon.name, ammo));
       } else {
-        this.log(I18N.logs.chestAmmo(weapon.name, ammo));
+        this.log(TEXT.logs.chestAmmo(weapon.name, ammo));
       }
     }
 
@@ -2703,7 +3018,7 @@ class GameController {
       this.dungeon.npcs.splice(bunnyIndex, 1);
       this.player.gold += 5;
       sounds.playCoin();
-      this.log(I18N.logs.bunnyCaught);
+      this.log(TEXT.logs.bunnyCaught);
       this.updateHUD();
       return true;
     }
@@ -2720,7 +3035,7 @@ class GameController {
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
       if (this.dungeon.enemies.length > 0) {
-        this.log(I18N.logs.exitLocked(this.dungeon.enemies.length));
+        this.log(TEXT.logs.exitLocked(this.dungeon.enemies.length));
       } else {
         if (this.floor >= 100) {
           this.startVictorySequence();
@@ -2728,7 +3043,7 @@ class GameController {
         }
 
         sounds.playCoin();
-        this.log(I18N.logs.exitDescend);
+        this.log(TEXT.logs.exitDescend);
 
         if (this.inMerchantFloor) {
           this.floor++;
@@ -2878,16 +3193,16 @@ class GameController {
   }
 }
 
-// INITIUM CUM VELO APERIENTI
+// Pantalla de inicio: fade in del logo, 1 s visible, fade out y arranque de la partida.
 window.addEventListener("DOMContentLoaded", () => {
+  const SPLASH_FADE_MS = 700;
+  const SPLASH_STAY_MS = 1000;
   const splashScreen = document.getElementById("splash-screen");
-  const introVideo = document.getElementById("intro-video");
   const splashLogo = splashScreen?.querySelector(".splash-logo");
-  const skipIntro = document.getElementById("skip-intro");
   let gameStarted = false;
-  let fallbackTimer;
+  let stayTimer;
 
-  if (sessionStorage.getItem("lior_intro_played")) {
+  if (!splashScreen || sessionStorage.getItem("lior_intro_played")) {
     if (splashScreen) splashScreen.style.display = "none";
     new GameController();
     return;
@@ -2896,44 +3211,19 @@ window.addEventListener("DOMContentLoaded", () => {
   function startGame() {
     if (gameStarted) return;
     gameStarted = true;
-    clearTimeout(fallbackTimer);
-    introVideo?.pause();
+    clearTimeout(stayTimer);
     sessionStorage.setItem("lior_intro_played", "true");
 
-    if (splashScreen) {
-      splashScreen.classList.add("fade-out");
-      setTimeout(() => {
-        splashScreen.style.display = "none";
-        new GameController();
-      }, 300);
-    } else {
-      new GameController();
-    }
+    new GameController();
+    splashScreen.classList.remove("show");
+    splashScreen.classList.add("fade-out");
+    setTimeout(() => { splashScreen.style.display = "none"; }, SPLASH_FADE_MS);
   }
 
-  function showLogoFallback() {
-    if (gameStarted || !splashLogo) return;
-    introVideo?.classList.add("hidden");
-    splashLogo.classList.remove("hidden");
-    fallbackTimer = setTimeout(startGame, 1200);
-  }
+  sounds.playLogoJingle();
+  requestAnimationFrame(() => splashLogo?.classList.add("show"));
+  stayTimer = setTimeout(startGame, SPLASH_FADE_MS + SPLASH_STAY_MS);
 
-  if (splashScreen) {
-    if (introVideo && splashLogo) {
-      splashLogo.classList.add("hidden");
-      introVideo.addEventListener("ended", startGame, { once: true });
-      introVideo.addEventListener("error", showLogoFallback, { once: true });
-      introVideo.addEventListener("canplay", () => clearTimeout(fallbackTimer), { once: true });
-      fallbackTimer = setTimeout(showLogoFallback, 10000);
-      introVideo.play().catch(showLogoFallback);
-    }
-
-    splashScreen.addEventListener("click", startGame);
-    splashScreen.addEventListener("touchstart", startGame, { passive: true });
-  }
-
-  skipIntro?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    startGame();
-  });
+  splashScreen.addEventListener("click", startGame);
+  splashScreen.addEventListener("touchstart", startGame, { passive: true });
 });
