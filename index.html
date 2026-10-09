@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Lior Kurogane - Dungeon Crawler</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="theme-color" content="#10081d">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./pwa-icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 
@@ -16,27 +19,45 @@
   <!-- ENVOLTORIO PRINCIPAL -->
   <div id="app-wrapper">
 
-    <!-- HUD SUPERIOR -->
+    <!-- PANEL DE ESTADO -->
     <header id="hud">
-      <div class="hud-item">PISO: <span id="hud-floor">1</span></div>
-      <div class="hud-item">DIR: <span id="hud-dir">Norte (▲)</span></div>
-      <div class="hud-item">HP: <span id="hud-hp">61</span>/61</div>
-      <div class="hud-item">ORO: <span id="hud-gold">0</span> PO</div>
-      <div class="hud-item">ARMA: <span id="hud-weapon">Espada</span></div>
-      <div class="hud-item">BALAS: <span id="hud-ammo">P:0 | M:0 | T:0</span></div>
-      <div class="hud-item door-item">SALIDA: <span id="hud-door" class="door-locked">BLOQUEADA</span></div>
+      <div class="hud-floor">PISO <span id="hud-floor">01</span></div>
+      <div class="health-panel">
+        <span class="pixel-heart" aria-hidden="true"></span>
+        <div class="health-details">
+          <div class="health-track" role="img" aria-label="Vida de Lior">
+            <span id="hud-hp-fill" class="health-fill"></span>
+            <span id="hud-extra-fill" class="extra-health-fill"></span>
+          </div>
+          <div id="hud-vitals" class="health-label">16 / 16 (+0)</div>
+        </div>
+      </div>
+      <div class="weapon-panel">
+        <span id="hud-weapon-icon" class="weapon-icon weapon-icon-sword" aria-hidden="true"></span>
+        <div class="weapon-details">
+          <span id="hud-weapon" class="weapon-name">Espada</span>
+          <span id="hud-ammo" class="weapon-ammo">∞</span>
+        </div>
+      </div>
+      <div class="hud-resource">ORO <span id="hud-gold">0</span> PO</div>
+      <div class="hud-exit"><span class="exit-icon" aria-hidden="true">▣</span><span id="hud-door" class="door-locked">BLOQUEADA</span></div>
+      <div class="hud-direction" aria-label="Dirección actual">
+        <span id="hud-dir-arrow" class="direction-arrow" aria-hidden="true">↑</span>
+        <span id="hud-dir">Norte</span>
+      </div>
     </header>
 
     <!-- ÁREA CENTRAL DE JUEGO Y MODALES -->
     <main id="game-container">
       <canvas id="viewport" width="294" height="504"></canvas>
+      <div id="hud-status" class="hud-status" role="status" aria-live="polite"></div>
 
       <!-- CUADRO DE DIÁLOGO DEL MERCADER -->
       <div id="merchant-dialog-modal" class="hidden">
         <div class="dialog-box">
           <div class="dialog-speaker">✦ MERCADER DE SOMBRAS ✦</div>
           <div id="dialog-text" class="dialog-text">«Baja tu arma, viajero... Tengo mercancías selectas para tu travesía.»</div>
-          <div class="dialog-prompt">▼ Toca la pantalla para continuar</div>
+          <div class="dialog-prompt">▼ Se cerrará automáticamente</div>
         </div>
       </div>
 
@@ -62,22 +83,22 @@
           <h3>✦ MERCADER DE SOMBRAS ✦</h3>
           <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
           
-          <div class="shop-item">
+          <div class="shop-item" data-shop-index="0" tabindex="0">
             <span>Pistola: 6 balas</span>
             <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
           </div>
           
-          <div class="shop-item">
+          <div class="shop-item" data-shop-index="1" tabindex="0">
             <span>Mosquete: 4 balas</span>
             <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
           </div>
 
-          <div class="shop-item">
+          <div class="shop-item" data-shop-index="2" tabindex="0">
             <span>Trabuco: 2 balas</span>
             <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
           </div>
 
-          <div class="shop-item">
+          <div class="shop-item" data-shop-index="3" tabindex="0">
             <span>Poción de Vida (2d4+4 HP)</span>
             <button id="buy-potion" class="shop-btn">2 PO</button>
           </div>
@@ -87,31 +108,9 @@
       </div>
     </main>
 
-    <!-- GUÍAS DE TECLADO (solo PC / horizontal) -->
-    <aside id="legend-left" class="key-legend" aria-label="Controles de movimiento">
-      <h4>MOVIMIENTO</h4>
-      <ul>
-        <li><kbd>W / ▲</kbd><span>Mover Norte</span></li>
-        <li><kbd>S / ▼</kbd><span>Mover Sur</span></li>
-        <li><kbd>A / ◄</kbd><span>Mover Oeste</span></li>
-        <li><kbd>D / ►</kbd><span>Mover Este</span></li>
-      </ul>
+    <aside id="pc-legend" aria-label="Atajos de teclado y mando">
+      [WASD / D-Pad] Mover/Girar | [K / A] Atacar | [J / X] Blast | [L / B] Bruma | [I / Y] Cambiar Arma
     </aside>
-    <aside id="legend-right" class="key-legend" aria-label="Controles de acción">
-      <h4>ACCIONES</h4>
-      <ul>
-        <li><kbd>K</kbd><span>Disparo / Ataque</span></li>
-        <li><kbd>J</kbd><span>Eldritch Blast</span></li>
-        <li><kbd>L</kbd><span>Paso Brumoso</span></li>
-        <li><kbd>I</kbd><span>Cambiar Arma</span></li>
-        <li><kbd>Enter / Espacio</kbd><span>Interactuar</span></li>
-      </ul>
-    </aside>
-
-    <!-- CONSOLA DE MENSAJES -->
-    <section id="log-container">
-      <div id="log-entries"></div>
-    </section>
 
     <!-- CONTROLES INFERIORES -->
     <footer id="control-dock">
@@ -154,5 +153,13 @@
   </div>
 
   <script src="game.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js", { scope: "./" })
+          .catch(error => console.error("No se pudo registrar el Service Worker:", error));
+      });
+    }
+  </script>
 </body>
 </html>

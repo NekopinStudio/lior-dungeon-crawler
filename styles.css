@@ -32,29 +32,216 @@ html, body {
 
 /* HUD DINÁMICO Y FLUIDO */
 #hud {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1.4fr) minmax(120px, 1fr) auto auto auto;
   align-items: center;
   width: 100%;
-  max-width: 380px;
+  max-width: none;
+  min-height: 54px;
   background-color: #0a0b0e;
-  border: 1px solid #222226;
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: clamp(9px, 2.5vw, 11px);
-  gap: 2px 6px;
+  border: 1px solid #2a302d;
+  padding: 5px 12px;
+  border-radius: 0;
+  font-size: 11px;
+  gap: 10px 14px;
   flex-shrink: 0;
 }
 
-.hud-item span {
-  font-weight: bold;
-  color: #00b0ff;
+.hud-direction,
+.weapon-panel,
+.hud-exit {
+  display: flex;
+  align-items: center;
 }
 
-#hud-ammo { color: #ffb300 !important; }
-.door-locked { color: #ff3333 !important; }
-.door-open { color: #00e676 !important; }
+.hud-floor { color: #f4d36c; font-size: 15px; font-weight: 900; }
+.hud-floor span { color: #ffffff; }
+.hud-direction { justify-content: flex-end; gap: 7px; color: #d5e0d9; }
+.direction-arrow { color: #f4d36c; font-size: 27px; font-weight: 900; line-height: 1; }
+
+.health-panel { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.pixel-heart {
+  width: 22px;
+  height: 20px;
+  flex: 0 0 22px;
+  background: #54ec78;
+  clip-path: polygon(0 18%, 18% 18%, 18% 0, 42% 0, 50% 15%, 58% 0, 82% 0, 82% 18%, 100% 18%, 100% 56%, 82% 56%, 82% 76%, 66% 76%, 66% 88%, 50% 88%, 50% 100%, 34% 88%, 34% 76%, 18% 76%, 18% 56%, 0 56%);
+  image-rendering: pixelated;
+}
+
+.health-details { min-width: 0; flex: 1; }
+.health-track {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  background: #171b19;
+  border: 2px solid #405247;
+  image-rendering: pixelated;
+}
+.health-fill { display: block; height: 100%; background: #35db62; }
+.extra-health-fill { display: block; height: 100%; background: #36a9ff; }
+.health-label { margin-top: 3px; color: #e6eee8; font-size: 10px; font-weight: 700; }
+
+.weapon-panel { gap: 7px; min-width: 0; min-height: 32px; }
+.weapon-icon {
+  position: relative;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  flex: 0 0 26px;
+  color: #f3d16c;
+  border: 1px solid #59604d;
+  background: #171a16;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+.weapon-icon::before,
+.weapon-icon::after { position: absolute; display: block; content: ""; image-rendering: pixelated; }
+.weapon-icon-sword::before {
+  top: 4px;
+  left: 7px;
+  width: 4px;
+  height: 4px;
+  background: #e5eee9;
+  box-shadow: 4px 4px #e5eee9, 8px 8px #e5eee9, 12px 12px #e5eee9, 16px 16px #e5eee9;
+}
+.weapon-icon-sword::after {
+  top: 18px;
+  left: 5px;
+  width: 11px;
+  height: 3px;
+  background: #f3d16c;
+  transform: rotate(-45deg);
+  box-shadow: -3px 3px #8e6b32;
+}
+.weapon-icon-pistol::before {
+  top: 8px;
+  left: 6px;
+  width: 17px;
+  height: 5px;
+  background: #cbd6ce;
+  box-shadow: 4px -3px #88958c;
+}
+.weapon-icon-pistol::after {
+  top: 13px;
+  left: 12px;
+  width: 5px;
+  height: 9px;
+  background: #9c7740;
+  box-shadow: 3px 5px #70542f;
+}
+.weapon-icon-musket::before {
+  top: 8px;
+  left: 3px;
+  width: 23px;
+  height: 4px;
+  background: #d3ddd5;
+  box-shadow: 3px -3px #849188;
+}
+.weapon-icon-musket::after {
+  top: 12px;
+  left: 8px;
+  width: 5px;
+  height: 10px;
+  background: #9c7740;
+  box-shadow: 4px 5px #70542f;
+}
+.weapon-icon-blunderbuss::before {
+  top: 6px;
+  left: 5px;
+  width: 20px;
+  height: 8px;
+  background: #d3ddd5;
+  box-shadow: 3px -3px #849188, 3px 3px #849188;
+}
+.weapon-icon-blunderbuss::after {
+  top: 14px;
+  left: 11px;
+  width: 6px;
+  height: 9px;
+  background: #9c7740;
+  box-shadow: 4px 4px #70542f;
+}
+.weapon-details { display: flex; min-width: 0; flex: 1; justify-content: space-between; gap: 8px; }
+.weapon-name { overflow: hidden; color: #fff; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.weapon-ammo { color: #f3d16c; font-weight: 800; white-space: nowrap; }
+.hud-resource { color: #cbd6ce; }
+.hud-resource span { color: #f3d16c; font-weight: 900; }
+.hud-exit { gap: 5px; color: #d9e0da; font-weight: 800; white-space: nowrap; }
+.exit-icon { color: #f3d16c; font-size: 17px; }
+.door-locked { color: #f3d16c !important; }
+.door-open { color: #39ef73 !important; text-shadow: 0 0 7px rgba(57, 239, 115, 0.55); }
+
+.hud-status {
+  position: absolute;
+  z-index: 10;
+  top: 10px;
+  left: 50%;
+  width: min(560px, calc(100% - 24px));
+  min-height: 0;
+  padding: 8px 12px;
+  overflow: hidden;
+  color: #ffd166;
+  border: 1px solid #725c2d;
+  background: rgba(8, 10, 9, 0.92);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  transition: opacity 0.3s ease;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.hud-status:empty { display: none; }
+.hud-status.is-fading { opacity: 0; }
+
+@media (max-width: 600px) and (orientation: portrait) {
+  #hud {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 4px 6px;
+    min-height: 0;
+    padding: 5px 6px;
+    font-size: 9px;
+  }
+  .hud-floor { grid-column: 1; grid-row: 1; font-size: 12px; }
+  .health-panel { grid-column: 2; grid-row: 1; gap: 5px; }
+  .pixel-heart { width: 17px; height: 16px; flex-basis: 17px; }
+  .health-track { height: 9px; }
+  .health-label { margin-top: 1px; font-size: 8px; }
+  .hud-direction { grid-column: 3; grid-row: 1; gap: 2px; }
+  .direction-arrow { font-size: 22px; }
+  .hud-direction #hud-dir { display: none; }
+  .weapon-panel { grid-column: 1 / 3; grid-row: 2; min-height: 25px; gap: 5px; }
+  .weapon-icon { width: 22px; height: 22px; flex-basis: 22px; }
+  .weapon-name, .weapon-ammo { font-size: 9px; }
+  .hud-resource { display: flex; grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; font-size: 8px; }
+  .hud-exit { grid-column: 3; grid-row: 2; gap: 3px; justify-self: end; font-size: 8px; }
+  .exit-icon { font-size: 13px; }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  body.mode-landscape #hud {
+    grid-template-columns: auto minmax(100px, 1.2fr) minmax(90px, 1fr) auto auto auto;
+    gap: 4px 7px;
+    min-height: 42px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+  body.mode-landscape .hud-floor { font-size: 12px; }
+  body.mode-landscape .health-panel { gap: 4px; }
+  body.mode-landscape .pixel-heart { width: 17px; height: 16px; flex-basis: 17px; }
+  body.mode-landscape .health-label { margin-top: 1px; font-size: 8px; }
+  body.mode-landscape .health-track { height: 9px; }
+  body.mode-landscape .weapon-panel { gap: 4px; min-height: 25px; }
+  body.mode-landscape .weapon-icon { width: 21px; height: 21px; flex-basis: 21px; }
+  body.mode-landscape .weapon-name, body.mode-landscape .weapon-ammo { font-size: 8px; }
+  body.mode-landscape .hud-resource, body.mode-landscape .hud-exit { font-size: 8px; }
+  body.mode-landscape .exit-icon { font-size: 12px; }
+  body.mode-landscape .direction-arrow { font-size: 20px; }
+  body.mode-landscape .hud-direction #hud-dir { display: none; }
+}
 
 /* ÁREA CENTRAL DE JUEGO ESCALABLE */
 #game-container {
@@ -93,6 +280,7 @@ html, body {
   z-index: 60;
   padding: 14px;
   cursor: pointer;
+  transition: opacity 0.35s ease;
 }
 
 .dialog-box {
@@ -107,7 +295,11 @@ html, body {
   flex-direction: column;
   gap: 8px;
   animation: dialogPop 0.2s ease-out;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
+
+#merchant-dialog-modal.is-fading { opacity: 0; pointer-events: none; }
+#merchant-dialog-modal.is-fading .dialog-box { opacity: 0; transform: translateY(10px); }
 
 @keyframes dialogPop {
   from { transform: translateY(12px); opacity: 0; }
@@ -139,30 +331,6 @@ html, body {
 @keyframes promptBlink {
   from { opacity: 0.4; }
   to { opacity: 1; }
-}
-
-/* BITÁCORA / CONSOLA DE REGISTROS DINÁMICA */
-#log-container {
-  width: 100%;
-  max-width: 380px;
-  height: clamp(30px, 6vh, 42px);
-  background-color: #050505;
-  border: 1px solid #1a1a1a;
-  border-radius: 4px;
-  padding: 2px 6px;
-  overflow-y: auto;
-  font-size: clamp(9px, 2.4vw, 11px);
-  margin: 2px 0;
-  flex-shrink: 0;
-}
-
-#log-entries div {
-  margin-bottom: 1px;
-  color: #888888;
-}
-
-#log-entries div:last-child {
-  color: #00ff88;
 }
 
 /* CONTROLES INFERIORES */
@@ -360,102 +528,78 @@ html, body {
   text-align: center;
 }
 
-/* MODO HORIZONTAL (cámara fija 10x10): formato consola. La clase la fija el Renderer según la orientación. */
-body.mode-landscape #app-wrapper {
-  max-width: 100vw;
+/* HORIZONTAL TÁCTIL: HUD arriba; D-pad y acciones flanquean el tablero. */
+body.mode-landscape:not(.pad-hidden) #app-wrapper {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 200px;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "hud hud hud"
-    "dpad game actions"
-    "log log log";
-  gap: 4px;
+  grid-template-columns: minmax(156px, 20vw) minmax(0, 1fr) minmax(156px, 24vw);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "hud hud hud" "dpad game actions";
+  gap: 6px 8px;
   align-items: center;
+  max-width: none;
+  padding: env(safe-area-inset-top, 3px) 8px env(safe-area-inset-bottom, 3px);
 }
 
+body.mode-landscape #hud {
+  grid-area: hud;
+  grid-template-columns: auto minmax(170px, 1.4fr) minmax(130px, 1fr) auto auto auto;
+  gap: 8px 12px;
+  min-height: 50px;
+  padding: 4px 10px;
+}
+
+body.mode-landscape #game-container { grid-area: game; width: 100%; height: 100%; min-height: 0; padding: 0; }
+body.mode-landscape #control-dock { display: contents; }
+body.mode-landscape .dpad { grid-area: dpad; justify-self: center; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
+body.mode-landscape .diamond-pad { grid-area: actions; justify-self: center; width: 150px; height: 150px; }
+body.mode-landscape .btn-slot { width: 48px; overflow: visible; }
+body.mode-landscape .btn-caption { font-size: 10px; color: #f0d77a; text-shadow: 0 1px 2px #000; margin-top: 2px; }
+body.mode-landscape .dpad-btn { touch-action: none; user-select: none; -webkit-user-select: none; }
+body.mode-landscape .arcade-btn { width: 48px; height: 48px; min-width: 48px; min-height: 48px; font-size: 18px; }
+
 body.mode-landscape #viewport {
-  height: min(85vh, 100%);
-  width: auto;
-  max-height: 85vh;
+  width: min(94dvh, calc(100dvh - 60px), 100%);
+  height: auto;
   max-width: 100%;
+  max-height: none;
+  aspect-ratio: 1;
   image-rendering: pixelated;
 }
 
-body.mode-landscape #hud { grid-area: hud; max-width: 100%; }
-body.mode-landscape #game-container { grid-area: game; height: 100%; }
-body.mode-landscape #log-container { grid-area: log; max-width: 100%; height: 32px; }
+#pc-legend { display: none; }
 
-body.mode-landscape #control-dock { display: contents; }
-
-body.mode-landscape .dpad {
-  grid-area: dpad;
-  justify-self: center;
-  grid-template-columns: repeat(3, 48px);
-  grid-template-rows: repeat(3, 48px);
-}
-
-body.mode-landscape .diamond-pad {
-  grid-area: actions;
-  justify-self: center;
-  width: 150px;
-  height: 150px;
-}
-
-body.mode-landscape .btn-slot {
-  width: 48px;
-  overflow: visible;
-}
-
-body.mode-landscape .btn-caption {
-  font-size: 10px;
-  color: #f0d77a;
-  text-shadow: 0 1px 2px #000;
-  margin-top: 2px;
-}
-
-body.mode-landscape .dpad-btn {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-body.mode-landscape .arcade-btn {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  font-size: 18px;
-}
-
-/* Con teclado o mando físico se ocultan los controles en pantalla y el mapa gana el ancho. */
+/* PC: tablero centrado entre la barra superior y la leyenda inferior. */
 body.mode-landscape.pad-hidden #app-wrapper {
-  grid-template-columns: minmax(130px, 190px) minmax(0, 1fr) minmax(130px, 190px);
-  grid-template-areas:
-    "hud hud hud"
-    "legl game legr"
-    "log log log";
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "hud" "game" "legend";
+  gap: 5px;
+  max-width: none;
+  padding: 5px 10px;
+}
+body.mode-landscape.pad-hidden #hud { grid-area: hud; }
+body.mode-landscape.pad-hidden #game-container { grid-area: game; height: 100%; }
+body.mode-landscape.pad-hidden #control-dock { display: none; }
+body.mode-landscape.pad-hidden #viewport {
+  width: min(94dvh, calc(100dvh - 98px), 100%);
+}
+body.mode-landscape.pad-hidden #pc-legend {
+  grid-area: legend;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  color: #c9d3cb;
+  background: #0a0b0e;
+  border-top: 1px solid #38413a;
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .key-legend { display: none; }
-
-body.mode-landscape.pad-hidden .key-legend {
-  display: block;
-  align-self: center;
-  max-height: 85vh;
-  overflow: hidden;
-  padding: 8px 10px;
-  background: rgba(10, 8, 14, 0.85);
-  border: 1px solid #4a3a5c;
-  box-shadow: inset 0 0 0 1px #1a1424;
-  color: #c9c2d6;
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-#legend-left { grid-area: legl; justify-self: end; }
-#legend-right { grid-area: legr; justify-self: start; }
 
 .key-legend h4 {
   margin: 0 0 6px;
@@ -491,11 +635,6 @@ body.mode-landscape.pad-hidden .key-legend {
   font-family: inherit;
   font-size: 11px;
   font-weight: bold;
-}
-
-body.mode-landscape.pad-hidden .dpad,
-body.mode-landscape.pad-hidden .diamond-pad {
-  display: none;
 }
 
 /* Transición suave al cambiar de viewport sin recargar la partida. */
@@ -540,6 +679,15 @@ body.mode-landscape.pad-hidden .diamond-pad {
   padding: 6px;
   border: 1px solid #222222;
   border-radius: 4px;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.shop-item.is-selected,
+.shop-item:focus-visible {
+  outline: none;
+  border-color: #7cf59a;
+  background-color: #17271c;
+  box-shadow: inset 0 0 0 1px #7cf59a, 0 0 8px rgba(124, 245, 154, 0.28);
 }
 
 .shop-btn {

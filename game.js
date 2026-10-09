@@ -63,13 +63,15 @@ const TEXT = {
     wallImpact: (weapon) => `Tu disparo de ${weapon} impacta contra un muro.`,
     attackHit: (total, ac, dmg, name, hp) => `[${total} vs CA ${ac}]: ${dmg} DMG -> ${name} (HP: ${hp})`,
     attackDefended: (total, ac, name) => `[${total} vs CA ${ac}] ${name} se defiende.`,
-    enemyHit: (name, total, ac, dmg) => `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} HP.`,
+    criticalMiss: (name) => `${name} pifia y queda aturdido para su próximo ataque.`,
+    stunned: (name) => `${name} pierde su turno de ataque por el aturdimiento.`,
+    enemyHit: (name, total, ac, dmg) => `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} de daño (escudo primero).`,
     goldDrop: (gold, name) => `+${gold} PO (${name})`,
     panic: "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen.",
     deadPlayer: "Lior ha caído en combate. Fin de la partida.",
     blastCharging: (rem) => `Eldritch Blast cargando (${rem} acciones restantes).`,
     blastWhiff: "Liberas un rayo de Eldritch Blast, pero no hay objetivos en tu línea de visión.",
-    blastFired: (target, dmg) => `¡Eldritch Blast impacta a ${target} por ${dmg} de daño arcano!`,
+    blastFired: (target, dmg, rays) => `¡Eldritch Blast (${rays} rayos) impacta a ${target} por ${dmg} de daño arcano!`,
     exitLocked: (cnt) => `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.`,
     exitDescend: "¡Descendiendo al siguiente nivel...!",
     floorIntro: (floor, tier, w, h, ac, hit, dmg) =>
@@ -372,14 +374,15 @@ const ACTION_BINDINGS = {
     attack: { index: 0, standardLabel: "A", genericLabel: "1" },
     mist: { index: 1, standardLabel: "B", genericLabel: "2" },
     blast: { index: 2, standardLabel: "X", genericLabel: "3" },
-    weapon: { index: 3, standardLabel: "Y", genericLabel: "4" }
+    weapon: { index: 3, standardLabel: "Y", genericLabel: "4" },
+    weaponAlt: [4, 5]
   }
 };
 
-// Modo vertical: viewport 7x12 con el mundo rotando. Modo horizontal: 10x10 con Norte fijo y ancla por encaramiento (N, E, S, O).
+// Modo vertical: viewport 7x12 con el mundo rotando. Landscape: 11x11 centrado, con el Norte fijo.
 const CAMERA_PROFILES = {
   classic: { cols: 7, rows: 12, tileSize: 42, anchors: [{ x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }] },
-  fixed: { cols: 10, rows: 10, tileSize: 40, anchors: [{ x: 5, y: 8 }, { x: 1, y: 5 }, { x: 5, y: 1 }, { x: 8, y: 5 }] }
+  fixed: { cols: 11, rows: 11, tileSize: 40, anchors: [{ x: 5, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 5 }] }
 };
 
 // Estado vivo de la cámara; playerScreenX/Y son la casilla entera de Lior en pantalla.
@@ -466,7 +469,7 @@ const WEAPONS = {
     id: "sword",
     name: TEXT.weaponNames.sword,
     label: TEXT.weaponLabels.sword,
-    damage: 2,
+    damage: 4,
     range: 1.5,
     isMelee: true,
     ammoType: null
@@ -475,7 +478,7 @@ const WEAPONS = {
     id: "pistol",
     name: TEXT.weaponNames.pistol,
     label: TEXT.weaponLabels.pistol,
-    damage: 4,
+    damage: 6,
     range: 3,
     width: 3,
     isMelee: false,
@@ -486,7 +489,7 @@ const WEAPONS = {
     id: "musket",
     name: TEXT.weaponNames.musket,
     label: TEXT.weaponLabels.musket,
-    damage: 6,
+    damage: 8,
     range: 5,
     width: 3,
     isMelee: false,
@@ -510,8 +513,65 @@ function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
+function calculateLiorMaxHP(floor) {
+  return 16 + (floor - 1) * 7;
+}
+
+function calculateLiorAC(floor) {
+  return 12 + Math.floor((floor - 1) / 10);
+}
+
+function calculateMaxExtraHP(maxHP) {
+  return Math.floor(Math.max(0, maxHP) / 2);
+}
+
+function restoreHealth(player, healing) {
+  let remaining = Math.max(0, Math.floor(healing));
+  const hpRestored = Math.min(player.maxHp - player.hp, remaining);
+  player.hp = Math.min(player.maxHp, player.hp + hpRestored);
+  remaining -= hpRestored;
+  player.maxExtraHp = calculateMaxExtraHP(player.maxHp);
+  const extraRestored = Math.min(player.maxExtraHp - player.extraHp, remaining);
+  player.extraHp = Math.min(player.maxExtraHp, player.extraHp + extraRestored);
+  return { hpRestored, extraRestored, totalRestored: hpRestored + extraRestored };
+}
+
+function calculateMinionHP(floor) {
+  return 4 + Math.floor((floor - 1) / 2);
+}
+
+function calculateMiniBossHP(floor) {
+  return 16 + (floor - 1) * 2;
+}
+
+function calculateMegaBossHP(floor) {
+  return 64 + Math.floor(floor / 10) * 64;
+}
+
+function calculateTier(floor) {
+  return 1 + Math.floor((floor - 1) / 10);
+}
+
+function calculateEnemyAttackBonus(floor) {
+  return Math.floor((floor - 1) / 10);
+}
+
+function calculateEldritchBlastRayCount(floor) {
+  return calculateTier(floor);
+}
+
+function calculateEldritchBlastDamage(floor) {
+  return 20 * calculateTier(floor) + 4;
+}
+
+function splitDamageAcrossRays(totalDamage, rayCount) {
+  const baseDamage = Math.floor(totalDamage / rayCount);
+  const remainder = totalDamage % rayCount;
+  return Array.from({ length: rayCount }, (_, index) => baseDamage + (index < remainder ? 1 : 0));
+}
+
 function getTierForFloor(floorNumber) {
-  return Math.min(10, Math.floor((floorNumber - 1) / 10) + 1);
+  return Math.min(10, calculateTier(floorNumber));
 }
 
 // Población acumulativa: en el tier N pueden aparecer las entradas 1..N.
@@ -523,9 +583,10 @@ function getBossRoomMinionLimit(tier) {
   return 10 + (tier - 1);
 }
 
-function createMinion(tier, x, y, visionRange = 2) {
+function createMinion(floor, x, y, visionRange = 2) {
+  const tier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, tier);
-  const hp = 2 + Math.floor((tier - 1) / 2);
+  const hp = calculateMinionHP(floor);
   return {
     id: Math.random().toString(36).substring(2, 9),
     x, y,
@@ -534,7 +595,7 @@ function createMinion(tier, x, y, visionRange = 2) {
     spriteSrc: entry.src,
     hp,
     maxHp: hp,
-    ac: 8 + tier,
+    ac: 6 + calculateEnemyAttackBonus(floor),
     visionRange,
     attackRange: 1,
     ranged: !!entry.ranged,
@@ -542,7 +603,8 @@ function createMinion(tier, x, y, visionRange = 2) {
     isBoss: false,
     size: 1,
     cells: [{ x, y }],
-    fearCooldown: 0
+    fearCooldown: 0,
+    stunned: false
   };
 }
 
@@ -618,9 +680,12 @@ class Player {
     this.x = startX;
     this.y = startY;
     this.direction = 0;
-    this.maxHp = 61;
-    this.hp = 61;
-    this.ac = 10;
+    this.maxHp = calculateLiorMaxHP(1);
+    this.hp = this.maxHp;
+    this.ac = calculateLiorAC(1);
+    this.maxExtraHp = calculateMaxExtraHP(this.maxHp);
+    this.extraHp = 0;
+    this.stunned = false;
     this.gold = 0;
     this.kills = 0;
 
@@ -668,10 +733,21 @@ class Player {
   }
 
   cycleWeapon() {
-    const availableWeapons = Object.values(WEAPONS).filter(weapon => this.unlockedWeapons.has(weapon.id));
+    const availableWeapons = this.getAvailableWeapons();
     if (availableWeapons.length < 2) return;
     const currentIndex = availableWeapons.findIndex(weapon => weapon.id === this.equippedWeapon.id);
-    this.equippedWeapon = availableWeapons[(currentIndex + 1) % availableWeapons.length];
+    this.equippedWeapon = availableWeapons[(Math.max(0, currentIndex) + 1) % availableWeapons.length];
+  }
+
+  getAvailableWeapons() {
+    return Object.values(WEAPONS).filter(weapon => this.unlockedWeapons.has(weapon.id)
+      && (!weapon.ammoProperty || this[weapon.ammoProperty] > 0));
+  }
+
+  ensureEquippedWeaponAvailable() {
+    if (!this.getAvailableWeapons().some(weapon => weapon.id === this.equippedWeapon.id)) {
+      this.equippedWeapon = WEAPONS.SWORD;
+    }
   }
 
   advanceAction() {
@@ -696,7 +772,7 @@ class DungeonGenerator {
       return;
     }
 
-    this.dungeon.isBossRoom = this.floorNumber % 10 === 0;
+    this.dungeon.isBossRoom = this.floorNumber >= 10 && this.floorNumber <= 100 && this.floorNumber % 10 === 0;
 
     const area = dungeon.width * dungeon.height;
     this.totalEnemies = Math.max(2, Math.floor(area / 20));
@@ -792,7 +868,7 @@ class DungeonGenerator {
     const bossCells = this.generateCells(mx, my, 4);
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-    const megaBossHp = 18 + this.tier * 6;
+    const megaBossHp = calculateMegaBossHP(this.floorNumber);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -802,7 +878,7 @@ class DungeonGenerator {
       spriteSrc: entry.src,
       hp: megaBossHp,
       maxHp: megaBossHp,
-      ac: 12 + this.tier,
+      ac: 14 + calculateEnemyAttackBonus(this.floorNumber),
       visionRange: 4,
       // 8 casillas desde su fila inferior (y=5) alcanzan hasta y=13: solo queda a salvo la fila pegada al muro sur.
       attackRange: 8,
@@ -811,7 +887,8 @@ class DungeonGenerator {
       isBoss: true,
       size: 4,
       cells: bossCells,
-      fearCooldown: 0
+      fearCooldown: 0,
+      stunned: false
     });
   }
 
@@ -844,7 +921,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const miniBossHp = 6 + this.tier * 2;
+          const miniBossHp = calculateMiniBossHP(this.floorNumber);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
@@ -854,18 +931,19 @@ class DungeonGenerator {
             spriteSrc: entry.src,
             hp: miniBossHp,
             maxHp: miniBossHp,
-            ac: 10 + this.tier,
+            ac: 8 + calculateEnemyAttackBonus(this.floorNumber),
             visionRange: 3,
             attackRange: 1.5,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
             cells: candidateCells,
-            fearCooldown: 0
+            fearCooldown: 0,
+            stunned: false
           });
           sequenceCounter = 0;
         } else {
-          this.dungeon.enemies.push(createMinion(this.tier, rx, ry));
+          this.dungeon.enemies.push(createMinion(this.floorNumber, rx, ry));
           sequenceCounter++;
         }
         placed = true;
@@ -1098,6 +1176,7 @@ class Renderer {
     this.chestOpening = null;
     this.chestOpeningFrame = null;
     this.damageFlashUntil = 0;
+    this.floatingNumbers = [];
 
     this.cameraAnchor = { x: 3, y: 10 };
     this.cameraFacing = player.direction;
@@ -1531,6 +1610,36 @@ class Renderer {
       else this.animLoopActive = false;
     };
     requestAnimationFrame(step);
+  }
+
+  showFloatingNumber(x, y, text, type) {
+    this.floatingNumbers.push({ x, y, text, type, startedAt: performance.now() });
+    this.keepAnimating(1000);
+  }
+
+  drawFloatingNumbers(targetCtx, now) {
+    this.floatingNumbers = this.floatingNumbers.filter(number => now - number.startedAt < 1000);
+    const tileSize = CAMERA_CONFIG.tileSize;
+    this.floatingNumbers.forEach(number => {
+      const progress = Math.min(1, (now - number.startedAt) / 1000);
+      const { screenX, screenY } = CameraTransformer.worldToScreen(number.x, number.y, this.player);
+      const x = (screenX + 0.72) * tileSize;
+      const y = (screenY + 0.25 - progress * 0.55) * tileSize;
+
+      targetCtx.save();
+      targetCtx.globalAlpha = 1 - progress;
+      targetCtx.font = "bold 11px monospace";
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.lineWidth = 2.5;
+      targetCtx.strokeStyle = "#101010";
+      targetCtx.fillStyle = number.type === "healing"
+        ? "#5cff78"
+        : (number.type === "gold" ? "#ffdf55" : "#ff5757");
+      targetCtx.strokeText(number.text, x, y);
+      targetCtx.fillText(number.text, x, y);
+      targetCtx.restore();
+    });
   }
 
   getEnemyFrame(enemy, animation, now) {
@@ -2018,14 +2127,23 @@ class Renderer {
   }
 
   // beamReach: distancia en casillas desde Lior hasta el final del rayo.
-  playEldritchBlastAnimation(beamReach) {
+  playEldritchBlastAnimation(beamReach, rayCount = 1) {
     const centerX = CAMERA_CONFIG.playerScreenX + 0.5;
     const bottom = CAMERA_CONFIG.playerScreenY;
     const top = CAMERA_CONFIG.playerScreenY + 0.5 - beamReach;
     const rotation = this.getFacingAngle();
+    const rays = Array.from({ length: rayCount }, (_, index) => ({
+      type: "beam",
+      sheet: "eblast",
+      x: centerX + (index - (rayCount - 1) / 2) * (1.4 / rayCount),
+      bottom,
+      top,
+      width: 1.4 / rayCount,
+      rotation
+    }));
     const frames = this.getLiorRow("ELDRITCH_BLAST", LIOR_SPRITES.ELDRITCH_BLAST.length).map((sprite, index) => ({
       sprite,
-      effects: [{ type: "beam", sheet: "eblast", phase: Math.min(2, index), x: centerX, bottom, top, width: 1.4, rotation }]
+      effects: rays.map(ray => ({ ...ray, phase: Math.min(2, index) }))
     }));
     this.playSpriteAnimation(frames, 110);
   }
@@ -2196,7 +2314,9 @@ class Renderer {
             targetCtx.textBaseline = "middle";
             targetCtx.lineWidth = 3;
             targetCtx.strokeStyle = "#000000";
-            targetCtx.fillStyle = tileType === TILE_ENTRANCE ? "#00e676" : "#ffd700";
+            targetCtx.fillStyle = tileType === TILE_ENTRANCE
+              ? "#ff4141"
+              : (this.dungeon.enemies.length > 0 ? "#ffd700" : "#39ef73");
             targetCtx.strokeText(tileType === TILE_ENTRANCE ? "▼" : "▲",
               px + tileSize / 2, py + tileSize / 2);
             targetCtx.fillText(tileType === TILE_ENTRANCE ? "▼" : "▲",
@@ -2215,7 +2335,8 @@ class Renderer {
         targetCtx.lineWidth = 1;
         targetCtx.strokeRect(px, py, tileSize, tileSize);
 
-        if (this.game && this.game.showWeaponRange) {
+        const entryPreview = this.game && this.game.entryPreviewUntil > performance.now();
+        if (this.game && (this.game.showWeaponRange || entryPreview)) {
           const inRange = CombatSystem.isCellInWeaponRange(
             this.player,
             worldCoord.x,
@@ -2224,9 +2345,13 @@ class Renderer {
           );
           if (inRange && !(worldCoord.x === this.player.x && worldCoord.y === this.player.y)) {
             targetCtx.save();
-            targetCtx.strokeStyle = "rgba(255, 45, 45, 0.9)";
+            targetCtx.strokeStyle = entryPreview && !this.game.showWeaponRange
+              ? "rgba(255, 202, 72, 0.95)"
+              : "rgba(255, 45, 45, 0.9)";
             targetCtx.lineWidth = 2.5;
-            targetCtx.fillStyle = "rgba(255, 0, 0, 0.14)";
+            targetCtx.fillStyle = entryPreview && !this.game.showWeaponRange
+              ? "rgba(255, 190, 40, 0.18)"
+              : "rgba(255, 0, 0, 0.14)";
             targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
             targetCtx.strokeRect(px + 1.5, py + 1.5, tileSize - 3, tileSize - 3);
             targetCtx.restore();
@@ -2283,6 +2408,7 @@ class Renderer {
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
     this.drawEnemyProjectiles(targetCtx, frameNow);
     targetCtx.restore();
+    this.drawFloatingNumbers(targetCtx, frameNow);
     this.drawDamageFlash(targetCtx);
   }
 }
@@ -2398,17 +2524,59 @@ class CombatSystem {
     return { targets: [], impact, area: null, hitWall };
   }
 
-  static rollAttack(game, target, damage) {
-    const d20 = rollDie(20);
-    const attackTotal = d20 + game.hitBonus;
+  static resolveD20Attack(attacker, target, attackBonus) {
+    if (target.hp <= 0) return null;
+    const natural = rollDie(20);
+    const total = natural + attackBonus;
+    const fumble = natural === 1;
+    const critical = natural === 20;
+    if (fumble) attacker.stunned = true;
+    return { natural, total, fumble, critical, hit: !fumble && (critical || total >= target.ac) };
+  }
 
-    if (d20 === 20 || attackTotal >= target.ac) {
-      target.hp -= damage;
-      if (target.hp > 0) game.renderer?.playEnemyAnim(target, "hurt");
-      game.log(TEXT.logs.attackHit(attackTotal, target.ac, damage, target.name, Math.max(0, target.hp)));
-    } else {
-      game.log(TEXT.logs.attackDefended(attackTotal, target.ac, target.name));
+  static rollDamageDice(count, sides) {
+    let damage = 0;
+    for (let die = 0; die < count; die++) damage += rollDie(sides);
+    return damage;
+  }
+
+  static applyDamageToPlayer(game, player, incomingDamage) {
+    let remaining = Math.max(0, Math.floor(incomingDamage));
+    const extraDamage = Math.min(player.extraHp, remaining);
+    player.extraHp = Math.max(0, player.extraHp - extraDamage);
+    remaining -= extraDamage;
+    const hpDamage = Math.min(player.hp, remaining);
+    player.hp = Math.max(0, player.hp - hpDamage);
+    const totalDamage = extraDamage + hpDamage;
+    if (totalDamage > 0) game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage}`, "damage");
+    return { extraDamage, hpDamage, totalDamage };
+  }
+
+  static applyDamageToEnemy(game, target, incomingDamage, animate = true) {
+    if (target.hp <= 0) return 0;
+    const damage = Math.min(target.hp, Math.max(0, Math.floor(incomingDamage)));
+    target.hp = Math.max(0, target.hp - damage);
+    if (animate && target.hp > 0) game.renderer?.playEnemyAnim(target, "hurt");
+    return damage;
+  }
+
+  static rollAttack(game, target, damageSides) {
+    const result = CombatSystem.resolveD20Attack(game.player, target, game.hitBonus);
+    if (!result) return;
+    if (result.fumble) {
+      game.log(TEXT.logs.criticalMiss("Lior"));
+      return;
     }
+    if (!result.hit) {
+      game.log(TEXT.logs.attackDefended(result.total, target.ac, target.name));
+      return;
+    }
+
+    const baseDamage = rollDie(damageSides) + game.dmgBonus;
+    const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
+    const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
+    if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage}`, "damage");
+    game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
   }
 
   // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
@@ -2421,7 +2589,7 @@ class CombatSystem {
     dead.forEach(enemy => {
       game.player.kills++;
       const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-      game.player.gold += goldDrop;
+      game.addGold(goldDrop, enemy.x, enemy.y);
       game.log(TEXT.logs.goldDrop(goldDrop, enemy.name));
     });
     game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
@@ -2443,6 +2611,7 @@ class CombatSystem {
 
   static executeAttack(game) {
     const { player, dungeon } = game;
+    game.clearMistyStepConfirmation();
     game.showWeaponRange = false;
 
     if (player.hp <= 0 || game.isPausedForDialog) {
@@ -2455,9 +2624,17 @@ class CombatSystem {
       return;
     }
 
-    player.advanceAction();
-
     const weapon = player.equippedWeapon;
+
+    if (player.stunned) {
+      player.stunned = false;
+      player.advanceAction();
+      game.log(TEXT.logs.stunned("Lior"));
+      game.processEnemiesTurn();
+      game.updateHUD();
+      game.renderer.draw();
+      return;
+    }
 
     if (weapon.ammoProperty && player[weapon.ammoProperty] <= 0) {
       const noAmmoMessage = {
@@ -2468,6 +2645,8 @@ class CombatSystem {
       game.log(noAmmoMessage);
       return;
     }
+
+    player.advanceAction();
 
     let targets = [];
 
@@ -2480,6 +2659,7 @@ class CombatSystem {
       if (targets.length === 0) game.log(TEXT.logs.swordWhiff);
     } else {
       player[weapon.ammoProperty]--;
+      if (player[weapon.ammoProperty] <= 0) player.equippedWeapon = WEAPONS.SWORD;
       sounds.playShot(weapon.id !== "pistol");
       game.renderer?.commitCameraFacing();
       const shot = CombatSystem.resolveShot(player, dungeon, weapon);
@@ -2490,7 +2670,7 @@ class CombatSystem {
       }
     }
 
-    targets.forEach(target => CombatSystem.rollAttack(game, target, weapon.damage + game.dmgBonus));
+    targets.forEach(target => CombatSystem.rollAttack(game, target, weapon.damage));
     CombatSystem.applyPanic(game, CombatSystem.processDeaths(game, targets));
 
     game.processEnemiesTurn();
@@ -2511,9 +2691,16 @@ class GameController {
     this.isVictory = false;
     this.isPausedForDialog = false;
     this.showWeaponRange = false;
+    this.entryPreviewUntil = 0;
+    this.mistyStepConfirmation = null;
+    this.statusMessageTimer = null;
+    this.statusMessageFadeTimer = null;
+    this.dialogTimer = null;
+    this.dialogFadeTimer = null;
+    this.shopSelection = 0;
     this.dialogCallback = null;
     this.gamepadMapping = "standard";
-    this.controlDevice = "touch";
+    this.controlDevice = this.getPreferredControlDevice();
 
     this.initDungeonFloor();
     this.bindEvents();
@@ -2528,7 +2715,7 @@ class GameController {
   }
 
   get playerAC() {
-    return 9 + this.tier;
+    return calculateLiorAC(this.floor);
   }
 
   get hitBonus() {
@@ -2540,6 +2727,7 @@ class GameController {
   }
 
   initDeviceDetection() {
+    this.setControlDevice(this.controlDevice);
     window.addEventListener("keydown", () => this.setControlDevice("keyboard"));
     window.addEventListener("touchstart", () => this.setControlDevice("touch"));
     window.addEventListener("gamepadconnected", (event) => {
@@ -2552,15 +2740,23 @@ class GameController {
       this.gamepadMapping = "standard";
       this.lastGamepadButtons = [];
       this.lastGamepadAxes = { x: 0, y: 0 };
-      this.setControlDevice("touch");
+      this.setControlDevice(this.getPreferredControlDevice());
     });
   }
 
+  getPreferredControlDevice() {
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches;
+    const compactScreen = Math.max(window.innerWidth, window.innerHeight) <= 1000
+      && Math.min(window.innerWidth, window.innerHeight) <= 500;
+    return navigator.maxTouchPoints > 0 || coarsePointer || compactScreen ? "touch" : "keyboard";
+  }
+
   setControlDevice(device) {
-    if (this.controlDevice === device) return;
+    const changed = this.controlDevice !== device;
     this.controlDevice = device;
-    // En horizontal, teclado o mando ocultan la cruceta y los botones en pantalla.
-    document.body.classList.toggle("pad-hidden", device === "keyboard" || device === "gamepad");
+    document.body.classList.toggle("pad-hidden", device !== "touch");
+    if (!changed) return;
+    // Conserva los controles visibles y sincroniza sus leyendas con el dispositivo activo.
     this.updateButtonLabels();
   }
 
@@ -2631,6 +2827,8 @@ class GameController {
   initDungeonFloor(isMerchantTransition = false) {
     this.inMerchantFloor = isMerchantTransition;
     this.showWeaponRange = false;
+    this.mistyStepConfirmation = null;
+    this.entryPreviewUntil = 0;
 
     if (isMerchantTransition) {
       this.dungeon = new Dungeon(5, 5);
@@ -2655,7 +2853,12 @@ class GameController {
       this.player.mistyStepCharges = 2;
     }
 
+    this.player.maxHp = calculateLiorMaxHP(this.floor);
+    this.player.hp = Math.min(this.player.hp, this.player.maxHp);
+    this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
+    this.player.extraHp = Math.min(this.player.extraHp, this.player.maxExtraHp);
     this.player.ac = this.playerAC;
+    if (!isMerchantTransition) this.entryPreviewUntil = performance.now() + 1500;
 
     if (!this.renderer) {
       this.renderer = new Renderer(this.canvas, this.dungeon, this.player, this.generator);
@@ -2684,24 +2887,36 @@ class GameController {
     this.renderer.draw();
   }
 
-  showMerchantDialog(text, onDismiss) {
+  showMerchantDialog(text, onDismiss, speaker = "✦ MERCADER DE SOMBRAS ✦") {
     if (!this.dialogModal) {
       if (onDismiss) onDismiss();
       return;
     }
     this.isPausedForDialog = true;
     this.dialogCallback = onDismiss;
+    clearTimeout(this.dialogTimer);
+    clearTimeout(this.dialogFadeTimer);
 
     const dialogText = document.getElementById("dialog-text");
     if (dialogText) dialogText.textContent = text;
+    const dialogSpeaker = this.dialogModal.querySelector(".dialog-speaker");
+    if (dialogSpeaker) dialogSpeaker.textContent = speaker;
 
+    this.dialogModal.classList.remove("is-fading");
     this.dialogModal.classList.remove("hidden");
+    this.dialogFadeTimer = setTimeout(() => this.dialogModal?.classList.add("is-fading"), 2650);
+    this.dialogTimer = setTimeout(() => this.dismissMerchantDialog(), 3000);
   }
 
   dismissMerchantDialog() {
     if (!this.isPausedForDialog) return;
+    clearTimeout(this.dialogTimer);
+    clearTimeout(this.dialogFadeTimer);
     this.isPausedForDialog = false;
-    if (this.dialogModal) this.dialogModal.classList.add("hidden");
+    if (this.dialogModal) {
+      this.dialogModal.classList.remove("is-fading");
+      this.dialogModal.classList.add("hidden");
+    }
     if (typeof this.dialogCallback === "function") {
       const cb = this.dialogCallback;
       this.dialogCallback = null;
@@ -2721,8 +2936,12 @@ class GameController {
     this.closeShop();
     if (this.dialogModal) this.dialogModal.classList.add("hidden");
 
-    const logBox = document.getElementById("log-entries");
-    if (logBox) logBox.innerHTML = "";
+    this.mistyStepConfirmation = null;
+    clearTimeout(this.statusMessageTimer);
+    clearTimeout(this.statusMessageFadeTimer);
+    clearTimeout(this.dialogTimer);
+    clearTimeout(this.dialogFadeTimer);
+    this.dialogCallback = null;
 
     this.player = null;
     this.initDungeonFloor(false);
@@ -2730,6 +2949,8 @@ class GameController {
 
   openShop() {
     if (!this.shopModal) return;
+    this.shopSelection = 0;
+    this.updateShopSelection();
     this.updateShopHUD();
     this.shopModal.classList.remove("hidden");
   }
@@ -2739,9 +2960,38 @@ class GameController {
     this.shopModal.classList.add("hidden");
   }
 
+  updateShopSelection() {
+    const items = [...(this.shopModal?.querySelectorAll(".shop-item") || [])];
+    if (items.length === 0) return;
+    this.shopSelection = (this.shopSelection + items.length) % items.length;
+    items.forEach((item, index) => {
+      const selected = index === this.shopSelection;
+      item.classList.toggle("is-selected", selected);
+      item.setAttribute("aria-selected", String(selected));
+    });
+  }
+
+  moveShopSelection(delta) {
+    this.shopSelection += delta;
+    this.updateShopSelection();
+  }
+
+  purchaseSelectedShopItem() {
+    const item = this.shopModal?.querySelector(`.shop-item[data-shop-index="${this.shopSelection}"]`);
+    item?.querySelector("button")?.click();
+  }
+
   updateShopHUD() {
     const goldDisplay = document.getElementById("shop-gold-display");
     if (goldDisplay) goldDisplay.textContent = this.player.gold;
+  }
+
+  addGold(amount, x = this.player.x, y = this.player.y) {
+    const reward = Math.max(0, Math.floor(amount));
+    if (reward === 0) return;
+    this.player.gold += reward;
+    this.updateHUD();
+    this.renderer?.showFloatingNumber(x, y, `+${reward} PO`, "gold");
   }
 
   initShopEvents() {
@@ -2752,6 +3002,22 @@ class GameController {
       this.dialogModal.addEventListener("click", () => this.dismissMerchantDialog());
       this.dialogModal.addEventListener("touchstart", () => this.dismissMerchantDialog(), { passive: true });
     }
+
+    this.shopModal?.querySelectorAll(".shop-item").forEach((item, index) => {
+      item.addEventListener("pointerenter", () => {
+        this.shopSelection = index;
+        this.updateShopSelection();
+      });
+      item.addEventListener("focusin", () => {
+        this.shopSelection = index;
+        this.updateShopSelection();
+      });
+      item.addEventListener("click", event => {
+        if (event.target.closest("button")) return;
+        this.shopSelection = index;
+        this.updateShopSelection();
+      });
+    });
 
     const buyPistol = document.getElementById("buy-pistol-ammo");
     if (buyPistol) {
@@ -2803,13 +3069,18 @@ class GameController {
       buyPotion.addEventListener("click", () => {
         if (this.player.gold >= 2) {
           const heal = rollDie(4) + rollDie(4) + 4;
-          if (this.player.hp < this.player.maxHp) {
+          const canRestore = this.player.hp < this.player.maxHp
+            || this.player.extraHp < this.player.maxExtraHp;
+          if (canRestore) {
             this.player.gold -= 2;
-            this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+            const restored = restoreHealth(this.player, heal);
+            if (restored.totalRestored > 0) {
+              this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored}`, "healing");
+            }
             sounds.playHeal();
             this.updateHUD();
             this.updateShopHUD();
-            this.log(TEXT.logs.boughtPotion(heal));
+            this.log(TEXT.logs.boughtPotion(restored.totalRestored));
           }
         }
       });
@@ -2817,43 +3088,68 @@ class GameController {
   }
 
   log(message) {
-    const logBox = document.getElementById("log-entries");
-    if (!logBox) return;
-    const entry = document.createElement("div");
-    entry.textContent = `> ${message}`;
-    logBox.appendChild(entry);
-    const container = document.getElementById("log-container");
-    if (container) container.scrollTop = 99999;
+    const status = document.getElementById("hud-status");
+    if (!status) return;
+    status.textContent = message;
+    status.classList.remove("is-fading");
+    clearTimeout(this.statusMessageTimer);
+    clearTimeout(this.statusMessageFadeTimer);
+    this.statusMessageFadeTimer = setTimeout(() => status.classList.add("is-fading"), 2700);
+    this.statusMessageTimer = setTimeout(() => {
+      if (status.textContent === message) {
+        status.textContent = "";
+        status.classList.remove("is-fading");
+      }
+    }, 3000);
   }
 
   updateHUD() {
     const elFloor = document.getElementById("hud-floor");
     const elDir = document.getElementById("hud-dir");
-    const elHp = document.getElementById("hud-hp");
+    const elDirArrow = document.getElementById("hud-dir-arrow");
+    const elVitals = document.getElementById("hud-vitals");
+    const elHpFill = document.getElementById("hud-hp-fill");
+    const elExtraFill = document.getElementById("hud-extra-fill");
     const elGold = document.getElementById("hud-gold");
     const elAmmo = document.getElementById("hud-ammo");
     const elWeapon = document.getElementById("hud-weapon");
+    const elWeaponIcon = document.getElementById("hud-weapon-icon");
     const elMisty = document.getElementById("misty-charges");
 
-    if (elFloor) elFloor.textContent = this.inMerchantFloor ? `${this.floor} (Refugio)` : this.floor;
-    if (elDir) elDir.textContent = TEXT.cardinals[this.player.direction];
-    if (elHp) elHp.textContent = this.player.hp;
+    this.player.ensureEquippedWeaponAvailable();
+    this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
+    this.player.extraHp = Math.max(0, Math.min(this.player.extraHp, this.player.maxExtraHp));
+    const directionNames = ["Norte", "Este", "Sur", "Oeste"];
+    const directionArrows = ["↑", "→", "↓", "←"];
+    const totalHealthCapacity = Math.max(1, this.player.maxHp + this.player.maxExtraHp);
+    if (elFloor) elFloor.textContent = String(this.floor).padStart(2, "0");
+    if (elDir) elDir.textContent = directionNames[this.player.direction];
+    if (elDirArrow) elDirArrow.textContent = directionArrows[this.player.direction];
+    if (elVitals) elVitals.textContent = `${this.player.hp} / ${this.player.maxHp} (+${this.player.extraHp})`;
+    if (elHpFill) elHpFill.style.width = `${(this.player.hp / totalHealthCapacity) * 100}%`;
+    if (elExtraFill) elExtraFill.style.width = `${(this.player.extraHp / totalHealthCapacity) * 100}%`;
     if (elGold) elGold.textContent = this.player.gold;
-    if (elAmmo) {
-      elAmmo.textContent = `P:${this.player.ammoPistol} | M:${this.player.ammoMusket} | T:${this.player.ammoBlunderbuss}`;
-    }
+    const weapon = this.player.equippedWeapon;
+    if (elAmmo) elAmmo.textContent = weapon.ammoProperty ? `${this.player[weapon.ammoProperty]} balas` : "∞";
     if (elWeapon) elWeapon.textContent = this.player.equippedWeapon.name;
+    if (elWeaponIcon) {
+      elWeaponIcon.className = `weapon-icon weapon-icon-${weapon.id}`;
+      elWeaponIcon.textContent = "";
+    }
     if (elMisty) elMisty.textContent = this.player.mistyStepCharges;
 
     const doorEl = document.getElementById("hud-door");
+    const exitIcon = document.querySelector(".exit-icon");
     if (doorEl) {
       const enemiesRemain = this.dungeon.enemies.length > 0;
       if (enemiesRemain) {
         doorEl.textContent = TEXT.doorLocked(this.dungeon.enemies.length);
         doorEl.className = "door-locked";
+        if (exitIcon) exitIcon.style.color = "#ffd700";
       } else {
         doorEl.textContent = TEXT.doorOpen;
         doorEl.className = "door-open";
+        if (exitIcon) exitIcon.style.color = "#39ef73";
       }
     }
 
@@ -2887,7 +3183,7 @@ class GameController {
     }
 
     const weaponBtn = document.getElementById("btn-d");
-    if (weaponBtn) weaponBtn.disabled = this.player.unlockedWeapons.size <= 1 || this.player.hp <= 0;
+    if (weaponBtn) weaponBtn.disabled = this.player.getAvailableWeapons().length <= 1 || this.player.hp <= 0;
   }
 
   // Arena de mega jefe: invoca 1 esbirro en una celda libre distante si hay menos del límite vivos.
@@ -2910,7 +3206,7 @@ class GameController {
     const distant = freeCells.filter(c => Math.hypot(c.x - this.player.x, c.y - this.player.y) >= 3);
     const pool = distant.length > 0 ? distant : freeCells;
     const spot = pool[Math.floor(Math.random() * pool.length)];
-    this.dungeon.enemies.push(createMinion(this.tier, spot.x, spot.y, 3));
+    this.dungeon.enemies.push(createMinion(this.floor, spot.x, spot.y, 3));
   }
 
   triggerGameOver() {
@@ -2970,18 +3266,53 @@ class GameController {
     }, 400);
   }
 
+  clearMistyStepConfirmation() {
+    this.mistyStepConfirmation = null;
+  }
+
   castMistyStep() {
     this.showWeaponRange = false;
     if (this.isVictory || this.isPausedForDialog || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
 
+    const destination = this.getMistyStepDestination();
+    if (destination.blocked) return;
+    const confirmation = this.mistyStepConfirmation;
+    const isConfirmed = confirmation
+      && confirmation.floor === this.floor
+      && confirmation.x === destination.x
+      && confirmation.y === destination.y;
+
+    if (destination.dangerous && !isConfirmed) {
+      this.mistyStepConfirmation = { floor: this.floor, x: destination.x, y: destination.y };
+      this.showMerchantDialog("«Sería mejor que no me transporte ahí...»", null, "LIOR");
+      return;
+    }
+
+    this.mistyStepConfirmation = null;
     this.player.advanceAction();
     sounds.playMisty();
     this.player.mistyStepCharges--;
 
+    if (destination.dangerous) {
+      this.player.x = destination.x;
+      this.player.y = destination.y;
+      this.player.hp = 0;
+      this.updateHUD();
+      this.renderer.draw();
+      this.triggerGameOver();
+      return;
+    }
+
+    this.player.x = destination.x;
+    this.player.y = destination.y;
+    this.renderer.commitCameraFacing();
+    this.renderer.playMistyStep();
+    this.handleTileInteractions();
+    this.updateHUD();
+  }
+
+  getMistyStepDestination() {
     const dirVec = DIR_VECTORS[this.player.direction];
-    let targetX = this.player.x;
-    let targetY = this.player.y;
-    let foundOpenTile = false;
     let encounteredObstacle = false;
 
     for (let step = 1; step <= 8; step++) {
@@ -2989,44 +3320,30 @@ class GameController {
       const cy = this.player.y + dirVec.y * step;
 
       if (!this.dungeon.isInsideBounds(cx, cy)) {
-        this.player.hp = 0;
-        this.updateHUD();
-        this.renderer.draw();
-        this.triggerGameOver();
-        return;
+        return { x: cx, y: cy, dangerous: true, blocked: false };
       }
 
       const tile = this.dungeon.getTile(cx, cy);
       if (tile === TILE_WALL) {
         encounteredObstacle = true;
       } else if (encounteredObstacle && (tile === TILE_FLOOR || tile === TILE_CHEST)) {
-        targetX = cx;
-        targetY = cy;
-        foundOpenTile = true;
-        break;
+        return { x: cx, y: cy, dangerous: false, blocked: false };
       }
     }
 
-    if (foundOpenTile) {
-      this.player.x = targetX;
-      this.player.y = targetY;
-    } else {
-      const freeStep = this.player.getNextForwardPos(3);
-      const freeStepTile = this.dungeon.getTile(freeStep.x, freeStep.y);
-      if (this.dungeon.isInsideBounds(freeStep.x, freeStep.y)
-        && (freeStepTile === TILE_FLOOR || freeStepTile === TILE_CHEST)) {
-        this.player.x = freeStep.x;
-        this.player.y = freeStep.y;
-      }
+    const freeStep = this.player.getNextForwardPos(3);
+    const freeStepTile = this.dungeon.getTile(freeStep.x, freeStep.y);
+    if (!this.dungeon.isInsideBounds(freeStep.x, freeStep.y) || freeStepTile === TILE_OUT_OF_BOUNDS) {
+      return { x: freeStep.x, y: freeStep.y, dangerous: true, blocked: false };
     }
-
-    this.renderer.commitCameraFacing();
-    this.renderer.playMistyStep();
-    this.handleTileInteractions();
-    this.updateHUD();
+    if (freeStepTile === TILE_FLOOR || freeStepTile === TILE_CHEST) {
+      return { x: freeStep.x, y: freeStep.y, dangerous: false, blocked: false };
+    }
+    return { x: this.player.x, y: this.player.y, dangerous: false, blocked: true };
   }
 
   castEldritchBlast() {
+    this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
@@ -3065,14 +3382,18 @@ class GameController {
     sounds.playEldritchBlast();
     this.player.blastCurrentCharges = 0;
     this.renderer.commitCameraFacing();
-    this.renderer.playEldritchBlastAnimation(beamReach);
+    const rayCount = calculateEldritchBlastRayCount(this.floor);
+    const damageByRay = splitDamageAcrossRays(calculateEldritchBlastDamage(this.floor), rayCount);
+    this.renderer.playEldritchBlastAnimation(beamReach, rayCount);
 
     if (hitEnemy) {
-      // Daño fijo establecido exactamente en 11 puntos, sin modificadores
-      const blastDamage = 11;
-      hitEnemy.hp -= blastDamage;
+      let blastDamage = 0;
+      damageByRay.forEach(rayDamage => {
+        blastDamage += CombatSystem.applyDamageToEnemy(this, hitEnemy, rayDamage, false);
+      });
+      if (blastDamage > 0) this.renderer.showFloatingNumber(hitEnemy.x, hitEnemy.y, `-${blastDamage}`, "damage");
       if (hitEnemy.hp > 0) this.renderer.playEnemyAnim(hitEnemy, "hurt");
-      this.log(TEXT.logs.blastFired(hitEnemy.name, blastDamage));
+      this.log(TEXT.logs.blastFired(hitEnemy.name, blastDamage, rayCount));
       CombatSystem.applyPanic(this, CombatSystem.processDeaths(this, [hitEnemy]));
     } else {
       this.log(TEXT.logs.blastWhiff);
@@ -3084,6 +3405,7 @@ class GameController {
   }
 
   cycleWeapon() {
+    this.clearMistyStepConfirmation();
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
     if (this.player.unlockedWeapons.size < 2) return;
     this.player.cycleWeapon();
@@ -3096,20 +3418,22 @@ class GameController {
   }
 
   turnLeft() {
-    this.showWeaponRange = false;
+    this.clearMistyStepConfirmation();
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
-    this.player.advanceAction();
     this.player.turnLeft();
+    this.showWeaponRange = true;
+    this.renderer.commitCameraFacing();
     sounds.playStep();
     this.updateHUD();
     this.renderer.draw();
   }
 
   turnRight() {
-    this.showWeaponRange = false;
+    this.clearMistyStepConfirmation();
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
-    this.player.advanceAction();
     this.player.turnRight();
+    this.showWeaponRange = true;
+    this.renderer.commitCameraFacing();
     sounds.playStep();
     this.updateHUD();
     this.renderer.draw();
@@ -3164,6 +3488,12 @@ class GameController {
       if (this.player.hp <= 0) return;
       if (!this.dungeon.enemies.includes(enemy) || !enemy.cells || enemy.cells.length === 0) return;
 
+      if (enemy.stunned) {
+        enemy.stunned = false;
+        this.log(TEXT.logs.stunned(enemy.name));
+        return;
+      }
+
       if (this.dungeon.isBossRoom) enemy.fearCooldown = 0;
       if (enemy.fearCooldown > 0) enemy.fearCooldown--;
 
@@ -3178,20 +3508,27 @@ class GameController {
       }
 
       if (canAttack) {
-        const eD20 = rollDie(20);
-        const hitMod = this.hitBonus;
-        const dmgMod = this.dmgBonus;
-        const totalAtk = eD20 + hitMod;
-        const hit = totalAtk >= this.player.ac;
+        const attack = CombatSystem.resolveD20Attack(
+          enemy,
+          this.player,
+          calculateEnemyAttackBonus(this.floor)
+        );
+        if (!attack) return;
 
         this.renderer.playEnemyAnim(enemy, "attack");
         const isRanged = enemy.isBoss || enemy.ranged || distToPlayer > 1;
-        const impactDelay = isRanged ? this.renderer.fireEnemyProjectile(enemy, hit) : 0;
+        const impactDelay = isRanged ? this.renderer.fireEnemyProjectile(enemy, attack.hit) : 0;
 
-        if (hit) {
-          const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
-          const totalDmg = baseDmg + dmgMod;
-          const hitMessage = TEXT.logs.enemyHit(enemy.name, totalAtk, this.player.ac, totalDmg);
+        if (attack.fumble) {
+          this.log(TEXT.logs.criticalMiss(enemy.name));
+          return;
+        }
+
+        if (attack.hit) {
+          const damageSides = enemy.isMegaBoss ? 8 : (enemy.isBoss ? 4 : 2);
+          const baseDamage = CombatSystem.rollDamageDice(this.tier, damageSides);
+          const totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
+          const hitMessage = TEXT.logs.enemyHit(enemy.name, attack.total, this.player.ac, totalDmg);
 
           if (isRanged) {
             const turnDungeon = this.dungeon;
@@ -3199,7 +3536,7 @@ class GameController {
             setTimeout(() => {
               if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory) return;
               sounds.playHurt();
-              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
               this.log(hitMessage);
               this.updateHUD();
               this.renderer.playHurt(this.player.hp <= 0);
@@ -3207,7 +3544,7 @@ class GameController {
             }, impactDelay);
           } else {
             sounds.playHurt();
-            this.player.hp = Math.max(0, this.player.hp - totalDmg);
+            CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
             tookDamage = true;
             this.log(hitMessage);
           }
@@ -3304,6 +3641,7 @@ class GameController {
   }
 
   moveForward() {
+    this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
@@ -3354,6 +3692,7 @@ class GameController {
   }
 
   moveBackward() {
+    this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
@@ -3403,10 +3742,13 @@ class GameController {
 
     if (Math.random() < 0.5) {
       const healing = rollDie(4) + rollDie(4) + 4;
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + healing);
+      const restored = restoreHealth(this.player, healing);
+      if (restored.totalRestored > 0) {
+        this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored}`, "healing");
+      }
       sounds.playHeal();
       this.renderer.playDrinkPotion();
-      this.log(TEXT.logs.chestPotion(healing));
+      this.log(TEXT.logs.chestPotion(restored.totalRestored));
     } else {
       const weaponOptions = [WEAPONS.PISTOL, WEAPONS.MUSKET, WEAPONS.BLUNDERBUSS];
       const weapon = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
@@ -3417,7 +3759,6 @@ class GameController {
       this.player[weapon.ammoProperty] += ammo;
 
       if (isNewWeapon) {
-        this.player.equippedWeapon = weapon;
         this.log(TEXT.logs.chestWeapon(weapon.name, ammo));
       } else {
         this.log(TEXT.logs.chestAmmo(weapon.name, ammo));
@@ -3434,7 +3775,7 @@ class GameController {
 
     if (bunnyIndex !== -1) {
       this.dungeon.npcs.splice(bunnyIndex, 1);
-      this.player.gold += 5;
+      this.addGold(5, this.player.x, this.player.y);
       sounds.playCoin();
       this.log(TEXT.logs.bunnyCaught);
       this.updateHUD();
@@ -3528,6 +3869,33 @@ class GameController {
     window.addEventListener("keydown", (e) => {
       if (this.isVictory) return;
 
+      if (this.shopModal && !this.shopModal.classList.contains("hidden")) {
+        switch (e.key) {
+          case "ArrowUp":
+          case "w":
+          case "W":
+            if (!e.repeat) this.moveShopSelection(-1);
+            e.preventDefault();
+            break;
+          case "ArrowDown":
+          case "s":
+          case "S":
+            if (!e.repeat) this.moveShopSelection(1);
+            e.preventDefault();
+            break;
+          case "Enter":
+          case " ":
+            if (!e.repeat) this.purchaseSelectedShopItem();
+            e.preventDefault();
+            break;
+          case "Escape":
+            this.closeShop();
+            e.preventDefault();
+            break;
+        }
+        return;
+      }
+
       if (this.isPausedForDialog) {
         if (["Enter", " ", "Escape"].includes(e.key)) {
           this.dismissMerchantDialog();
@@ -3563,21 +3931,24 @@ class GameController {
           break;
         case "k":
         case "K":
+          if (!e.repeat) CombatSystem.executeAttack(this);
+          break;
         case "Enter":
         case " ":
-          CombatSystem.executeAttack(this);
+          if (e.target?.closest?.("button")) break;
+          if (!e.repeat) CombatSystem.executeAttack(this);
           break;
         case "l":
         case "L":
-          this.castMistyStep();
+          if (!e.repeat) this.castMistyStep();
           break;
         case "j":
         case "J":
-          this.castEldritchBlast();
+          if (!e.repeat) this.castEldritchBlast();
           break;
         case "i":
         case "I":
-          this.cycleWeapon();
+          if (!e.repeat) this.cycleWeapon();
           break;
         case "Escape":
           this.closeShop();
@@ -3605,44 +3976,60 @@ class GameController {
         }
         if (this.controlDevice !== "gamepad") this.setControlDevice("gamepad");
 
-        const axisX = gp.axes[0] || 0;
-        const axisY = gp.axes[1] || 0;
-        const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
-        const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
-        const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
-        const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+        const threshold = 0.25;
+        const rawAxisX = gp.axes[0] || 0;
+        const rawAxisY = gp.axes[1] || 0;
+        const axisX = Math.abs(rawAxisX) >= threshold ? Math.sign(rawAxisX) : 0;
+        const axisY = Math.abs(rawAxisY) >= threshold ? Math.sign(rawAxisY) : 0;
+        const btnStates = gp.buttons.map(button => button.pressed);
+        const pressedThisFrame = index => !!btnStates[index] && !this.lastGamepadButtons[index];
+        const dpadUp = !!gp.buttons[12]?.pressed;
+        const dpadDown = !!gp.buttons[13]?.pressed;
+        const dpadLeft = !!gp.buttons[14]?.pressed;
+        const dpadRight = !!gp.buttons[15]?.pressed;
+        const inputX = dpadLeft ? -1 : (dpadRight ? 1 : axisX);
+        const inputY = dpadUp ? -1 : (dpadDown ? 1 : axisY);
+        const movedX = inputX !== 0 && inputX !== this.lastGamepadAxes.x;
+        const movedY = inputY !== 0 && inputY !== this.lastGamepadAxes.y;
+        const gamepadActions = ACTION_BINDINGS.gamepad;
+        const shopOpen = this.shopModal && !this.shopModal.classList.contains("hidden");
 
-        const threshold = 0.5;
-        const btnStates = gp.buttons.map(b => b.pressed);
-
-        if (this.isPausedForDialog) {
-          if (btnStates.some((pressed, idx) => pressed && !this.lastGamepadButtons[idx])) {
-            this.dismissMerchantDialog();
-          }
+        if (shopOpen) {
+          if (movedY) this.moveShopSelection(inputY < 0 ? -1 : 1);
+          if (pressedThisFrame(gamepadActions.attack.index)) this.purchaseSelectedShopItem();
+          if (pressedThisFrame(gamepadActions.mist.index)) this.closeShop();
+        } else if (this.isPausedForDialog) {
+          if (pressedThisFrame(gamepadActions.attack.index)
+            || pressedThisFrame(gamepadActions.mist.index)
+            || pressedThisFrame(9)) this.dismissMerchantDialog();
         } else {
-          if ((axisY < -threshold || dpadUp) && this.lastGamepadAxes.y >= -threshold) this.moveForward();
-          else if ((axisY > threshold || dpadDown) && this.lastGamepadAxes.y <= threshold) this.moveBackward();
-          else if ((axisX < -threshold || dpadLeft) && this.lastGamepadAxes.x >= -threshold) this.turnLeft();
-          else if ((axisX > threshold || dpadRight) && this.lastGamepadAxes.x <= threshold) this.turnRight();
+          if (movedY || movedX) {
+            if (this.renderer.cameraMode === "fixed") {
+              if (movedY) this.moveCardinal(inputY < 0 ? 0 : 2);
+              else this.moveCardinal(inputX < 0 ? 3 : 1);
+            } else if (movedY) {
+              if (inputY < 0) this.moveForward();
+              else this.moveBackward();
+            } else if (inputX < 0) {
+              this.turnLeft();
+            } else {
+              this.turnRight();
+            }
+          }
 
-          const gamepadActions = ACTION_BINDINGS.gamepad;
-          if (btnStates[gamepadActions.attack.index] && !this.lastGamepadButtons[gamepadActions.attack.index]) {
-            CombatSystem.executeAttack(this);
-          }
-          if (btnStates[gamepadActions.mist.index] && !this.lastGamepadButtons[gamepadActions.mist.index]) {
-            this.castMistyStep();
-          }
-          if (btnStates[gamepadActions.blast.index] && !this.lastGamepadButtons[gamepadActions.blast.index]) {
-            this.castEldritchBlast();
-          }
-          if (btnStates[gamepadActions.weapon.index] && !this.lastGamepadButtons[gamepadActions.weapon.index]) {
-            this.cycleWeapon();
-          }
+          if (pressedThisFrame(gamepadActions.attack.index)) CombatSystem.executeAttack(this);
+          if (pressedThisFrame(gamepadActions.mist.index)) this.castMistyStep();
+          if (pressedThisFrame(gamepadActions.blast.index)) this.castEldritchBlast();
+          if (pressedThisFrame(gamepadActions.weapon.index)
+            || gamepadActions.weaponAlt.some(pressedThisFrame)) this.cycleWeapon();
         }
 
-        this.lastGamepadAxes.x = (axisX < -threshold || dpadLeft) ? -1 : (axisX > threshold || dpadRight ? 1 : 0);
-        this.lastGamepadAxes.y = (axisY < -threshold || dpadUp) ? -1 : (axisY > threshold || dpadDown ? 1 : 0);
+        this.lastGamepadAxes.x = inputX;
+        this.lastGamepadAxes.y = inputY;
         this.lastGamepadButtons = btnStates;
+      } else {
+        this.lastGamepadAxes = { x: 0, y: 0 };
+        this.lastGamepadButtons = [];
       }
       requestAnimationFrame(pollGamepad);
     };
