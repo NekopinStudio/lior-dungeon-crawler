@@ -105,6 +105,40 @@ const LIOR_SPRITES = Object.fromEntries(Object.entries(LIOR_ROWS).map(([name, ro
 ]));
 
 /**
+ * lior2.png (alfa real): vistas frontal y lateral derecha. Los rangos x excluyen las etiquetas de fila.
+ */
+const LIOR2_ROWS = {
+  FRONT_IDLE: { view: "front", y0: 0,    y1: 319,  xs: [[316, 478], [538, 699], [758, 920], [978, 1139], [1199, 1357], [1419, 1577], [1637, 1796]] },
+  FRONT_WALK: { view: "front", y0: 337,  y1: 657,  xs: [[328, 472], [550, 695], [774, 918], [998, 1142], [1208, 1368], [1446, 1591]] },
+  FRONT_GUN:  { view: "front", y0: 673,  y1: 991,  xs: [[397, 612], [924, 1117], [1308, 1530]] },
+  SIDE_IDLE:  { view: "side",  y0: 1012, y1: 1324, xs: [[358, 509], [574, 723], [787, 937], [1001, 1151], [1214, 1365], [1429, 1579], [1646, 1795], [1858, 2009]] },
+  SIDE_WALK:  { view: "side",  y0: 1334, y1: 1628, xs: [[407, 556], [697, 848], [983, 1134], [1251, 1400], [1521, 1669]] },
+  // Destello y haz recortados (los dibuja el sistema de efectos); el primer frame se omite porque el rótulo de la hoja le tapa el sombrero.
+  SIDE_GUN:   { view: "side",  y0: 1647, y1: 1949, xs: [[732, 933], [1013, 1233]] }
+};
+
+const LIOR2_SPRITES = Object.fromEntries(Object.entries(LIOR2_ROWS).map(([name, row]) => [
+  name,
+  row.xs.map(([x0, x1]) => ({ sheet: "lior2", view: row.view, x: x0, y: row.y0, w: x1 - x0 + 1, h: row.y1 - row.y0 + 1 }))
+]));
+
+const flipFrames = frames => frames.map(frame => ({ ...frame, flip: true }));
+
+// Filas de lior2 por encaramiento (1 Este, 2 Sur, 3 Oeste reflejado); el Norte conserva lior.png.
+const LIOR_FACING_FRAMES = {
+  2: { IDLE: LIOR2_SPRITES.FRONT_IDLE, WALK: LIOR2_SPRITES.FRONT_WALK, GUN_RECOIL: LIOR2_SPRITES.FRONT_GUN, ELDRITCH_BLAST: LIOR2_SPRITES.FRONT_GUN },
+  1: { IDLE: LIOR2_SPRITES.SIDE_IDLE, WALK: LIOR2_SPRITES.SIDE_WALK, GUN_RECOIL: LIOR2_SPRITES.SIDE_GUN, ELDRITCH_BLAST: LIOR2_SPRITES.SIDE_GUN },
+  3: {
+    IDLE: flipFrames(LIOR2_SPRITES.SIDE_IDLE),
+    WALK: flipFrames(LIOR2_SPRITES.SIDE_WALK),
+    GUN_RECOIL: flipFrames(LIOR2_SPRITES.SIDE_GUN),
+    ELDRITCH_BLAST: flipFrames(LIOR2_SPRITES.SIDE_GUN)
+  }
+};
+
+const LIOR2_REFERENCE = { front: LIOR2_SPRITES.FRONT_IDLE[0], side: LIOR2_SPRITES.SIDE_IDLE[0] };
+
+/**
  * EFECTOS DE ARMAS: 3 fases por hoja. "cols" = columnas iguales; "panels" = recortes
  * manuales (el trabuco dibuja un panel completo de 5x2 casillas).
  */
@@ -342,7 +376,15 @@ const ACTION_BINDINGS = {
   }
 };
 
+// Modo vertical: viewport 7x12 con el mundo rotando. Modo horizontal: 10x10 con Norte fijo y ancla por encaramiento (N, E, S, O).
+const CAMERA_PROFILES = {
+  classic: { cols: 7, rows: 12, tileSize: 42, anchors: [{ x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }] },
+  fixed: { cols: 10, rows: 10, tileSize: 40, anchors: [{ x: 5, y: 8 }, { x: 1, y: 5 }, { x: 5, y: 1 }, { x: 8, y: 5 }] }
+};
+
+// Estado vivo de la cámara; playerScreenX/Y son la casilla entera de Lior en pantalla.
 const CAMERA_CONFIG = {
+  mode: "classic",
   cols: 7,
   rows: 12,
   tileSize: 42,
@@ -924,6 +966,9 @@ class CameraTransformer {
   static screenToWorld(screenX, screenY, player) {
     const lateral = screenX - CAMERA_CONFIG.playerScreenX;
     const forward = CAMERA_CONFIG.playerScreenY - screenY;
+    if (CAMERA_CONFIG.mode === "fixed") {
+      return { x: player.x + lateral, y: player.y - forward };
+    }
     const basis = CameraTransformer.getBasis(player.direction);
     return {
       x: player.x + basis.forward.x * forward + basis.right.x * lateral,
@@ -934,6 +979,9 @@ class CameraTransformer {
   static worldToScreen(worldX, worldY, player) {
     const dx = worldX - player.x;
     const dy = worldY - player.y;
+    if (CAMERA_CONFIG.mode === "fixed") {
+      return { screenX: CAMERA_CONFIG.playerScreenX + dx, screenY: CAMERA_CONFIG.playerScreenY + dy };
+    }
     const basis = CameraTransformer.getBasis(player.direction);
     const forward = dx * basis.forward.x + dy * basis.forward.y;
     const lateral = dx * basis.right.x + dy * basis.right.y;
@@ -1031,6 +1079,7 @@ class Renderer {
     this.keyedSpriteCache = new Map();
 
     this.liorSheet = this.loadTerrainTexture("Assets/Lior/lior.png");
+    this.lior2Sheet = this.loadTerrainTexture("Assets/Lior/lior2.png");
     this.effectImages = Object.fromEntries(
       Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
     );
@@ -1050,10 +1099,117 @@ class Renderer {
     this.chestOpeningFrame = null;
     this.damageFlashUntil = 0;
 
+    this.cameraAnchor = { x: 3, y: 10 };
+    this.cameraFacing = player.direction;
+    this.cameraOffset = { x: 0, y: 0 };
+    this.lastCameraTick = 0;
+    this.cameraMode = null;
+    this.setCameraMode(Renderer.detectCameraMode(), false);
+
+    // Girar el dispositivo o redimensionar solo cambia el viewport; la partida no se toca.
+    let resizeTimer = null;
+    const onViewportChange = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const mode = Renderer.detectCameraMode();
+        if (mode !== this.cameraMode) this.setCameraMode(mode, true);
+      }, 120);
+    };
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("orientationchange", onViewportChange);
+
     // Ciclo de reposo (IDLE) de Lior.
     setInterval(() => {
       if (!this.playerAnimation && !this.chestOpening) this.draw();
     }, 100);
+  }
+
+  static detectCameraMode() {
+    return window.innerWidth > window.innerHeight ? "fixed" : "classic";
+  }
+
+  // Cambia viewport, tamaño de celda y canvas sin tocar mazmorra, niebla, enemigos ni estado de Lior.
+  setCameraMode(mode, animate) {
+    const profile = CAMERA_PROFILES[mode];
+    this.cameraMode = mode;
+    CAMERA_CONFIG.mode = mode;
+    CAMERA_CONFIG.cols = profile.cols;
+    CAMERA_CONFIG.rows = profile.rows;
+    CAMERA_CONFIG.tileSize = profile.tileSize;
+
+    this.canvas.width = profile.cols * profile.tileSize;
+    this.canvas.height = profile.rows * profile.tileSize;
+    this.canvas.style.aspectRatio = `${profile.cols} / ${profile.rows}`;
+    document.body.classList.toggle("mode-landscape", mode === "fixed");
+
+    this.snapCamera();
+
+    if (animate) {
+      this.canvas.classList.remove("viewport-morph");
+      void this.canvas.offsetWidth;
+      this.canvas.classList.add("viewport-morph");
+    }
+    this.draw();
+  }
+
+  snapCamera() {
+    this.cameraFacing = this.player.direction;
+    const anchor = CAMERA_PROFILES[this.cameraMode].anchors[this.cameraFacing];
+    this.cameraAnchor = { ...anchor };
+    CAMERA_CONFIG.playerScreenX = anchor.x;
+    CAMERA_CONFIG.playerScreenY = anchor.y;
+    this.cameraOffset = { x: 0, y: 0 };
+  }
+
+  // Fija el encaramiento del ancla solo al caminar o ejecutar/preparar una acción balística; un giro no la mueve.
+  commitCameraFacing() {
+    if (this.cameraFacing === this.player.direction) return;
+    this.cameraFacing = this.player.direction;
+    this.lastCameraTick = performance.now();
+    this.keepAnimating(700);
+  }
+
+  updateCamera(now) {
+    if (this.cameraMode !== "fixed") {
+      this.cameraOffset = { x: 0, y: 0 };
+      return;
+    }
+    const target = CAMERA_PROFILES.fixed.anchors[this.cameraFacing];
+    const anchor = this.cameraAnchor;
+    const dt = Math.min(100, Math.max(0, now - (this.lastCameraTick || now)));
+    this.lastCameraTick = now;
+    const blend = 1 - Math.exp(-dt / 70);
+    anchor.x += (target.x - anchor.x) * blend;
+    anchor.y += (target.y - anchor.y) * blend;
+    if (Math.abs(target.x - anchor.x) < 0.01 && Math.abs(target.y - anchor.y) < 0.01) {
+      anchor.x = target.x;
+      anchor.y = target.y;
+    } else {
+      this.keepAnimating(100);
+    }
+
+    CAMERA_CONFIG.playerScreenX = Math.round(anchor.x);
+    CAMERA_CONFIG.playerScreenY = Math.round(anchor.y);
+    this.cameraOffset = {
+      x: (anchor.x - CAMERA_CONFIG.playerScreenX) * CAMERA_CONFIG.tileSize,
+      y: (anchor.y - CAMERA_CONFIG.playerScreenY) * CAMERA_CONFIG.tileSize
+    };
+  }
+
+  // En la cámara fija el giro se ve en el sprite; en la clásica Lior siempre mira hacia arriba.
+  getLiorFacing() {
+    return CAMERA_CONFIG.mode === "fixed" ? this.player.direction : 0;
+  }
+
+  getFacingAngle() {
+    return CAMERA_CONFIG.mode === "fixed" ? this.player.direction * Math.PI / 2 : 0;
+  }
+
+  // Filas de Lior para el encaramiento actual; `count` remuestrea para conservar el ritmo de los efectos.
+  getLiorRow(name, count = 0) {
+    const frames = LIOR_FACING_FRAMES[this.getLiorFacing()]?.[name] ?? LIOR_SPRITES[name];
+    if (!count || count === frames.length) return frames;
+    return Array.from({ length: count }, (_, i) => frames[Math.floor(i * frames.length / count)]);
   }
 
   loadTerrainTexture(src) {
@@ -1490,7 +1646,8 @@ class Renderer {
   }
 
   getLiorFrame(rect) {
-    return this.getKeyedSprite(this.liorSheet, rect, "alpha", { trim: true });
+    const sheet = rect.sheet === "lior2" ? this.lior2Sheet : this.liorSheet;
+    return this.getKeyedSprite(sheet, rect, "alpha", { trim: true });
   }
 
   getEffectSprite(sheetKey, phase) {
@@ -1675,18 +1832,25 @@ class Renderer {
 
     let frameRect = actionFrame?.sprite;
     if (!frameRect) {
+      const idleRow = this.getLiorRow("IDLE");
       frameRect = this.player.hp <= 0
         ? LIOR_SPRITES.DEFEAT[LIOR_SPRITES.DEFEAT.length - 1]
-        : LIOR_SPRITES.IDLE[Math.floor(now / 450) % LIOR_SPRITES.IDLE.length];
+        : idleRow[Math.floor(now / 450) % idleRow.length];
     }
 
     const sprite = this.getLiorFrame(frameRect);
-    const reference = this.getLiorFrame(LIOR_SPRITES.IDLE[0]);
+    // Cada hoja se escala con su propia pose de reposo para que Lior mida lo mismo en los cuatro encaramientos.
+    const reference = this.getLiorFrame(frameRect.sheet === "lior2" ? LIOR2_REFERENCE[frameRect.view] : LIOR_SPRITES.IDLE[0]);
 
     if (sprite && reference) {
       const scale = (tileSize * 1.35) / reference.height;
       const renderW = sprite.width * scale;
       const renderH = sprite.height * scale;
+      if (frameRect.flip) {
+        targetCtx.translate(px + tileSize / 2, 0);
+        targetCtx.scale(-1, 1);
+        targetCtx.translate(-(px + tileSize / 2), 0);
+      }
       targetCtx.drawImage(sprite, px + (tileSize - renderW) / 2, py + tileSize - renderH + 2, renderW, renderH);
     } else {
       const centerX = px + tileSize / 2;
@@ -1710,12 +1874,22 @@ class Renderer {
     }
     targetCtx.restore();
 
-    if (actionFrame?.effects) this.drawEffects(targetCtx, actionFrame.effects);
+    if (actionFrame?.effects) this.drawEffects(targetCtx, actionFrame.effects, this.playerAnimation.origin);
   }
 
-  // Los efectos usan coordenadas de pantalla en casillas (la cámara siempre mira hacia arriba).
-  drawEffects(targetCtx, effects) {
+  // Coordenadas en casillas de pantalla relativas al ancla de Lior al crear el efecto (`origin`);
+  // `rotation` gira haz y área alrededor de Lior hacia su encaramiento real.
+  drawEffects(targetCtx, effects, origin) {
     const tileSize = CAMERA_CONFIG.tileSize;
+    const shiftX = (CAMERA_CONFIG.playerScreenX - origin.x) * tileSize;
+    const shiftY = (CAMERA_CONFIG.playerScreenY - origin.y) * tileSize;
+    const pivot = { x: (origin.x + 0.5) * tileSize, y: (origin.y + 0.5) * tileSize };
+    const rotateAroundLior = angle => {
+      if (!angle) return;
+      targetCtx.translate(pivot.x, pivot.y);
+      targetCtx.rotate(angle);
+      targetCtx.translate(-pivot.x, -pivot.y);
+    };
 
     effects.forEach(effect => {
       const sprite = this.getEffectSprite(effect.sheet, effect.phase);
@@ -1723,6 +1897,7 @@ class Renderer {
 
       targetCtx.save();
       targetCtx.imageSmoothingEnabled = false;
+      targetCtx.translate(shiftX, shiftY);
       if (effect.clip) {
         targetCtx.beginPath();
         effect.clip.forEach(cell => targetCtx.rect(cell.x * tileSize, cell.y * tileSize, tileSize, tileSize));
@@ -1731,12 +1906,14 @@ class Renderer {
 
       if (effect.type === "area") {
         const { x, y, w, h } = effect.rect;
+        rotateAroundLior(effect.rotation);
         targetCtx.drawImage(sprite, x * tileSize, y * tileSize, w * tileSize, h * tileSize);
       } else if (effect.type === "beam") {
         const width = effect.width * tileSize;
         const bottom = effect.bottom * tileSize;
         const top = effect.top * tileSize;
         const height = effect.phase === 2 ? bottom - top : width * (sprite.height / sprite.width);
+        rotateAroundLior(effect.rotation);
         targetCtx.beginPath();
         targetCtx.rect(0, top, this.canvas.width, bottom - top);
         targetCtx.clip();
@@ -1776,7 +1953,8 @@ class Renderer {
       cancelAnimationFrame(this.playerAnimationFrame);
     }
 
-    const animation = { frames, frameDuration, interruptible, startedAt: performance.now() };
+    const animation = { frames, frameDuration, interruptible, startedAt: performance.now(),
+      origin: { x: CAMERA_CONFIG.playerScreenX, y: CAMERA_CONFIG.playerScreenY } };
     this.playerAnimation = animation;
     const animate = () => {
       if (this.playerAnimation !== animation) return;
@@ -1805,7 +1983,10 @@ class Renderer {
   }
 
   playRow(rowName, frameDuration, interruptible = false) {
-    this.playSpriteAnimation(LIOR_SPRITES[rowName].map(sprite => ({ sprite })), frameDuration, interruptible);
+    const frames = this.getLiorRow(rowName);
+    // Si la fila de lior2 tiene otro número de frames, la duración total se mantiene.
+    const duration = frameDuration * LIOR_SPRITES[rowName].length / frames.length;
+    this.playSpriteAnimation(frames.map(sprite => ({ sprite })), duration, interruptible);
   }
 
   playSwordSpin() {
@@ -1841,9 +2022,10 @@ class Renderer {
     const centerX = CAMERA_CONFIG.playerScreenX + 0.5;
     const bottom = CAMERA_CONFIG.playerScreenY;
     const top = CAMERA_CONFIG.playerScreenY + 0.5 - beamReach;
-    const frames = LIOR_SPRITES.ELDRITCH_BLAST.map((sprite, index) => ({
+    const rotation = this.getFacingAngle();
+    const frames = this.getLiorRow("ELDRITCH_BLAST", LIOR_SPRITES.ELDRITCH_BLAST.length).map((sprite, index) => ({
       sprite,
-      effects: [{ type: "beam", sheet: "eblast", phase: Math.min(2, index), x: centerX, bottom, top, width: 1.4 }]
+      effects: [{ type: "beam", sheet: "eblast", phase: Math.min(2, index), x: centerX, bottom, top, width: 1.4, rotation }]
     }));
     this.playSpriteAnimation(frames, 110);
   }
@@ -1854,7 +2036,7 @@ class Renderer {
    */
   playRangedAttack(weaponId, shot) {
     const lior = { x: CAMERA_CONFIG.playerScreenX + 0.5, y: CAMERA_CONFIG.playerScreenY + 0.5 };
-    const frames = LIOR_SPRITES.GUN_RECOIL;
+    const frames = this.getLiorRow("GUN_RECOIL", LIOR_SPRITES.GUN_RECOIL.length);
 
     if (weaponId === "blunderbuss") {
       const clip = shot.area.map(cell => {
@@ -1870,7 +2052,7 @@ class Renderer {
       const phases = [0, 0, 1, 1, 2, 2];
       this.playSpriteAnimation(frames.map((sprite, index) => ({
         sprite,
-        effects: [{ type: "area", sheet: "blunderbuss", phase: phases[index], rect, clip }]
+        effects: [{ type: "area", sheet: "blunderbuss", phase: phases[index], rect, clip, rotation: this.getFacingAngle() }]
       })), 85);
       return;
     }
@@ -1901,6 +2083,7 @@ class Renderer {
   setDungeon(dungeon, generator) {
     this.dungeon = dungeon;
     this.generator = generator;
+    this.snapCamera();
   }
 
   draw() {
@@ -1909,6 +2092,7 @@ class Renderer {
 
   drawBase(targetCtx) {
     const { canvas } = this;
+    this.updateCamera(performance.now());
     const { cols, rows, tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
 
     targetCtx.fillStyle = "#000000";
@@ -1968,8 +2152,13 @@ class Renderer {
     const theme = this.getTerrainTheme();
     this.dungeon.markRevealed(this.player.x, this.player.y);
 
-    for (let sy = 0; sy < rows; sy++) {
-      for (let sx = 0; sx < cols; sx++) {
+    // El desplazamiento fraccionario de la cámara fija se aplica a todo el mundo; sobra una casilla de margen.
+    const margin = CAMERA_CONFIG.mode === "fixed" ? 1 : 0;
+    targetCtx.save();
+    targetCtx.translate(this.cameraOffset.x, this.cameraOffset.y);
+
+    for (let sy = -margin; sy < rows + margin; sy++) {
+      for (let sx = -margin; sx < cols + margin; sx++) {
         const worldCoord = CameraTransformer.screenToWorld(sx, sy, this.player);
         const tileType = this.dungeon.getTile(worldCoord.x, worldCoord.y);
         const px = sx * tileSize;
@@ -2093,6 +2282,7 @@ class Renderer {
     const liorCellPy = playerScreenY * tileSize;
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
     this.drawEnemyProjectiles(targetCtx, frameNow);
+    targetCtx.restore();
     this.drawDamageFlash(targetCtx);
   }
 }
@@ -2291,6 +2481,7 @@ class CombatSystem {
     } else {
       player[weapon.ammoProperty]--;
       sounds.playShot(weapon.id !== "pistol");
+      game.renderer?.commitCameraFacing();
       const shot = CombatSystem.resolveShot(player, dungeon, weapon);
       game.renderer?.playRangedAttack(weapon.id, shot);
       targets = shot.targets;
@@ -2367,6 +2558,8 @@ class GameController {
   setControlDevice(device) {
     if (this.controlDevice === device) return;
     this.controlDevice = device;
+    // En horizontal, teclado o mando ocultan la cruceta y los botones en pantalla.
+    document.body.classList.toggle("pad-hidden", device === "keyboard" || device === "gamepad");
     this.updateButtonLabels();
   }
 
@@ -2823,6 +3016,7 @@ class GameController {
       }
     }
 
+    this.renderer.commitCameraFacing();
     this.renderer.playMistyStep();
     this.handleTileInteractions();
     this.updateHUD();
@@ -2866,6 +3060,7 @@ class GameController {
 
     sounds.playEldritchBlast();
     this.player.blastCurrentCharges = 0;
+    this.renderer.commitCameraFacing();
     this.renderer.playEldritchBlastAnimation(beamReach);
 
     if (hitEnemy) {
@@ -2889,6 +3084,8 @@ class GameController {
     if (this.player.unlockedWeapons.size < 2) return;
     this.player.cycleWeapon();
     this.showWeaponRange = true;
+    // Preparar un arma de fuego adelanta el ancla hacia donde apunta Lior.
+    if (!this.player.equippedWeapon.isMelee) this.renderer.commitCameraFacing();
     sounds.playStep();
     this.updateHUD();
     this.renderer.draw();
@@ -3133,6 +3330,7 @@ class GameController {
     this.player.advanceAction();
     this.player.moveForward();
     sounds.playStep();
+    this.renderer.commitCameraFacing();
     this.renderer.playWalk();
 
     this.checkGoldenBunnyCapture();
@@ -3172,6 +3370,7 @@ class GameController {
     this.player.advanceAction();
     this.player.moveBackward();
     sounds.playStep();
+    this.renderer.commitCameraFacing();
     this.renderer.playWalk();
     this.checkGoldenBunnyCapture();
     this.processEnemiesTurn();
