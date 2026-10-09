@@ -81,7 +81,7 @@ const TEXT = {
     boughtPistol: "Compraste 6 balas de Pistola (-1 PO).",
     boughtMusket: "Compraste 4 balas de Mosquete (-1 PO).",
     boughtBlunderbuss: "Compraste 2 balas de Trabuco (-1 PO).",
-    boughtPotion: (heal) => `Bebiste una poción: +${heal} HP (-2 PO).`
+    boughtPotion: (heal, price) => `Bebiste una poción: +${heal} HP (-${price} PO).`
   }
 };
 
@@ -542,6 +542,22 @@ function restoreHealth(player, healing) {
   const extraRestored = Math.min(player.maxExtraHp - player.extraHp, remaining);
   player.extraHp = Math.min(player.maxExtraHp, player.extraHp + extraRestored);
   return { hpRestored, extraRestored, totalRestored: hpRestored + extraRestored };
+}
+
+// Dados d4 necesarios para que Nd4 + 4 (máximo 4N + 4) cubra ~25% del HP máximo.
+function calculatePotionDice(floor) {
+  const target = calculateLiorMaxHP(floor) * 0.25;
+  return Math.max(1, Math.ceil((target - 4) / 4));
+}
+
+function calculatePotionPrice(floor) {
+  return calculatePotionDice(floor) + 1;
+}
+
+function rollPotionHealing(floor) {
+  let total = 4;
+  for (let i = 0; i < calculatePotionDice(floor); i++) total += rollDie(4);
+  return total;
 }
 
 function calculateMinionHP(floor) {
@@ -2643,11 +2659,14 @@ class CombatSystem {
       game.player.kills++;
       const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
       game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
-      game.log(TEXT.logs.goldDrop(goldDrop, enemy.name));
       if (enemy.size === 1 && !enemy.isBoss) {
-        game.player.minionKillsSincePotion++;
-        if (game.player.minionKillsSincePotion === 4) {
-          game.player.minionKillsSincePotion = 0;
+        if (game.floor % 10 === 0) {
+          game.player.minionKillsSincePotion++;
+          if (game.player.minionKillsSincePotion >= 4) {
+            game.player.minionKillsSincePotion = 0;
+            game.spawnPickup("potion", enemy.x, enemy.y);
+          }
+        } else if (Math.random() < 0.1) {
           game.spawnPickup("potion", enemy.x, enemy.y);
         }
       }
@@ -3051,6 +3070,8 @@ class GameController {
   updateShopHUD() {
     const goldDisplay = document.getElementById("shop-gold-display");
     if (goldDisplay) goldDisplay.textContent = this.player.gold;
+    const potionBtn = document.getElementById("buy-potion");
+    if (potionBtn) potionBtn.textContent = `${calculatePotionPrice(this.floor)} PO`;
   }
 
   addGold(amount, x = this.player.x, y = this.player.y) {
@@ -3157,12 +3178,13 @@ class GameController {
     const buyPotion = document.getElementById("buy-potion");
     if (buyPotion) {
       buyPotion.addEventListener("click", () => {
-        if (this.player.gold >= 2) {
-          const heal = Math.floor(this.player.maxHp * 0.25);
+        const price = calculatePotionPrice(this.floor);
+        if (this.player.gold >= price) {
+          const heal = rollPotionHealing(this.floor);
           const canRestore = this.player.hp < this.player.maxHp
             || this.player.extraHp < this.player.maxExtraHp;
           if (canRestore) {
-            this.player.gold -= 2;
+            this.player.gold -= price;
             const restored = restoreHealth(this.player, heal);
             if (restored.totalRestored > 0) {
               this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
@@ -3170,7 +3192,7 @@ class GameController {
             sounds.playHeal();
             this.updateHUD();
             this.updateShopHUD();
-            this.log(TEXT.logs.boughtPotion(restored.totalRestored));
+            this.log(TEXT.logs.boughtPotion(restored.totalRestored, price));
           }
         }
       });
@@ -3828,8 +3850,7 @@ class GameController {
     sounds.playCoin();
 
     if (Math.random() < 0.5) {
-      const healing = Math.floor(this.player.maxHp * 0.25);
-      const restored = restoreHealth(this.player, healing);
+      const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored > 0) {
         this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
       }
@@ -3916,7 +3937,7 @@ class GameController {
         return;
       }
 
-      const restored = restoreHealth(this.player, Math.floor(this.player.maxHp * 0.25));
+      const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored === 0) return;
       this.renderer.showFloatingNumber(pickup.x, pickup.y, `+${restored.totalRestored} HP`, "healing");
       sounds.playHeal();
