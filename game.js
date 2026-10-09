@@ -762,7 +762,8 @@ class DungeonGenerator {
       maxHp: megaBossHp,
       ac: 12 + this.tier,
       visionRange: 4,
-      attackRange: 2,
+      // 8 casillas desde su fila inferior (y=5) alcanzan hasta y=13: solo queda a salvo la fila pegada al muro sur.
+      attackRange: 8,
       bossAttackReady: true,
       isMegaBoss: true,
       isBoss: true,
@@ -1034,6 +1035,10 @@ class Renderer {
       Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
     );
     this.enemyImages = new Map();
+    // Precarga y segmenta disparos.jpg para que el primer proyectil no caiga al dibujo de respaldo.
+    const projectileSheet = this.loadTerrainTexture(PROJECTILE_SHEET.src);
+    this.enemyImages.set(PROJECTILE_SHEET.src, projectileSheet);
+    projectileSheet.addEventListener("load", () => this.getProjectileSprite("small", 1));
     this.enemyAnimCache = new Map();
     this.enemyProjectiles = [];
     this.animUntil = 0;
@@ -1217,7 +1222,7 @@ class Renderer {
    * Segmenta una hoja sobre fondo magenta: franjas horizontales de contenido y, dentro de cada una, frames.
    * Devuelve filas de canvas ya sin fondo (null si no hay contenido).
    */
-  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true } = {}) {
+  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true, denseFractions = [0.06, 0.15] } = {}) {
     const STEP = 4;
     const width = Math.floor(image.naturalWidth / STEP);
     const height = Math.floor(image.naturalHeight / STEP);
@@ -1253,9 +1258,41 @@ class Renderer {
       for (let y = band.start; y <= band.end; y++) {
         for (let x = 0; x < width; x++) colCounts[x] += solid[y * width + x];
       }
+      // Frames que se tocan (o con armas finas que los parten) se separan por columnas densas (cuerpos),
+      // cortando en el valle; entre las particiones candidatas gana la de anchos más uniformes.
+      const bandSteps = band.end - band.start + 1;
       let segments = Renderer.findRuns(colCounts, 2, colGap);
       if (mergeNarrow && segments.length > 1) segments = Renderer.mergeNarrowRuns(segments);
+      const widthVariation = runs => {
+        const widths = runs.map(r => r.end - r.start + 1);
+        const mean = widths.reduce((a, b) => a + b, 0) / widths.length;
+        return Math.sqrt(widths.reduce((a, w) => a + (w - mean) ** 2, 0) / widths.length) / mean;
+      };
+      for (const fraction of denseFractions) {
+        let dense = Renderer.findRuns(colCounts, Math.max(2, Math.ceil(fraction * bandSteps)), colGap);
+        if (mergeNarrow && dense.length > 1) dense = Renderer.mergeNarrowRuns(dense);
+        const better = segments.length < 3
+          ? dense.length > segments.length
+          : dense.length >= 3 && widthVariation(dense) < widthVariation(segments) * 0.6;
+        if (!better) continue;
 
+        let first = 0;
+        while (first < width - 1 && colCounts[first] < 2) first++;
+        let last = width - 1;
+        while (last > first && colCounts[last] < 2) last--;
+        const cuts = [first];
+        for (let i = 1; i < dense.length; i++) {
+          const from = dense[i - 1].end, to = dense[i].start;
+          const center = (from + to) / 2;
+          let cut = Math.floor(center);
+          for (let x = from; x <= to; x++) {
+            if (colCounts[x] < colCounts[cut] || (colCounts[x] === colCounts[cut] && Math.abs(x - center) < Math.abs(cut - center))) cut = x;
+          }
+          cuts.push(cut);
+        }
+        cuts.push(last);
+        segments = dense.map((_, i) => ({ start: cuts[i], end: cuts[i + 1] }));
+      }
       const y0 = Math.max(0, band.start * STEP - 2);
       const y1 = Math.min(image.naturalHeight, (band.end + 1) * STEP + 2);
       return segments.map(segment => {
@@ -1361,7 +1398,8 @@ class Renderer {
       this.projectileRows = this.segmentSheet(image, {
         rowGap: Math.floor(image.naturalHeight / 4 * 0.05),
         colGap: Math.floor(image.naturalWidth / 4 * 0.1),
-        mergeNarrow: false
+        mergeNarrow: false,
+        denseFractions: []
       });
     }
     return this.projectileRows?.[PROJECTILE_SHEET.rows[caliber]]?.[phase] ?? null;
@@ -1369,7 +1407,7 @@ class Renderer {
 
   // Lanza un proyectil hacia Lior; devuelve los ms hasta el impacto para sincronizar el daño visual.
   fireEnemyProjectile(enemy, hit) {
-    const caliber = enemy.size >= 4 ? "large" : (enemy.size === 2 ? "medium" : "small");
+    const caliber = enemy.isMegaBoss || enemy.size >= 4 ? "large" : (enemy.size === 2 ? "medium" : "small");
     const cells = enemy.cells;
     const from = {
       x: cells.reduce((sum, c) => sum + c.x, 0) / cells.length,
@@ -1389,7 +1427,7 @@ class Renderer {
     const launchAt = performance.now() + PROJECTILE_LAUNCH_DELAY_MS;
     this.enemyProjectiles.push({ caliber, from, to, hit, launchAt, travelMs });
     this.keepAnimating(PROJECTILE_LAUNCH_DELAY_MS + travelMs + PROJECTILE_IMPACT_MS + 100);
-    return PROJECTILE_LAUNCH_DELAY_MS + travelMs;
+    return PROJECTILE_LAUNCH_DELAY_MS + travelMs + (hit ? PROJECTILE_IMPACT_MS : 0);
   }
 
   drawEnemyProjectiles(targetCtx, now) {
@@ -1439,7 +1477,15 @@ class Renderer {
 
       // Destello en la casilla de Lior antes de que se muestre el daño.
       const progress = (now - flightEnd) / PROJECTILE_IMPACT_MS;
-      drawSprite(this.getProjectileSprite(shot.caliber, 2), target, size * 1.6, 0, 1 - progress * 0.5);
+      if (!drawSprite(this.getProjectileSprite(shot.caliber, 2), target, size * 1.3, 0, 1 - progress * 0.5)) {
+        targetCtx.save();
+        targetCtx.globalAlpha = 1 - progress;
+        targetCtx.fillStyle = "#ffffff";
+        targetCtx.beginPath();
+        targetCtx.arc(target.x, target.y, size * tileSize * 0.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.restore();
+      }
     });
   }
 
@@ -2911,7 +2957,6 @@ class GameController {
     const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
     const enemySnapshot = [...this.dungeon.enemies];
     let tookDamage = false;
-    let hurtDelay = 0;
     this.dungeon.turnCount++;
 
     enemySnapshot.forEach(enemy => {
@@ -2924,16 +2969,14 @@ class GameController {
       const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
       const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
-      if (hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0) {
-        // Mega jefe: ataca un turno sí y uno no; el turno de pausa es la ventana de contraataque.
-        if (enemy.isMegaBoss) {
-          if (!enemy.bossAttackReady) {
-            enemy.bossAttackReady = true;
-            return;
-          }
-          enemy.bossAttackReady = false;
-        }
+      let canAttack = hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0;
+      // Mega jefe: ataca un turno sí y uno no; en el turno de pausa solo se reposiciona en X.
+      if (canAttack && enemy.isMegaBoss) {
+        if (enemy.bossAttackReady) enemy.bossAttackReady = false;
+        else { enemy.bossAttackReady = true; canAttack = false; }
+      }
 
+      if (canAttack) {
         const eD20 = rollDie(20);
         const hitMod = this.hitBonus;
         const dmgMod = this.dmgBonus;
@@ -2942,15 +2985,31 @@ class GameController {
 
         this.renderer.playEnemyAnim(enemy, "attack");
         const isRanged = enemy.isBoss || enemy.ranged || distToPlayer > 1;
-        if (isRanged) hurtDelay = Math.max(hurtDelay, this.renderer.fireEnemyProjectile(enemy, hit));
+        const impactDelay = isRanged ? this.renderer.fireEnemyProjectile(enemy, hit) : 0;
 
         if (hit) {
-          sounds.playHurt();
           const baseDmg = enemy.isMegaBoss ? (rollDie(6) + 2) : (enemy.isBoss ? rollDie(4) + 1 : rollDie(2));
           const totalDmg = baseDmg + dmgMod;
-          this.player.hp = Math.max(0, this.player.hp - totalDmg);
-          tookDamage = true;
-          this.log(TEXT.logs.enemyHit(enemy.name, totalAtk, this.player.ac, totalDmg));
+          const hitMessage = TEXT.logs.enemyHit(enemy.name, totalAtk, this.player.ac, totalDmg);
+
+          if (isRanged) {
+            const turnDungeon = this.dungeon;
+            // El HP baja cuando el destello de impacto ya se mostró sobre Lior.
+            setTimeout(() => {
+              if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory) return;
+              sounds.playHurt();
+              this.player.hp = Math.max(0, this.player.hp - totalDmg);
+              this.log(hitMessage);
+              this.updateHUD();
+              this.renderer.playHurt(this.player.hp <= 0);
+              if (this.player.hp <= 0) this.triggerGameOver();
+            }, impactDelay);
+          } else {
+            sounds.playHurt();
+            this.player.hp = Math.max(0, this.player.hp - totalDmg);
+            tookDamage = true;
+            this.log(hitMessage);
+          }
         }
         return;
       }
@@ -3027,7 +3086,7 @@ class GameController {
       }
     });
 
-    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0, hurtDelay);
+    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0);
 
     // Cada 4 turnos el mega jefe invoca exactamente 1 esbirro.
     if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.turnCount % 4 === 0
