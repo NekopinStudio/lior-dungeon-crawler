@@ -404,6 +404,20 @@ body.mode-landscape .diamond-pad {
 
 body.mode-landscape .btn-slot {
   width: 48px;
+  overflow: visible;
+}
+
+body.mode-landscape .btn-caption {
+  font-size: 10px;
+  color: #f0d77a;
+  text-shadow: 0 1px 2px #000;
+  margin-top: 2px;
+}
+
+body.mode-landscape .dpad-btn {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 body.mode-landscape .arcade-btn {

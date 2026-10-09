@@ -2520,6 +2520,7 @@ class GameController {
     this.initShopEvents();
     this.initDeviceDetection();
     this.startGamepadLoop();
+    window.__lior = this;
   }
 
   get tier() {
@@ -2581,12 +2582,20 @@ class GameController {
 
     const blastInner = btnC ? (btnC.querySelector(".arcade-btn-inner") || btnC) : null;
 
+    const keyLabels = this.controlDevice === "keyboard" || this.controlDevice === "touch";
     if (this.controlDevice === "keyboard") {
       btnUp.textContent = "W";
       btnDown.textContent = "S";
       btnLeft.textContent = "A";
       btnRight.textContent = "D";
+    } else {
+      btnUp.textContent = "▲";
+      btnDown.textContent = "▼";
+      btnLeft.textContent = "◀";
+      btnRight.textContent = "▶";
+    }
 
+    if (keyLabels) {
       btnD.textContent = ACTION_BINDINGS.keyboard.weapon;
       if (blastInner) blastInner.textContent = ACTION_BINDINGS.keyboard.blast;
       btnB.textContent = ACTION_BINDINGS.keyboard.mist;
@@ -2596,11 +2605,6 @@ class GameController {
       capB.textContent = TEXT.captionsKeyboard.mist;
       capA.textContent = TEXT.captionsKeyboard.attack;
     } else {
-      btnUp.textContent = "▲";
-      btnDown.textContent = "▼";
-      btnLeft.textContent = "◀";
-      btnRight.textContent = "▶";
-
       const gamepadLabel = binding => this.controlDevice === "gamepad" && this.gamepadMapping !== "standard"
         ? binding.genericLabel
         : binding.standardLabel;
@@ -2615,7 +2619,7 @@ class GameController {
     }
 
     if (capC) {
-      const baseCaption = this.controlDevice === "keyboard"
+      const baseCaption = keyLabels
         ? TEXT.captionsKeyboard.blast
         : TEXT.captions.blast;
       const cur = this.player ? this.player.blastCurrentCharges : 10;
@@ -3473,10 +3477,43 @@ class GameController {
   }
 
   bindEvents() {
-    document.getElementById("btn-forward").addEventListener("click", () => this.moveForward());
-    document.getElementById("btn-left").addEventListener("click", () => this.turnLeft());
-    document.getElementById("btn-right").addEventListener("click", () => this.turnRight());
-    document.getElementById("btn-backward").addEventListener("click", () => this.moveBackward());
+    const isFixed = () => this.renderer.cameraMode === "fixed";
+    const dpadActions = {
+      "btn-forward": () => isFixed() ? this.moveCardinal(0) : this.moveForward(),
+      "btn-right": () => isFixed() ? this.moveCardinal(1) : this.turnRight(),
+      "btn-backward": () => isFixed() ? this.moveCardinal(2) : this.moveBackward(),
+      "btn-left": () => isFixed() ? this.moveCardinal(3) : this.turnLeft()
+    };
+    const HOLD_DELAY_MS = 250;
+    const HOLD_REPEAT_MS = 130;
+    let holdDelayTimer = null;
+    let holdRepeatTimer = null;
+    const stopHold = () => {
+      clearTimeout(holdDelayTimer);
+      clearInterval(holdRepeatTimer);
+      holdDelayTimer = null;
+      holdRepeatTimer = null;
+    };
+    for (const [id, action] of Object.entries(dpadActions)) {
+      const btn = document.getElementById(id);
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        stopHold();
+        action();
+        holdDelayTimer = setTimeout(() => {
+          holdRepeatTimer = setInterval(action, HOLD_REPEAT_MS);
+        }, HOLD_DELAY_MS);
+      });
+      for (const type of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel", "mouseleave"]) {
+        btn.addEventListener(type, stopHold);
+      }
+      // Activación por teclado (Enter/Espacio sobre el botón enfocado).
+      btn.addEventListener("click", (e) => { if (e.detail === 0) action(); });
+    }
+    window.addEventListener("blur", stopHold);
+    document.addEventListener("visibilitychange", stopHold);
+    window.addEventListener("pointerup", stopHold);
+    window.addEventListener("pointercancel", stopHold);
 
     document.getElementById("btn-d").addEventListener("click", () => this.cycleWeapon());
     document.getElementById("btn-c").addEventListener("click", () => this.castEldritchBlast());
