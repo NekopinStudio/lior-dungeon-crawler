@@ -3112,6 +3112,7 @@ class GameController {
     const elExtraFill = document.getElementById("hud-extra-fill");
     const elGold = document.getElementById("hud-gold");
     const elAmmo = document.getElementById("hud-ammo");
+    const elAmmoDisplay = document.getElementById("hud-ammo-display");
     const elWeapon = document.getElementById("hud-weapon");
     const elWeaponIcon = document.getElementById("hud-weapon-icon");
     const elMisty = document.getElementById("misty-charges");
@@ -3130,7 +3131,8 @@ class GameController {
     if (elExtraFill) elExtraFill.style.width = `${(this.player.extraHp / totalHealthCapacity) * 100}%`;
     if (elGold) elGold.textContent = this.player.gold;
     const weapon = this.player.equippedWeapon;
-    if (elAmmo) elAmmo.textContent = weapon.ammoProperty ? `${this.player[weapon.ammoProperty]} balas` : "∞";
+    if (elAmmo) elAmmo.textContent = weapon.ammoProperty ? this.player[weapon.ammoProperty] : "∞";
+    if (elAmmoDisplay) elAmmoDisplay.classList.toggle("weapon-ammo-infinite", !weapon.ammoProperty);
     if (elWeapon) elWeapon.textContent = this.player.equippedWeapon.name;
     if (elWeaponIcon) {
       elWeaponIcon.className = `weapon-icon weapon-icon-${weapon.id}`;

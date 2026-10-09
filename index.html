@@ -36,10 +36,16 @@
         <span id="hud-weapon-icon" class="weapon-icon weapon-icon-sword" aria-hidden="true"></span>
         <div class="weapon-details">
           <span id="hud-weapon" class="weapon-name">Espada</span>
-          <span id="hud-ammo" class="weapon-ammo">∞</span>
+          <span id="hud-ammo-display" class="weapon-ammo">
+            <span class="bullet-icon" aria-hidden="true"></span>
+            <span id="hud-ammo">∞</span>
+          </span>
         </div>
       </div>
-      <div class="hud-resource">ORO <span id="hud-gold">0</span> PO</div>
+      <div class="hud-resource" aria-label="Monedas de oro">
+        <span class="gold-coin-icon" aria-hidden="true"></span>
+        <span id="hud-gold">0</span>
+      </div>
       <div class="hud-exit"><span class="exit-icon" aria-hidden="true">▣</span><span id="hud-door" class="door-locked">BLOQUEADA</span></div>
       <div class="hud-direction" aria-label="Dirección actual">
         <span id="hud-dir-arrow" class="direction-arrow" aria-hidden="true">↑</span>

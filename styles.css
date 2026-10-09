@@ -81,7 +81,14 @@ html, body {
 }
 .health-fill { display: block; height: 100%; background: #35db62; }
 .extra-health-fill { display: block; height: 100%; background: #36a9ff; }
-.health-label { margin-top: 3px; color: #e6eee8; font-size: 10px; font-weight: 700; }
+.health-label {
+  margin-top: 3px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  -webkit-text-stroke: 0.45px #07100a;
+  text-shadow: 1px 1px 0 #07100a, -1px -1px 0 #07100a, 1px -1px 0 #07100a, -1px 1px 0 #07100a;
+}
 
 .weapon-panel { gap: 7px; min-width: 0; min-height: 32px; }
 .weapon-icon {
@@ -166,9 +173,57 @@ html, body {
 }
 .weapon-details { display: flex; min-width: 0; flex: 1; justify-content: space-between; gap: 8px; }
 .weapon-name { overflow: hidden; color: #fff; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
-.weapon-ammo { color: #f3d16c; font-weight: 800; white-space: nowrap; }
-.hud-resource { color: #cbd6ce; }
-.hud-resource span { color: #f3d16c; font-weight: 900; }
+.weapon-ammo { display: inline-flex; align-items: center; gap: 5px; color: #f3d16c; font-weight: 900; white-space: nowrap; }
+.weapon-ammo-infinite { font-size: 20px; line-height: 1; text-shadow: 1px 1px #10100a; }
+.weapon-ammo-infinite .bullet-icon { display: none; }
+.bullet-icon {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 12px;
+  background: #d4d9d2;
+  border: 1px solid #414a43;
+  image-rendering: pixelated;
+}
+.bullet-icon::before {
+  position: absolute;
+  top: -5px;
+  left: -1px;
+  width: 7px;
+  height: 5px;
+  content: "";
+  background: #f1d074;
+  border: 1px solid #70582b;
+  border-radius: 4px 4px 0 0;
+}
+.bullet-icon::after {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  left: -2px;
+  height: 3px;
+  content: "";
+  background: #b48742;
+  border: 1px solid #51402b;
+}
+.hud-resource { display: flex; align-items: center; gap: 6px; color: #f5d765; font-size: 15px; font-weight: 900; }
+.gold-coin-icon {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: #e9b832;
+  border: 2px solid #76551c;
+  box-shadow: inset 2px 0 #fff079, inset -2px 0 #ae781b, 1px 1px 0 #050505;
+  image-rendering: pixelated;
+}
+.gold-coin-icon::after {
+  position: absolute;
+  inset: 3px 4px;
+  content: "";
+  background: #98691b;
+  box-shadow: 1px 0 #98691b, -1px 0 #98691b;
+}
 .hud-exit { gap: 5px; color: #d9e0da; font-weight: 800; white-space: nowrap; }
 .exit-icon { color: #f3d16c; font-size: 17px; }
 .door-locked { color: #f3d16c !important; }
@@ -216,6 +271,8 @@ html, body {
   .weapon-panel { grid-column: 1 / 3; grid-row: 2; min-height: 25px; gap: 5px; }
   .weapon-icon { width: 22px; height: 22px; flex-basis: 22px; }
   .weapon-name, .weapon-ammo { font-size: 9px; }
+  .weapon-ammo-infinite { font-size: 15px; }
+  .gold-coin-icon { width: 12px; height: 12px; }
   .hud-resource { display: flex; grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; font-size: 8px; }
   .hud-exit { grid-column: 3; grid-row: 2; gap: 3px; justify-self: end; font-size: 8px; }
   .exit-icon { font-size: 13px; }
@@ -237,6 +294,8 @@ html, body {
   body.mode-landscape .weapon-panel { gap: 4px; min-height: 25px; }
   body.mode-landscape .weapon-icon { width: 21px; height: 21px; flex-basis: 21px; }
   body.mode-landscape .weapon-name, body.mode-landscape .weapon-ammo { font-size: 8px; }
+  body.mode-landscape .weapon-ammo-infinite { font-size: 13px; }
+  body.mode-landscape .gold-coin-icon { width: 11px; height: 11px; }
   body.mode-landscape .hud-resource, body.mode-landscape .hud-exit { font-size: 8px; }
   body.mode-landscape .exit-icon { font-size: 12px; }
   body.mode-landscape .direction-arrow { font-size: 20px; }
@@ -858,3 +917,11 @@ body.mode-landscape.pad-hidden #pc-legend {
 .hidden {
   display: none !important;
 }
+body.mode-landscape.pad-hidden .hud-floor { font-size: 18px; }
+body.mode-landscape.pad-hidden .health-label { font-size: 16px; }
+body.mode-landscape.pad-hidden .weapon-name,
+body.mode-landscape.pad-hidden .weapon-ammo { font-size: 16px; }
+body.mode-landscape.pad-hidden .weapon-ammo-infinite { font-size: 24px; }
+body.mode-landscape.pad-hidden .hud-resource { font-size: 19px; }
+body.mode-landscape.pad-hidden .hud-exit { font-size: 14px; }
+body.mode-landscape.pad-hidden .direction-arrow { font-size: 32px; }
