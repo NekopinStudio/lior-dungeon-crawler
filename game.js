@@ -3339,6 +3339,16 @@ class GameController {
     this.renderer.draw();
   }
 
+  moveCardinal(direction) {
+    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    this.player.direction = direction;
+    this.moveForward();
+    // Si el paso fue bloqueado, igualmente se refleja el nuevo encaramiento.
+    this.renderer.commitCameraFacing();
+    this.updateHUD();
+    this.renderer.draw();
+  }
+
   moveBackward() {
     this.showWeaponRange = false;
     if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
@@ -3488,29 +3498,35 @@ class GameController {
         return;
       }
 
+      const fixedCamera = this.renderer.cameraMode === "fixed";
       switch (e.key) {
         case "ArrowLeft":
         case "a":
         case "A":
-          this.turnLeft();
+          if (fixedCamera) this.moveCardinal(3);
+          else this.turnLeft();
           break;
         case "ArrowRight":
         case "d":
         case "D":
-          this.turnRight();
+          if (fixedCamera) this.moveCardinal(1);
+          else this.turnRight();
           break;
         case "ArrowUp":
         case "w":
         case "W":
-          this.moveForward();
+          if (fixedCamera) this.moveCardinal(0);
+          else this.moveForward();
           break;
         case "ArrowDown":
         case "s":
         case "S":
-          this.moveBackward();
+          if (fixedCamera) this.moveCardinal(2);
+          else this.moveBackward();
           break;
         case "k":
         case "K":
+        case "Enter":
         case " ":
           CombatSystem.executeAttack(this);
           break;

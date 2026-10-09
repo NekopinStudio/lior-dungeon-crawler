@@ -416,11 +416,67 @@ body.mode-landscape .arcade-btn {
 
 /* Con teclado o mando físico se ocultan los controles en pantalla y el mapa gana el ancho. */
 body.mode-landscape.pad-hidden #app-wrapper {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(130px, 190px) minmax(0, 1fr) minmax(130px, 190px);
   grid-template-areas:
-    "hud"
-    "game"
-    "log";
+    "hud hud hud"
+    "legl game legr"
+    "log log log";
+}
+
+.key-legend { display: none; }
+
+body.mode-landscape.pad-hidden .key-legend {
+  display: block;
+  align-self: center;
+  max-height: 85vh;
+  overflow: hidden;
+  padding: 8px 10px;
+  background: rgba(10, 8, 14, 0.85);
+  border: 1px solid #4a3a5c;
+  box-shadow: inset 0 0 0 1px #1a1424;
+  color: #c9c2d6;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+#legend-left { grid-area: legl; justify-self: end; }
+#legend-right { grid-area: legr; justify-self: start; }
+
+.key-legend h4 {
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #4a3a5c;
+  color: #d4af37;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-align: center;
+}
+
+.key-legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.key-legend li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.key-legend kbd {
+  align-self: flex-start;
+  padding: 1px 5px;
+  background: #1a1424;
+  border: 1px solid #d4af37;
+  color: #f0d77a;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: bold;
 }
 
 body.mode-landscape.pad-hidden .dpad,
