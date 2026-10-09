@@ -61,11 +61,10 @@ html, body {
 
 .health-panel { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .pixel-heart {
-  width: 22px;
-  height: 20px;
-  flex: 0 0 22px;
-  background: #54ec78;
-  clip-path: polygon(0 18%, 18% 18%, 18% 0, 42% 0, 50% 15%, 58% 0, 82% 0, 82% 18%, 100% 18%, 100% 56%, 82% 56%, 82% 76%, 66% 76%, 66% 88%, 50% 88%, 50% 100%, 34% 88%, 34% 76%, 18% 76%, 18% 56%, 0 56%);
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  background: url("./Assets/Map/PowerUps/PickUp_Items-Sheet.png") -80px 0 / 128px 32px no-repeat;
   image-rendering: pixelated;
 }
 
@@ -90,7 +89,8 @@ html, body {
   text-shadow: 1px 1px 0 #07100a, -1px -1px 0 #07100a, 1px -1px 0 #07100a, -1px 1px 0 #07100a;
 }
 
-.weapon-panel { gap: 7px; min-width: 0; min-height: 32px; }
+.weapon-panel { gap: 8px; min-width: 0; min-height: 32px; }
+.weapon-identity { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
 .weapon-icon {
   position: relative;
   display: grid;
@@ -107,71 +107,113 @@ html, body {
 .weapon-icon::before,
 .weapon-icon::after { position: absolute; display: block; content: ""; image-rendering: pixelated; }
 .weapon-icon-sword::before {
-  top: 4px;
-  left: 7px;
-  width: 4px;
-  height: 4px;
-  background: #e5eee9;
-  box-shadow: 4px 4px #e5eee9, 8px 8px #e5eee9, 12px 12px #e5eee9, 16px 16px #e5eee9;
+  top: 3px;
+  left: 11px;
+  width: 2px;
+  height: 2px;
+  background: #f4f8f8;
+  box-shadow:
+    0 2px #d9e4e8,
+    -2px 4px #b5c3c9, 0 4px #f4f8f8, 2px 4px #ccd8dd,
+    -4px 6px #829199, -2px 6px #d5e0e5, 0 6px #ffffff, 2px 6px #c4d1d7, 4px 6px #77878f,
+    -4px 8px #829199, -2px 8px #d5e0e5, 0 8px #ffffff, 2px 8px #c4d1d7, 4px 8px #77878f,
+    -4px 10px #829199, -2px 10px #d5e0e5, 0 10px #ffffff, 2px 10px #c4d1d7, 4px 10px #77878f,
+    -2px 12px #b5c3c9, 0 12px #eaf1f2, 2px 12px #aab9c0,
+    0 14px #d4dfe3;
 }
 .weapon-icon-sword::after {
-  top: 18px;
+  top: 17px;
   left: 5px;
-  width: 11px;
-  height: 3px;
+  width: 2px;
+  height: 2px;
   background: #f3d16c;
-  transform: rotate(-45deg);
-  box-shadow: -3px 3px #8e6b32;
+  box-shadow:
+    2px 0 #d5a84f, 4px 0 #f8df8d, 6px 0 #d5a84f, 8px 0 #f8df8d,
+    10px 0 #d5a84f, 12px 0 #f8df8d, 14px 0 #d5a84f, 16px 0 #a87936,
+    6px 2px #77512e, 6px 4px #a5753c,
+    4px 6px #d5a84f, 6px 6px #f3d16c, 8px 6px #d5a84f;
 }
 .weapon-icon-pistol::before {
-  top: 8px;
-  left: 6px;
-  width: 17px;
-  height: 5px;
-  background: #cbd6ce;
-  box-shadow: 4px -3px #88958c;
+  top: 9px;
+  left: 8px;
+  width: 2px;
+  height: 2px;
+  background: #edf3f3;
+  box-shadow:
+    2px 0 #b9c6cc, 4px 0 #e0e8eb, 6px 0 #aebbc1, 8px 0 #d7e0e3, 10px 0 #718087,
+    0 -2px #a97b47, 2px -2px #d9e2e5, 4px -2px #78868d,
+    2px 2px #7f8e94, 4px 2px #d5dfe2, 6px 2px #68777e, 8px 2px #47565d,
+    -2px 0 #596970;
 }
 .weapon-icon-pistol::after {
   top: 13px;
-  left: 12px;
-  width: 5px;
-  height: 9px;
-  background: #9c7740;
-  box-shadow: 3px 5px #70542f;
+  left: 8px;
+  width: 2px;
+  height: 2px;
+  background: #ba8950;
+  box-shadow:
+    2px 0 #8a5d32, 4px 0 #a8753d, 6px 0 #62472e,
+    -2px 2px #9b6d3d, 0 2px #d0a166, 2px 2px #a8753d,
+    -2px 4px #77502e, 0 4px #ad7b43, 2px 4px #77502e,
+    0 6px #704b2c, 2px 6px #8b6036,
+    6px -2px #e1bd70, 8px -2px #9a7444;
 }
 .weapon-icon-musket::before {
-  top: 8px;
-  left: 3px;
-  width: 23px;
-  height: 4px;
-  background: #d3ddd5;
-  box-shadow: 3px -3px #849188;
+  top: 10px;
+  left: 5px;
+  width: 2px;
+  height: 2px;
+  background: #e9f0f1;
+  box-shadow:
+    2px 0 #aebbc0, 4px 0 #d5dfe2, 6px 0 #eff4f4, 8px 0 #b4c1c6,
+    10px 0 #e3ebed, 12px 0 #aebbc0, 14px 0 #d5dfe2, 16px 0 #eff4f4,
+    18px 0 #6b7b82,
+    6px -2px #73838a, 8px -2px #d5dfe2, 10px -2px #eaf0f1,
+    12px -2px #c0cbd0, 14px -2px #eaf0f1, 16px -2px #9eacb2,
+    6px 2px #7a898f, 8px 2px #c3cfd3, 10px 2px #eaf0f1,
+    12px 2px #c0cbd0, 14px 2px #eaf0f1, 16px 2px #8f9da3;
 }
 .weapon-icon-musket::after {
-  top: 12px;
-  left: 8px;
-  width: 5px;
-  height: 10px;
-  background: #9c7740;
-  box-shadow: 4px 5px #70542f;
+  top: 14px;
+  left: 3px;
+  width: 2px;
+  height: 2px;
+  background: #a8753d;
+  box-shadow:
+    2px 0 #d2a264, 4px 0 #8d6035, 6px 0 #bf8b4a, 8px 0 #704b2c,
+    0 2px #875a32, 2px 2px #ba8445, 4px 2px #6d4a2d, 6px 2px #a8743e,
+    6px 4px #9e6d3a, 8px 4px #6c4a2d,
+    10px -2px #c39558, 12px -2px #70502f;
 }
 .weapon-icon-blunderbuss::before {
-  top: 6px;
+  top: 10px;
   left: 5px;
-  width: 20px;
-  height: 8px;
-  background: #d3ddd5;
-  box-shadow: 3px -3px #849188, 3px 3px #849188;
+  width: 2px;
+  height: 4px;
+  background: #d6a851;
+  box-shadow:
+    2px 0 #aa793b,
+    4px -2px #ca9849, 4px 0 #b9843d, 4px 2px #a47739,
+    6px -4px #89734e, 6px -2px #d2a958, 6px 0 #e8bf68, 6px 2px #c8984b, 6px 4px #667477,
+    8px -4px #b99a5e, 8px -2px #e6c36e, 8px 0 #d6ad5d, 8px 2px #e2bd69, 8px 4px #8a7b5a,
+    10px -4px #d4b266, 10px -2px #f0cf7c, 10px 0 #d9b360, 10px 2px #e7c574, 10px 4px #9c875e,
+    12px -2px #c19f60, 12px 0 #e8c779, 12px 2px #c69d56,
+    14px -2px #768080, 14px 0 #202a2e, 14px 2px #202a2e, 14px 4px #657274,
+    16px 0 #11191c, 16px 2px #11191c;
 }
 .weapon-icon-blunderbuss::after {
-  top: 14px;
-  left: 11px;
-  width: 6px;
-  height: 9px;
-  background: #9c7740;
-  box-shadow: 4px 4px #70542f;
+  top: 12px;
+  left: 3px;
+  width: 2px;
+  height: 2px;
+  background: #be8a4b;
+  box-shadow:
+    2px 0 #855a32, 4px 0 #a9753e, 6px 0 #704b2d,
+    -2px 2px #875a31, 0 2px #d0a064, 2px 2px #9f6e39,
+    -2px 4px #6d4a2d, 0 4px #aa7740, 2px 4px #80572f,
+    2px 6px #8d6035, 4px 6px #67472c,
+    6px 2px #e1bd70, 8px 2px #80613a;
 }
-.weapon-details { display: flex; min-width: 0; flex: 1; justify-content: space-between; gap: 8px; }
 .weapon-name { overflow: hidden; color: #fff; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .weapon-ammo { display: inline-flex; align-items: center; gap: 5px; color: #f3d16c; font-weight: 900; white-space: nowrap; }
 .weapon-ammo-infinite { font-size: 20px; line-height: 1; text-shadow: 1px 1px #10100a; }
@@ -208,21 +250,20 @@ html, body {
 }
 .hud-resource { display: flex; align-items: center; gap: 6px; color: #f5d765; font-size: 15px; font-weight: 900; }
 .gold-coin-icon {
-  position: relative;
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  background: #e9b832;
-  border: 2px solid #76551c;
-  box-shadow: inset 2px 0 #fff079, inset -2px 0 #ae781b, 1px 1px 0 #050505;
+  width: 1.2em;
+  height: 1.2em;
+  background: url("./Assets/Map/PowerUps/PickUp_Items-Sheet.png") -11.1em -0.3em / 14.4em 3.6em no-repeat;
   image-rendering: pixelated;
+  animation: coin-spin 600ms steps(1, end) infinite;
 }
-.gold-coin-icon::after {
-  position: absolute;
-  inset: 3px 4px;
-  content: "";
-  background: #98691b;
-  box-shadow: 1px 0 #98691b, -1px 0 #98691b;
+
+@keyframes coin-spin {
+  0% { background-position: -11.1em -0.3em; }
+  20% { background-position: -12.9em -0.3em; }
+  40% { background-position: -0.3em -2.1em; }
+  60% { background-position: -2.1em -2.1em; }
+  80%, 100% { background-position: -3.9em -2.1em; }
 }
 .hud-exit { gap: 5px; color: #d9e0da; font-weight: 800; white-space: nowrap; }
 .exit-icon { color: #f3d16c; font-size: 17px; }
@@ -262,17 +303,18 @@ html, body {
   }
   .hud-floor { grid-column: 1; grid-row: 1; font-size: 12px; }
   .health-panel { grid-column: 2; grid-row: 1; gap: 5px; }
-  .pixel-heart { width: 17px; height: 16px; flex-basis: 17px; }
+  .pixel-heart { width: 16px; height: 16px; flex-basis: 16px; }
   .health-track { height: 9px; }
   .health-label { margin-top: 1px; font-size: 8px; }
   .hud-direction { grid-column: 3; grid-row: 1; gap: 2px; }
   .direction-arrow { font-size: 22px; }
   .hud-direction #hud-dir { display: none; }
   .weapon-panel { grid-column: 1 / 3; grid-row: 2; min-height: 25px; gap: 5px; }
-  .weapon-icon { width: 22px; height: 22px; flex-basis: 22px; }
+  .weapon-identity { gap: 4px; }
+  .weapon-icon { width: 26px; height: 26px; flex-basis: 26px; }
   .weapon-name, .weapon-ammo { font-size: 9px; }
   .weapon-ammo-infinite { font-size: 15px; }
-  .gold-coin-icon { width: 12px; height: 12px; }
+  .gold-coin-icon { width: 1.2em; height: 1.2em; }
   .hud-resource { display: flex; grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; font-size: 8px; }
   .hud-exit { grid-column: 3; grid-row: 2; gap: 3px; justify-self: end; font-size: 8px; }
   .exit-icon { font-size: 13px; }
@@ -288,14 +330,14 @@ html, body {
   }
   body.mode-landscape .hud-floor { font-size: 12px; }
   body.mode-landscape .health-panel { gap: 4px; }
-  body.mode-landscape .pixel-heart { width: 17px; height: 16px; flex-basis: 17px; }
+  body.mode-landscape .pixel-heart { width: 16px; height: 16px; flex-basis: 16px; }
   body.mode-landscape .health-label { margin-top: 1px; font-size: 8px; }
   body.mode-landscape .health-track { height: 9px; }
   body.mode-landscape .weapon-panel { gap: 4px; min-height: 25px; }
-  body.mode-landscape .weapon-icon { width: 21px; height: 21px; flex-basis: 21px; }
+  body.mode-landscape .weapon-icon { width: 26px; height: 26px; flex-basis: 26px; }
   body.mode-landscape .weapon-name, body.mode-landscape .weapon-ammo { font-size: 8px; }
   body.mode-landscape .weapon-ammo-infinite { font-size: 13px; }
-  body.mode-landscape .gold-coin-icon { width: 11px; height: 11px; }
+  body.mode-landscape .gold-coin-icon { width: 1.2em; height: 1.2em; }
   body.mode-landscape .hud-resource, body.mode-landscape .hud-exit { font-size: 8px; }
   body.mode-landscape .exit-icon { font-size: 12px; }
   body.mode-landscape .direction-arrow { font-size: 20px; }
@@ -626,6 +668,20 @@ body.mode-landscape #viewport {
 }
 
 #pc-legend { display: none; }
+body.pad-hidden #pc-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  color: #c9d3cb;
+  background: #0a0b0e;
+  border-top: 1px solid #38413a;
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+}
 
 /* PC: tablero centrado entre la barra superior y la leyenda inferior. */
 body.mode-landscape.pad-hidden #app-wrapper {

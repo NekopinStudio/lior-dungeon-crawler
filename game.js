@@ -463,6 +463,14 @@ const BUNNY_SPRITES = {
 };
 
 const CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 0, w: 16, h: 16 }));
+const PICKUP_SPRITES = {
+  potion: [{ x: 0, y: 0, w: 16, h: 16 }, { x: 16, y: 0, w: 16, h: 16 }],
+  coins: [
+    { x: 96, y: 0, w: 16, h: 16 }, { x: 112, y: 0, w: 16, h: 16 },
+    { x: 0, y: 16, w: 16, h: 16 }, { x: 16, y: 16, w: 16, h: 16 },
+    { x: 32, y: 16, w: 16, h: 16 }
+  ]
+};
 
 const WEAPONS = {
   SWORD: {
@@ -638,6 +646,7 @@ class Dungeon {
     this.enemies = [];
     this.npcs = [];
     this.chests = new Set();
+    this.pickups = [];
     this.isMerchantRoom = false;
     this.isBossRoom = false;
     this.turnCount = 0;
@@ -688,6 +697,7 @@ class Player {
     this.stunned = false;
     this.gold = 0;
     this.kills = 0;
+    this.minionKillsSincePotion = 0;
 
     this.ammoPistol = 0;
     this.ammoMusket = 0;
@@ -1150,7 +1160,8 @@ class Renderer {
       }
     ];
     this.mapDecorations = {
-      chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png")
+      chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png"),
+      pickups: this.loadTerrainTexture("Assets/Map/PowerUps/PickUp_Items-Sheet.png")
     };
     this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
     this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
@@ -1620,11 +1631,13 @@ class Renderer {
   drawFloatingNumbers(targetCtx, now) {
     this.floatingNumbers = this.floatingNumbers.filter(number => now - number.startedAt < 1000);
     const tileSize = CAMERA_CONFIG.tileSize;
-    this.floatingNumbers.forEach(number => {
+    const placedLabels = [];
+    const startingAngles = { damage: -Math.PI / 2, gold: -Math.PI / 4, healing: -3 * Math.PI / 4 };
+    this.floatingNumbers.forEach((number, index) => {
       const progress = Math.min(1, (now - number.startedAt) / 1000);
       const { screenX, screenY } = CameraTransformer.worldToScreen(number.x, number.y, this.player);
-      const x = (screenX + 0.72) * tileSize;
-      const y = (screenY + 0.25 - progress * 0.55) * tileSize;
+      const anchorX = (screenX + 0.5) * tileSize;
+      const anchorY = (screenY + 0.3 - progress * 0.5) * tileSize;
 
       targetCtx.save();
       targetCtx.globalAlpha = 1 - progress;
@@ -1633,11 +1646,28 @@ class Renderer {
       targetCtx.textBaseline = "middle";
       targetCtx.lineWidth = 2.5;
       targetCtx.strokeStyle = "#101010";
+      const labelWidth = targetCtx.measureText(number.text).width + 6;
+      const labelHeight = 16;
+      const angleStart = startingAngles[number.type] ?? startingAngles.damage;
+      let position = null;
+      for (let ring = 0; !position; ring++) {
+        const radius = 0.8 + Math.floor(ring / 8) * 0.45;
+        const angle = angleStart + (ring % 8) * (Math.PI * 2 / 8) + (index % 3) * 0.12;
+        const candidate = {
+          x: anchorX + Math.cos(angle) * radius * tileSize,
+          y: anchorY + Math.sin(angle) * radius * tileSize
+        };
+        if (!placedLabels.some(label =>
+          Math.abs(candidate.x - label.x) * 2 < labelWidth + label.width
+          && Math.abs(candidate.y - label.y) * 2 < labelHeight + label.height
+        )) position = candidate;
+      }
+      placedLabels.push({ x: position.x, y: position.y, width: labelWidth, height: labelHeight });
       targetCtx.fillStyle = number.type === "healing"
         ? "#5cff78"
         : (number.type === "gold" ? "#ffdf55" : "#ff5757");
-      targetCtx.strokeText(number.text, x, y);
-      targetCtx.fillText(number.text, x, y);
+      targetCtx.strokeText(number.text, position.x, position.y);
+      targetCtx.fillText(number.text, position.x, position.y);
       targetCtx.restore();
     });
   }
@@ -1892,6 +1922,28 @@ class Renderer {
     targetCtx.drawImage(chests, frame.x, frame.y, frame.w, frame.h, px + 5, py + 5,
       CAMERA_CONFIG.tileSize - 10, CAMERA_CONFIG.tileSize - 10);
     targetCtx.restore();
+  }
+
+  drawGroundPickups(targetCtx, now) {
+    const sheet = this.mapDecorations.pickups;
+    if (!sheet.complete || sheet.naturalWidth === 0) return;
+    const tileSize = CAMERA_CONFIG.tileSize;
+    this.dungeon.pickups.forEach(pickup => {
+      const { screenX, screenY } = CameraTransformer.worldToScreen(pickup.x, pickup.y, this.player);
+      if (screenX < 0 || screenX >= CAMERA_CONFIG.cols || screenY < 0 || screenY >= CAMERA_CONFIG.rows) return;
+      if (!VisibilitySystem.hasLineOfSight(
+        CAMERA_CONFIG.playerScreenX, CAMERA_CONFIG.playerScreenY, screenX, screenY, this.dungeon, this.player
+      )) return;
+
+      const frames = pickup.type === "gold" ? PICKUP_SPRITES.coins : PICKUP_SPRITES.potion;
+      const frame = frames[Math.floor(now / (pickup.type === "gold" ? 100 : 220)) % frames.length];
+      const size = tileSize * 0.7;
+      targetCtx.save();
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.drawImage(sheet, frame.x, frame.y, frame.w, frame.h,
+        (screenX + 0.5) * tileSize - size / 2, (screenY + 0.5) * tileSize - size / 2, size, size);
+      targetCtx.restore();
+    });
   }
 
   drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY) {
@@ -2360,6 +2412,7 @@ class Renderer {
       }
     }
 
+    this.drawGroundPickups(targetCtx, performance.now());
     this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
 
     const frameNow = performance.now();
@@ -2548,7 +2601,7 @@ class CombatSystem {
     const hpDamage = Math.min(player.hp, remaining);
     player.hp = Math.max(0, player.hp - hpDamage);
     const totalDamage = extraDamage + hpDamage;
-    if (totalDamage > 0) game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage}`, "damage");
+    if (totalDamage > 0) game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage} HP`, "damage");
     return { extraDamage, hpDamage, totalDamage };
   }
 
@@ -2575,7 +2628,7 @@ class CombatSystem {
     const baseDamage = rollDie(damageSides) + game.dmgBonus;
     const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
-    if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage}`, "damage");
+    if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
   }
 
@@ -2584,16 +2637,22 @@ class CombatSystem {
     const dead = targets.filter(enemy => enemy.hp <= 0);
     if (dead.length === 0) return [];
 
-    sounds.playCoin();
     const deadIds = new Set(dead.map(enemy => enemy.id));
+    game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
     dead.forEach(enemy => {
       game.player.kills++;
-      const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : (Math.random() < 0.5 ? 1 : 0));
-      game.addGold(goldDrop, enemy.x, enemy.y);
+      const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
+      game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
       game.log(TEXT.logs.goldDrop(goldDrop, enemy.name));
+      if (enemy.size === 1 && !enemy.isBoss) {
+        game.player.minionKillsSincePotion++;
+        if (game.player.minionKillsSincePotion === 4) {
+          game.player.minionKillsSincePotion = 0;
+          game.spawnPickup("potion", enemy.x, enemy.y);
+        }
+      }
+      game.renderer?.startEnemyDeath(enemy);
     });
-    game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
-    dead.forEach(enemy => game.renderer?.startEnemyDeath(enemy));
     return dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
   }
 
@@ -2734,7 +2793,6 @@ class GameController {
       this.gamepadMapping = event.gamepad?.mapping || "";
       this.lastGamepadButtons = [];
       this.lastGamepadAxes = { x: 0, y: 0 };
-      this.setControlDevice("gamepad");
     });
     window.addEventListener("gamepaddisconnected", () => {
       this.gamepadMapping = "standard";
@@ -2755,9 +2813,18 @@ class GameController {
     const changed = this.controlDevice !== device;
     this.controlDevice = device;
     document.body.classList.toggle("pad-hidden", device !== "touch");
+    this.updateControlLegend();
     if (!changed) return;
     // Conserva los controles visibles y sincroniza sus leyendas con el dispositivo activo.
     this.updateButtonLabels();
+  }
+
+  updateControlLegend() {
+    const legend = document.getElementById("pc-legend");
+    if (!legend) return;
+    legend.textContent = this.controlDevice === "gamepad"
+      ? "[D-Pad / Stick] Mover/Girar | [A] Atacar | [X] Blast | [B] Bruma | [Y / LB] Cambiar Arma"
+      : "[WASD] Mover/Girar | [K] Atacar | [J] Blast | [L] Bruma | [I] Cambiar Arma";
   }
 
   updateButtonLabels() {
@@ -2994,6 +3061,29 @@ class GameController {
     this.renderer?.showFloatingNumber(x, y, `+${reward} PO`, "gold");
   }
 
+  spawnPickup(type, x, y, amount = 0) {
+    const isAvailable = (tileX, tileY) => this.dungeon.getTile(tileX, tileY) === TILE_FLOOR
+      && !(tileX === this.player.x && tileY === this.player.y)
+      && !this.dungeon.enemies.some(enemy => enemy.cells?.some(cell => cell.x === tileX && cell.y === tileY))
+      && !this.dungeon.npcs.some(npc => npc.x === tileX && npc.y === tileY)
+      && !this.dungeon.pickups.some(pickup => pickup.x === tileX && pickup.y === tileY);
+
+    let location = null;
+    for (let distance = 0; distance < this.dungeon.width + this.dungeon.height && !location; distance++) {
+      for (let tileY = Math.max(0, y - distance); tileY <= Math.min(this.dungeon.height - 1, y + distance) && !location; tileY++) {
+        for (let tileX = Math.max(0, x - distance); tileX <= Math.min(this.dungeon.width - 1, x + distance); tileX++) {
+          if (Math.abs(tileX - x) + Math.abs(tileY - y) === distance && isAvailable(tileX, tileY)) {
+            location = { x: tileX, y: tileY };
+            break;
+          }
+        }
+      }
+    }
+    if (!location) return false;
+    this.dungeon.pickups.push({ id: Math.random().toString(36).substring(2, 9), type, ...location, amount });
+    return true;
+  }
+
   initShopEvents() {
     const btnClose = document.getElementById("close-shop");
     if (btnClose) btnClose.addEventListener("click", () => this.closeShop());
@@ -3068,14 +3158,14 @@ class GameController {
     if (buyPotion) {
       buyPotion.addEventListener("click", () => {
         if (this.player.gold >= 2) {
-          const heal = rollDie(4) + rollDie(4) + 4;
+          const heal = Math.floor(this.player.maxHp * 0.25);
           const canRestore = this.player.hp < this.player.maxHp
             || this.player.extraHp < this.player.maxExtraHp;
           if (canRestore) {
             this.player.gold -= 2;
             const restored = restoreHealth(this.player, heal);
             if (restored.totalRestored > 0) {
-              this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored}`, "healing");
+              this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
             }
             sounds.playHeal();
             this.updateHUD();
@@ -3326,21 +3416,16 @@ class GameController {
       }
 
       const tile = this.dungeon.getTile(cx, cy);
-      if (tile === TILE_WALL) {
+      const enemy = this.dungeon.enemies.some(candidate =>
+        candidate.cells?.some(cell => cell.x === cx && cell.y === cy)
+      );
+      if (tile === TILE_WALL || enemy) {
         encounteredObstacle = true;
-      } else if (encounteredObstacle && (tile === TILE_FLOOR || tile === TILE_CHEST)) {
+      } else if (encounteredObstacle || step === 8) {
         return { x: cx, y: cy, dangerous: false, blocked: false };
       }
     }
 
-    const freeStep = this.player.getNextForwardPos(3);
-    const freeStepTile = this.dungeon.getTile(freeStep.x, freeStep.y);
-    if (!this.dungeon.isInsideBounds(freeStep.x, freeStep.y) || freeStepTile === TILE_OUT_OF_BOUNDS) {
-      return { x: freeStep.x, y: freeStep.y, dangerous: true, blocked: false };
-    }
-    if (freeStepTile === TILE_FLOOR || freeStepTile === TILE_CHEST) {
-      return { x: freeStep.x, y: freeStep.y, dangerous: false, blocked: false };
-    }
     return { x: this.player.x, y: this.player.y, dangerous: false, blocked: true };
   }
 
@@ -3393,7 +3478,7 @@ class GameController {
       damageByRay.forEach(rayDamage => {
         blastDamage += CombatSystem.applyDamageToEnemy(this, hitEnemy, rayDamage, false);
       });
-      if (blastDamage > 0) this.renderer.showFloatingNumber(hitEnemy.x, hitEnemy.y, `-${blastDamage}`, "damage");
+      if (blastDamage > 0) this.renderer.showFloatingNumber(hitEnemy.x, hitEnemy.y, `-${blastDamage} HP`, "damage");
       if (hitEnemy.hp > 0) this.renderer.playEnemyAnim(hitEnemy, "hurt");
       this.log(TEXT.logs.blastFired(hitEnemy.name, blastDamage, rayCount));
       CombatSystem.applyPanic(this, CombatSystem.processDeaths(this, [hitEnemy]));
@@ -3743,10 +3828,10 @@ class GameController {
     sounds.playCoin();
 
     if (Math.random() < 0.5) {
-      const healing = rollDie(4) + rollDie(4) + 4;
+      const healing = Math.floor(this.player.maxHp * 0.25);
       const restored = restoreHealth(this.player, healing);
       if (restored.totalRestored > 0) {
-        this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored}`, "healing");
+        this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
       }
       sounds.playHeal();
       this.renderer.playDrinkPotion();
@@ -3755,7 +3840,7 @@ class GameController {
       const weaponOptions = [WEAPONS.PISTOL, WEAPONS.MUSKET, WEAPONS.BLUNDERBUSS];
       const weapon = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
       const ammoDice = { pistol: 6, musket: 4, blunderbuss: 2 }[weapon.id];
-      const ammo = rollDie(ammoDice);
+      const ammo = rollDie(ammoDice) + Math.floor((this.tier - 1) * 1.5);
       const isNewWeapon = !this.player.unlockedWeapons.has(weapon.id);
       this.player.unlockedWeapons.add(weapon.id);
       this.player[weapon.ammoProperty] += ammo;
@@ -3792,6 +3877,7 @@ class GameController {
     }
 
     this.checkGoldenBunnyCapture();
+    this.collectGroundPickups();
     this.updateHUD();
 
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
@@ -3817,6 +3903,27 @@ class GameController {
     }
 
     this.renderer.draw();
+  }
+
+  collectGroundPickups() {
+    const collected = this.dungeon.pickups.filter(pickup => pickup.x === this.player.x && pickup.y === this.player.y);
+    const consumed = new Set();
+    collected.forEach(pickup => {
+      if (pickup.type === "gold") {
+        this.addGold(pickup.amount, pickup.x, pickup.y);
+        sounds.playCoin();
+        consumed.add(pickup);
+        return;
+      }
+
+      const restored = restoreHealth(this.player, Math.floor(this.player.maxHp * 0.25));
+      if (restored.totalRestored === 0) return;
+      this.renderer.showFloatingNumber(pickup.x, pickup.y, `+${restored.totalRestored} HP`, "healing");
+      sounds.playHeal();
+      consumed.add(pickup);
+    });
+    this.dungeon.pickups = this.dungeon.pickups.filter(pickup => !consumed.has(pickup));
+    if (consumed.size > 0) this.updateHUD();
   }
 
   bindEvents() {
@@ -3976,14 +4083,15 @@ class GameController {
           this.gamepadMapping = mapping;
           if (this.controlDevice === "gamepad") this.updateButtonLabels();
         }
-        if (this.controlDevice !== "gamepad") this.setControlDevice("gamepad");
-
         const threshold = 0.25;
         const rawAxisX = gp.axes[0] || 0;
         const rawAxisY = gp.axes[1] || 0;
         const axisX = Math.abs(rawAxisX) >= threshold ? Math.sign(rawAxisX) : 0;
         const axisY = Math.abs(rawAxisY) >= threshold ? Math.sign(rawAxisY) : 0;
         const btnStates = gp.buttons.map(button => button.pressed);
+        if ((axisX || axisY || btnStates.some(Boolean)) && this.controlDevice !== "gamepad") {
+          this.setControlDevice("gamepad");
+        }
         const pressedThisFrame = index => !!btnStates[index] && !this.lastGamepadButtons[index];
         const dpadUp = !!gp.buttons[12]?.pressed;
         const dpadDown = !!gp.buttons[13]?.pressed;
