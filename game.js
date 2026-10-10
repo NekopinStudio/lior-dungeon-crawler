@@ -813,6 +813,7 @@ class DungeonGenerator {
     this.placeChests();
     this.placeGoldenBunny();
     this.ensureStartingEnemyVisible();
+    this.ensureInterestingCellsReachable();
   }
 
   generateMerchantRoom() {
@@ -1054,6 +1055,87 @@ class DungeonGenerator {
 
       this.dungeon.setTile(x, y, TILE_CHEST);
       this.dungeon.chests.add(this.dungeon.getKey(x, y));
+    }
+  }
+
+  getReachableCells() {
+    const start = this.dungeon.entrance;
+    const reachable = new Set([this.dungeon.getKey(start.x, start.y)]);
+    const queue = [start];
+    const directions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+
+    for (let index = 0; index < queue.length; index++) {
+      const current = queue[index];
+      for (const direction of directions) {
+        const next = { x: current.x + direction.x, y: current.y + direction.y };
+        if (!this.dungeon.isInsideBounds(next.x, next.y) || this.dungeon.getTile(next.x, next.y) === TILE_WALL) continue;
+        const key = this.dungeon.getKey(next.x, next.y);
+        if (reachable.has(key)) continue;
+        reachable.add(key);
+        queue.push(next);
+      }
+    }
+    return reachable;
+  }
+
+  findPathToReachable(start, reachable) {
+    const entranceKey = this.dungeon.getKey(this.dungeon.entrance.x, this.dungeon.entrance.y);
+    const exitKey = this.dungeon.getKey(this.dungeon.exit.x, this.dungeon.exit.y);
+    const startKey = this.dungeon.getKey(start.x, start.y);
+    const queue = [start];
+    const parents = new Map([[startKey, null]]);
+    const directions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+    let destinationKey = null;
+
+    for (let index = 0; index < queue.length; index++) {
+      const current = queue[index];
+      const currentKey = this.dungeon.getKey(current.x, current.y);
+      if (reachable.has(currentKey)) {
+        destinationKey = currentKey;
+        break;
+      }
+
+      for (const direction of directions) {
+        const next = { x: current.x + direction.x, y: current.y + direction.y };
+        if (!this.dungeon.isInsideBounds(next.x, next.y)) continue;
+        const key = this.dungeon.getKey(next.x, next.y);
+        const onBoundary = next.x === 0 || next.x === this.dungeon.width - 1
+          || next.y === 0 || next.y === this.dungeon.height - 1;
+        if (onBoundary && key !== entranceKey && key !== exitKey && !reachable.has(key)) continue;
+        if (parents.has(key)) continue;
+        parents.set(key, currentKey);
+        queue.push(next);
+      }
+    }
+
+    if (destinationKey === null) return [];
+    const path = [];
+    for (let key = destinationKey; key !== null; key = parents.get(key)) {
+      const [x, y] = key.split(",").map(Number);
+      path.push({ x, y });
+    }
+    return path.reverse();
+  }
+
+  ensureInterestingCellsReachable() {
+    const chestCells = [...this.dungeon.chests].map(key => {
+      const [x, y] = key.split(",").map(Number);
+      return { x, y };
+    });
+    const enemyCells = this.dungeon.enemies.flatMap(enemy => enemy.cells || []);
+    const npcCells = this.dungeon.npcs.filter(npc => !npc.isMerchant).map(({ x, y }) => ({ x, y }));
+    const targets = [this.dungeon.exit, ...chestCells, ...enemyCells, ...npcCells];
+    let reachable = this.getReachableCells();
+
+    for (const target of targets) {
+      if (reachable.has(this.dungeon.getKey(target.x, target.y))) continue;
+      const path = this.findPathToReachable(target, reachable);
+      path.forEach(cell => {
+        if (this.dungeon.getTile(cell.x, cell.y) === TILE_WALL) {
+          this.dungeon.setTile(cell.x, cell.y, TILE_FLOOR);
+        }
+      });
+      reachable = this.getReachableCells();
     }
   }
 }
@@ -2599,7 +2681,6 @@ class CombatSystem {
     const total = natural + attackBonus;
     const fumble = natural === 1;
     const critical = natural === 20;
-    if (fumble) attacker.stunned = true;
     return { natural, total, fumble, critical, hit: !fumble && (critical || total >= target.ac) };
   }
 
@@ -2631,14 +2712,15 @@ class CombatSystem {
 
   static rollAttack(game, target, damageSides) {
     const result = CombatSystem.resolveD20Attack(game.player, target, game.hitBonus);
-    if (!result) return;
+    if (!result) return false;
     if (result.fumble) {
       game.log(TEXT.logs.criticalMiss("Lior"));
-      return;
+      game.player.stunned = true;
+      return true;
     }
     if (!result.hit) {
       game.log(TEXT.logs.attackDefended(result.total, target.ac, target.name));
-      return;
+      return false;
     }
 
     const baseDamage = rollDie(damageSides) + game.dmgBonus;
@@ -2646,6 +2728,7 @@ class CombatSystem {
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
     if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
+    return false;
   }
 
   // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
@@ -2689,13 +2772,14 @@ class CombatSystem {
 
   static executeAttack(game) {
     const { player, dungeon } = game;
-    game.clearMistyStepConfirmation();
-    game.showWeaponRange = false;
-
-    if (player.hp <= 0 || game.isPausedForDialog) {
+    if (game.isAnimatingTurn || game.isVictory || player.hp <= 0 || game.isPausedForDialog) {
       if (player.hp <= 0) game.log(TEXT.logs.deadPlayer);
       return;
     }
+
+    if (game.consumeStunnedTurn()) return;
+    game.clearMistyStepConfirmation();
+    game.showWeaponRange = false;
 
     if (dungeon.isMerchantRoom) {
       game.log(TEXT.logs.merchantNoAttack);
@@ -2703,16 +2787,6 @@ class CombatSystem {
     }
 
     const weapon = player.equippedWeapon;
-
-    if (player.stunned) {
-      player.stunned = false;
-      player.advanceAction();
-      game.log(TEXT.logs.stunned("Lior"));
-      game.processEnemiesTurn();
-      game.updateHUD();
-      game.renderer.draw();
-      return;
-    }
 
     if (weapon.ammoProperty && player[weapon.ammoProperty] <= 0) {
       const noAmmoMessage = {
@@ -2748,8 +2822,22 @@ class CombatSystem {
       }
     }
 
-    targets.forEach(target => CombatSystem.rollAttack(game, target, weapon.damage));
-    CombatSystem.applyPanic(game, CombatSystem.processDeaths(game, targets));
+    let playerFumbled = false;
+    for (const target of targets) {
+      if (CombatSystem.rollAttack(game, target, weapon.damage)) {
+        playerFumbled = true;
+        break;
+      }
+    }
+    const deadMiniBosses = CombatSystem.processDeaths(game, targets);
+    CombatSystem.applyPanic(game, deadMiniBosses);
+
+    if (playerFumbled) {
+      game.processEnemiesTurn();
+      game.updateHUD();
+      game.renderer.draw();
+      return;
+    }
 
     game.processEnemiesTurn();
     game.updateHUD();
@@ -2768,6 +2856,8 @@ class GameController {
     this.dialogModal = document.getElementById("merchant-dialog-modal");
     this.isVictory = false;
     this.isPausedForDialog = false;
+    this.isAnimatingTurn = false;
+    this.pendingEnemyProjectiles = 0;
     this.showWeaponRange = false;
     this.entryPreviewUntil = 0;
     this.mistyStepConfirmation = null;
@@ -3015,6 +3105,8 @@ class GameController {
     this.inMerchantFloor = false;
     this.isVictory = false;
     this.isPausedForDialog = false;
+    this.isAnimatingTurn = false;
+    this.pendingEnemyProjectiles = 0;
     this.showWeaponRange = false;
 
     this.deathScreen.classList.remove("visible");
@@ -3072,6 +3164,8 @@ class GameController {
     if (goldDisplay) goldDisplay.textContent = this.player.gold;
     const potionBtn = document.getElementById("buy-potion");
     if (potionBtn) potionBtn.textContent = `${calculatePotionPrice(this.floor)} PO`;
+    const potionLabel = document.getElementById("potion-shop-label");
+    if (potionLabel) potionLabel.textContent = `Poción de Vida (${calculatePotionDice(this.floor)}d4 + 4)`;
   }
 
   addGold(amount, x = this.player.x, y = this.player.y) {
@@ -3269,11 +3363,12 @@ class GameController {
 
     const attackBtn = document.getElementById("btn-a");
     if (attackBtn) {
-      attackBtn.disabled = this.inMerchantFloor || this.player.hp <= 0;
+      attackBtn.disabled = this.player.hp <= 0 || (this.inMerchantFloor && !this.player.stunned);
     }
 
     const mistyBtn = document.getElementById("btn-b");
-    if (mistyBtn) mistyBtn.disabled = this.player.mistyStepCharges <= 0 || this.player.hp <= 0;
+    if (mistyBtn) mistyBtn.disabled = this.player.hp <= 0
+      || (this.player.mistyStepCharges <= 0 && !this.player.stunned);
 
     const blastBtn = document.getElementById("btn-c");
     const blastCounter = document.getElementById("blast-counter");
@@ -3284,11 +3379,11 @@ class GameController {
       if (this.player.isBlastReady()) {
         blastBtn.classList.remove("btn-charging");
         blastBtn.classList.add("btn-ready");
-        blastBtn.disabled = this.inMerchantFloor || this.player.hp <= 0;
+        blastBtn.disabled = this.player.hp <= 0 || (this.inMerchantFloor && !this.player.stunned);
       } else {
         blastBtn.classList.remove("btn-ready");
         blastBtn.classList.add("btn-charging");
-        blastBtn.disabled = true;
+        blastBtn.disabled = !this.player.stunned || this.player.hp <= 0;
       }
     }
 
@@ -3297,7 +3392,8 @@ class GameController {
     }
 
     const weaponBtn = document.getElementById("btn-d");
-    if (weaponBtn) weaponBtn.disabled = this.player.getAvailableWeapons().length <= 1 || this.player.hp <= 0;
+    if (weaponBtn) weaponBtn.disabled = this.player.hp <= 0
+      || (this.player.getAvailableWeapons().length <= 1 && !this.player.stunned);
   }
 
   // Arena de mega jefe: invoca 1 esbirro en una celda libre distante si hay menos del límite vivos.
@@ -3384,9 +3480,23 @@ class GameController {
     this.mistyStepConfirmation = null;
   }
 
+  consumeStunnedTurn() {
+    if (!this.player.stunned) return false;
+    this.player.stunned = false;
+    this.clearMistyStepConfirmation();
+    this.player.advanceAction();
+    this.log(TEXT.logs.stunned("Lior"));
+    this.processEnemiesTurn();
+    this.updateHUD();
+    this.renderer.draw();
+    return true;
+  }
+
   castMistyStep() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.showWeaponRange = false;
-    if (this.isVictory || this.isPausedForDialog || this.player.mistyStepCharges <= 0 || this.player.hp <= 0) return;
+    if (this.player.mistyStepCharges <= 0) return;
 
     const destination = this.getMistyStepDestination();
     if (destination.blocked) return;
@@ -3452,9 +3562,10 @@ class GameController {
   }
 
   castEldritchBlast() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
     if (this.inMerchantFloor) {
       this.log(TEXT.logs.merchantNoAttack);
@@ -3514,8 +3625,9 @@ class GameController {
   }
 
   cycleWeapon() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
     if (this.player.unlockedWeapons.size < 2) return;
     this.player.cycleWeapon();
     this.showWeaponRange = true;
@@ -3527,8 +3639,9 @@ class GameController {
   }
 
   turnLeft() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
     this.player.turnLeft();
     this.showWeaponRange = true;
     this.renderer.commitCameraFacing();
@@ -3538,8 +3651,9 @@ class GameController {
   }
 
   turnRight() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
     this.player.turnRight();
     this.showWeaponRange = true;
     this.renderer.commitCameraFacing();
@@ -3627,31 +3741,44 @@ class GameController {
         this.renderer.playEnemyAnim(enemy, "attack");
         const isRanged = enemy.isBoss || enemy.ranged || distToPlayer > 1;
         const impactDelay = isRanged ? this.renderer.fireEnemyProjectile(enemy, attack.hit) : 0;
-
-        if (attack.fumble) {
-          this.log(TEXT.logs.criticalMiss(enemy.name));
-          return;
-        }
+        let totalDmg = 0;
+        let hitMessage = "";
 
         if (attack.hit) {
           const damageSides = enemy.isMegaBoss ? 8 : (enemy.isBoss ? 4 : 2);
           const baseDamage = CombatSystem.rollDamageDice(this.tier, damageSides);
-          const totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
-          const hitMessage = TEXT.logs.enemyHit(enemy.name, attack.total, this.player.ac, totalDmg);
+          totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
+          hitMessage = TEXT.logs.enemyHit(enemy.name, attack.total, this.player.ac, totalDmg);
+        }
 
-          if (isRanged) {
-            const turnDungeon = this.dungeon;
-            // El HP baja cuando el destello de impacto ya se mostró sobre Lior.
-            setTimeout(() => {
-              if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory) return;
+        if (isRanged) {
+          const turnDungeon = this.dungeon;
+          this.pendingEnemyProjectiles++;
+          this.isAnimatingTurn = true;
+          setTimeout(() => {
+            try {
+              if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory || !attack.hit) return;
               sounds.playHurt();
               CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
               this.log(hitMessage);
               this.updateHUD();
               this.renderer.playHurt(this.player.hp <= 0);
               if (this.player.hp <= 0) this.triggerGameOver();
-            }, impactDelay);
-          } else {
+            } finally {
+              this.pendingEnemyProjectiles = Math.max(0, this.pendingEnemyProjectiles - 1);
+              this.isAnimatingTurn = this.pendingEnemyProjectiles > 0;
+            }
+          }, impactDelay);
+        }
+
+        if (attack.fumble) {
+          enemy.stunned = true;
+          this.log(TEXT.logs.criticalMiss(enemy.name));
+          return;
+        }
+
+        if (attack.hit) {
+          if (!isRanged) {
             sounds.playHurt();
             CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
             tookDamage = true;
@@ -3750,9 +3877,10 @@ class GameController {
   }
 
   moveForward() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
     const next = this.player.getNextForwardPos(1);
     if (!this.dungeon.isInsideBounds(next.x, next.y)) {
@@ -3791,7 +3919,8 @@ class GameController {
   }
 
   moveCardinal(direction) {
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.player.direction = direction;
     this.moveForward();
     // Si el paso fue bloqueado, igualmente se refleja el nuevo encaramiento.
@@ -3801,9 +3930,10 @@ class GameController {
   }
 
   moveBackward() {
+    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
-    if (this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
 
     const prev = this.player.getNextBackwardPos();
     if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
@@ -4133,6 +4263,15 @@ class GameController {
           if (pressedThisFrame(gamepadActions.attack.index)
             || pressedThisFrame(gamepadActions.mist.index)
             || pressedThisFrame(9)) this.dismissMerchantDialog();
+        } else if (this.isAnimatingTurn) {
+          // Ignore gameplay input until every enemy projectile resolves.
+        } else if (this.player.stunned && (movedY || movedX
+          || pressedThisFrame(gamepadActions.attack.index)
+          || pressedThisFrame(gamepadActions.mist.index)
+          || pressedThisFrame(gamepadActions.blast.index)
+          || pressedThisFrame(gamepadActions.weapon.index)
+          || gamepadActions.weaponAlt.some(pressedThisFrame))) {
+          this.consumeStunnedTurn();
         } else {
           if (movedY || movedX) {
             if (this.renderer.cameraMode === "fixed") {
