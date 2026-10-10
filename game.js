@@ -2740,8 +2740,11 @@ class CombatSystem {
     game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
     dead.forEach(enemy => {
       game.player.kills++;
-      const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
-      game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
+      const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.5 : 0.25);
+      if (enemy.isMegaBoss || Math.random() < dropChance) {
+        const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
+        game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
+      }
       if (enemy.size === 1 && !enemy.isBoss) {
         if (game.floor % 10 === 0) {
           game.player.minionKillsSincePotion++;
