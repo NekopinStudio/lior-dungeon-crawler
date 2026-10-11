@@ -404,40 +404,40 @@ const CAMERA_CARDINAL_BASIS = [
 
 const ENEMY_ROSTER = {
   minion: [
-    { name: "Kobold", src: "Assets/Enemy/1x1/1. kobold.jpg" },
-    { name: "Goblin", src: "Assets/Enemy/1x1/2. Goblin.jpg" },
-    { name: "Esqueleto", src: "Assets/Enemy/1x1/3.Skelleton.jpg", ranged: true },
-    { name: "Zombi", src: "Assets/Enemy/1x1/4. Zombie.jpg" },
-    { name: "Orco", src: "Assets/Enemy/1x1/5. orc.jpg" },
-    { name: "Gnoll", src: "Assets/Enemy/1x1/6. Gnoll.jpg" },
-    { name: "Hobgoblin", src: "Assets/Enemy/1x1/7. hobgoblin.jpg" },
-    { name: "Hombre lagarto", src: "Assets/Enemy/1x1/8. lizardfolk.jpg" },
-    { name: "Diablillo", src: "Assets/Enemy/1x1/9. imp.jpg", ranged: true },
-    { name: "Osgo", src: "Assets/Enemy/1x1/10. bugbear.jpg" }
+    { name: "Kobold", src: "Assets/Enemy/1x1/1. kobold.jpg", tier: 1, category: "minion" },
+    { name: "Goblin", src: "Assets/Enemy/1x1/2. Goblin.jpg", tier: 2, category: "minion" },
+    { name: "Esqueleto", src: "Assets/Enemy/1x1/3.Skelleton.jpg", ranged: true, tier: 3, category: "minion" },
+    { name: "Zombi", src: "Assets/Enemy/1x1/4. Zombie.jpg", tier: 4, category: "minion" },
+    { name: "Orco", src: "Assets/Enemy/1x1/5. orc.jpg", tier: 5, category: "minion" },
+    { name: "Gnoll", src: "Assets/Enemy/1x1/6. Gnoll.jpg", tier: 6, category: "minion" },
+    { name: "Hobgoblin", src: "Assets/Enemy/1x1/7. hobgoblin.jpg", tier: 7, category: "minion" },
+    { name: "Hombre lagarto", src: "Assets/Enemy/1x1/8. lizardfolk.jpg", tier: 8, category: "minion" },
+    { name: "Diablillo", src: "Assets/Enemy/1x1/9. imp.jpg", ranged: true, tier: 9, category: "minion" },
+    { name: "Osgo", src: "Assets/Enemy/1x1/10. bugbear.jpg", tier: 10, category: "minion" }
   ],
   miniBoss: [
-    { name: "Ogro", src: "Assets/Enemy/2x2/1. ogre.png" },
-    { name: "Trol", src: "Assets/Enemy/2x2/2. troll.jpg" },
-    { name: "Minotauro", src: "Assets/Enemy/2x2/3. minotaur.jpg" },
-    { name: "Osobúho", src: "Assets/Enemy/2x2/4. owlbear.jpg" },
-    { name: "Mantícora", src: "Assets/Enemy/2x2/5. manticore.jpg" },
-    { name: "Basilisco", src: "Assets/Enemy/2x2/6. basilisk.jpg" },
-    { name: "Quimera", src: "Assets/Enemy/2x2/7. chimera.jpg" },
-    { name: "Bulette", src: "Assets/Enemy/2x2/8. bulette.jpg" },
-    { name: "Gigante de las colinas", src: "Assets/Enemy/2x2/9. hillGiant.jpg" },
-    { name: "Dragón joven", src: "Assets/Enemy/2x2/10. youngDragon.jpg" }
+    { name: "Ogro", src: "Assets/Enemy/2x2/1. ogre.png", tier: 1, category: "miniBoss" },
+    { name: "Trol", src: "Assets/Enemy/2x2/2. troll.jpg", tier: 2, category: "miniBoss" },
+    { name: "Minotauro", src: "Assets/Enemy/2x2/3. minotaur.jpg", tier: 3, category: "miniBoss" },
+    { name: "Osobúho", src: "Assets/Enemy/2x2/4. owlbear.jpg", tier: 4, category: "miniBoss" },
+    { name: "Mantícora", src: "Assets/Enemy/2x2/5. manticore.jpg", tier: 5, category: "miniBoss" },
+    { name: "Basilisco", src: "Assets/Enemy/2x2/6. basilisk.jpg", tier: 6, category: "miniBoss" },
+    { name: "Quimera", src: "Assets/Enemy/2x2/7. chimera.jpg", tier: 7, category: "miniBoss" },
+    { name: "Bulette", src: "Assets/Enemy/2x2/8. bulette.jpg", tier: 8, category: "miniBoss" },
+    { name: "Gigante de las colinas", src: "Assets/Enemy/2x2/9. hillGiant.jpg", tier: 9, category: "miniBoss" },
+    { name: "Dragón joven", src: "Assets/Enemy/2x2/10. youngDragon.jpg", tier: 10, category: "miniBoss" }
   ],
   megaBoss: [
-    { name: "Roc", src: "Assets/Enemy/4x4/1. roc.jpg" },
-    { name: "Tarrasca", src: "Assets/Enemy/4x4/2. tarrasque.jpg" },
-    { name: "Gólem de hierro", src: "Assets/Enemy/4x4/3. ironGolem.jpg" },
-    { name: "Kraken", src: "Assets/Enemy/4x4/4. kraken.jpg" },
-    { name: "Gigante de tormenta", src: "Assets/Enemy/4x4/5. stormGigant.jpg" },
-    { name: "Beholder", src: "Assets/Enemy/4x4/6. beholder.jpg" },
-    { name: "Gusano púrpura", src: "Assets/Enemy/4x4/7. purpleworm.jpg" },
-    { name: "Balor", src: "Assets/Enemy/4x4/8. Balor.jpg" },
-    { name: "Dragón rojo ancestral", src: "Assets/Enemy/4x4/9. AncientRedDragon.jpg" },
-    { name: "Dragón solar", src: "Assets/Enemy/4x4/10. solarDragon.jpg" }
+    { name: "Roc", src: "Assets/Enemy/4x4/1. roc.jpg", tier: 1, category: "megaBoss" },
+    { name: "Tarrasca", src: "Assets/Enemy/4x4/2. tarrasque.jpg", tier: 2, category: "megaBoss" },
+    { name: "Gólem de hierro", src: "Assets/Enemy/4x4/3. ironGolem.jpg", tier: 3, category: "megaBoss" },
+    { name: "Kraken", src: "Assets/Enemy/4x4/4. kraken.jpg", tier: 4, category: "megaBoss" },
+    { name: "Gigante de tormenta", src: "Assets/Enemy/4x4/5. stormGigant.jpg", tier: 5, category: "megaBoss" },
+    { name: "Beholder", src: "Assets/Enemy/4x4/6. beholder.jpg", tier: 6, category: "megaBoss" },
+    { name: "Gusano púrpura", src: "Assets/Enemy/4x4/7. purpleworm.jpg", tier: 7, category: "megaBoss" },
+    { name: "Balor", src: "Assets/Enemy/4x4/8. Balor.jpg", tier: 8, category: "megaBoss" },
+    { name: "Dragón rojo ancestral", src: "Assets/Enemy/4x4/9. AncientRedDragon.jpg", tier: 9, category: "megaBoss" },
+    { name: "Dragón solar", src: "Assets/Enemy/4x4/10. solarDragon.jpg", tier: 10, category: "megaBoss" }
   ]
 };
 
@@ -522,11 +522,12 @@ function rollDie(sides) {
 }
 
 function calculateLiorMaxHP(floor) {
-  return 16 + (floor - 1) * 7;
+  return 24 + (floor - 1) * 5;
 }
 
 function calculateLiorAC(floor) {
-  return 12 + Math.floor((floor - 1) / 10);
+  const tier = getTierForFloor(floor);
+  return 12 + Math.floor((tier - 1) / 2);
 }
 
 function calculateMaxExtraHP(maxHP) {
@@ -560,18 +561,6 @@ function rollPotionHealing(floor) {
   return total;
 }
 
-function calculateMinionHP(floor) {
-  return 4 + Math.floor((floor - 1) / 2);
-}
-
-function calculateMiniBossHP(floor) {
-  return 16 + (floor - 1) * 2;
-}
-
-function calculateMegaBossHP(floor) {
-  return 64 + Math.floor(floor / 10) * 64;
-}
-
 function calculateTier(floor) {
   return 1 + Math.floor((floor - 1) / 10);
 }
@@ -581,11 +570,28 @@ function calculateEnemyAttackBonus(floor) {
 }
 
 function calculateEldritchBlastRayCount(floor) {
-  return calculateTier(floor);
+  return 1;
+}
+
+function calculateEldritchBlastLevel(floor) {
+  if (floor <= 10) return "I";
+  if (floor <= 30) return "II";
+  if (floor <= 60) return "III";
+  return "IV";
 }
 
 function calculateEldritchBlastDamage(floor) {
-  return 20 * calculateTier(floor) + 4;
+  const level = calculateEldritchBlastLevel(floor);
+  return { I: 24, II: 60, III: 168, IV: 420 }[level];
+}
+
+function getReferenceMaxDamage(originTier) {
+  return 6 * originTier;
+}
+
+function getResistanceMultiplier(category, originTier) {
+  const categoryOffset = { minion: 0, miniBoss: 3, megaBoss: 7 }[category];
+  return originTier + categoryOffset;
 }
 
 function splitDamageAcrossRays(totalDamage, rayCount) {
@@ -608,17 +614,22 @@ function getBossRoomMinionLimit(tier) {
 }
 
 function createMinion(floor, x, y, visionRange = 2) {
-  const tier = getTierForFloor(floor);
-  const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, tier);
-  const hp = calculateMinionHP(floor);
+  const spawnTier = getTierForFloor(floor);
+  const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
+  const referenceDamage = getReferenceMaxDamage(entry.tier);
+  const maxHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
   return {
     id: Math.random().toString(36).substring(2, 9),
     x, y,
     startX: x, startY: y,
     name: entry.name,
     spriteSrc: entry.src,
-    hp,
-    maxHp: hp,
+    hp: maxHp,
+    maxHp,
+    originTier: entry.tier,
+    spawnTier,
+    category: entry.category,
+    referenceDamage,
     ac: 6 + calculateEnemyAttackBonus(floor),
     visionRange,
     attackRange: 1,
@@ -895,7 +906,8 @@ class DungeonGenerator {
     const bossCells = this.generateCells(mx, my, 4);
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-    const megaBossHp = calculateMegaBossHP(this.floorNumber);
+    const referenceDamage = getReferenceMaxDamage(entry.tier);
+    const megaBossHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -905,6 +917,10 @@ class DungeonGenerator {
       spriteSrc: entry.src,
       hp: megaBossHp,
       maxHp: megaBossHp,
+      originTier: entry.tier,
+      spawnTier: getTierForFloor(this.floorNumber),
+      category: entry.category,
+      referenceDamage,
       ac: 14 + calculateEnemyAttackBonus(this.floorNumber),
       visionRange: 4,
       // 8 casillas desde su fila inferior (y=5) alcanzan hasta y=13: solo queda a salvo la fila pegada al muro sur.
@@ -948,7 +964,8 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const miniBossHp = calculateMiniBossHP(this.floorNumber);
+          const referenceDamage = getReferenceMaxDamage(entry.tier);
+          const miniBossHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
@@ -958,6 +975,10 @@ class DungeonGenerator {
             spriteSrc: entry.src,
             hp: miniBossHp,
             maxHp: miniBossHp,
+            originTier: entry.tier,
+            spawnTier: this.tier,
+            category: entry.category,
+            referenceDamage,
             ac: 8 + calculateEnemyAttackBonus(this.floorNumber),
             visionRange: 3,
             attackRange: 1.5,
@@ -2277,7 +2298,8 @@ class Renderer {
   }
 
   // beamReach: distancia en casillas desde Lior hasta el final del rayo.
-  playEldritchBlastAnimation(beamReach, rayCount = 1) {
+  playEldritchBlastAnimation(beamReach) {
+    const rayCount = 1;
     const centerX = CAMERA_CONFIG.playerScreenX + 0.5;
     const bottom = CAMERA_CONFIG.playerScreenY;
     const top = CAMERA_CONFIG.playerScreenY + 0.5 - beamReach;
@@ -2877,6 +2899,7 @@ class GameController {
     this.bindEvents();
     this.initShopEvents();
     this.initDeviceDetection();
+    this.initOrientationNotice();
     this.startGamepadLoop();
     window.__lior = this;
   }
@@ -2911,6 +2934,23 @@ class GameController {
       this.lastGamepadButtons = [];
       this.lastGamepadAxes = { x: 0, y: 0 };
       this.setControlDevice(this.getPreferredControlDevice());
+    });
+  }
+
+  initOrientationNotice() {
+    const isMobilePhone = navigator.maxTouchPoints > 0
+      && window.matchMedia("(pointer: coarse)").matches
+      && Math.min(window.screen.width, window.screen.height) <= 600;
+    if (!isMobilePhone || sessionStorage.getItem("lior_orientation_notice_shown")) return;
+
+    const notice = document.getElementById("orientation-notice");
+    const dismiss = document.getElementById("orientation-notice-dismiss");
+    if (!notice || !dismiss) return;
+
+    notice.classList.remove("hidden");
+    dismiss.addEventListener("click", () => {
+      sessionStorage.setItem("lior_orientation_notice_shown", "true");
+      notice.classList.add("hidden");
     });
   }
 
@@ -2994,12 +3034,10 @@ class GameController {
     }
 
     if (capC) {
-      const baseCaption = keyLabels
-        ? TEXT.captionsKeyboard.blast
-        : TEXT.captions.blast;
       const cur = this.player ? this.player.blastCurrentCharges : 10;
       const max = this.player ? this.player.blastMaxCharges : 10;
-      capC.innerHTML = `${baseCaption} (<span id="blast-counter">${cur}/${max}</span>)`;
+      const level = calculateEldritchBlastLevel(this.floor || 1);
+      capC.innerHTML = `E. BLAST ${level} (<span id="blast-counter">${cur}/${max}</span>)`;
     }
   }
 
@@ -3607,7 +3645,7 @@ class GameController {
     this.renderer.commitCameraFacing();
     const rayCount = calculateEldritchBlastRayCount(this.floor);
     const damageByRay = splitDamageAcrossRays(calculateEldritchBlastDamage(this.floor), rayCount);
-    this.renderer.playEldritchBlastAnimation(beamReach, rayCount);
+    this.renderer.playEldritchBlastAnimation(beamReach);
 
     if (hitEnemy) {
       let blastDamage = 0;

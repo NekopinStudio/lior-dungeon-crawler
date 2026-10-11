@@ -158,6 +158,23 @@
 
   </div>
 
+  <section id="orientation-notice" class="orientation-notice hidden" role="dialog" aria-modal="true" aria-labelledby="orientation-title">
+    <div class="orientation-panel">
+      <h2 id="orientation-title">ORIENTACIÓN</h2>
+      <div class="orientation-examples">
+        <div class="orientation-example">
+          <span class="orientation-phone orientation-phone-portrait" aria-hidden="true"><span class="orientation-screen"></span></span>
+          <p><strong>MODALIDAD CLÁSICA</strong><span>Teléfono en posición vertical</span></p>
+        </div>
+        <div class="orientation-example">
+          <span class="orientation-phone orientation-phone-landscape" aria-hidden="true"><span class="orientation-screen"></span></span>
+          <p><strong>MODALIDAD MODERNA</strong><span>Teléfono en posición horizontal</span></p>
+        </div>
+      </div>
+      <button id="orientation-notice-dismiss" class="orientation-dismiss" type="button">ENTENDIDO</button>
+    </div>
+  </section>
+
   <script src="game.js"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
