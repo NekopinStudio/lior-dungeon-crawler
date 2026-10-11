@@ -88,26 +88,49 @@
         <div class="shop-content">
           <h3>✦ MERCADER DE SOMBRAS ✦</h3>
           <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
-          
-          <div class="shop-item" data-shop-index="0" tabindex="0">
-            <span>Pistola: 6 balas</span>
-            <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
-          </div>
-          
-          <div class="shop-item" data-shop-index="1" tabindex="0">
-            <span>Mosquete: 4 balas</span>
-            <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+          <div class="shop-tabs" role="tablist" aria-label="Secciones de la tienda">
+            <button class="shop-tab is-active" id="shop-tab-supplies" type="button" role="tab" aria-selected="true" aria-controls="shop-view-supplies" data-shop-view="supplies">SUMINISTROS</button>
+            <button class="shop-tab" id="shop-tab-upgrades" type="button" role="tab" aria-selected="false" aria-controls="shop-view-upgrades" data-shop-view="upgrades">TALLER</button>
           </div>
 
-          <div class="shop-item" data-shop-index="2" tabindex="0">
-            <span>Trabuco: 2 balas</span>
-            <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
-          </div>
+          <section id="shop-view-supplies" class="shop-view" role="tabpanel" aria-labelledby="shop-tab-supplies" data-shop-panel="supplies">
+            <div class="shop-item" tabindex="0">
+              <span>Pistola: 6 balas</span>
+              <button id="buy-pistol-ammo" class="shop-btn">1 PO</button>
+            </div>
+            <div class="shop-item" tabindex="0">
+              <span>Mosquete: 4 balas</span>
+              <button id="buy-musket-ammo" class="shop-btn">1 PO</button>
+            </div>
+            <div class="shop-item" tabindex="0">
+              <span>Trabuco: 2 balas</span>
+              <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
+            </div>
+            <div class="shop-item" tabindex="0">
+              <span id="potion-shop-label">Poción de Vida</span>
+              <button id="buy-potion" class="shop-btn">2 PO</button>
+            </div>
+          </section>
 
-          <div class="shop-item" data-shop-index="3" tabindex="0">
-            <span id="potion-shop-label">Poción de Vida</span>
-            <button id="buy-potion" class="shop-btn">2 PO</button>
-          </div>
+          <section id="shop-view-upgrades" class="shop-view hidden" role="tabpanel" aria-labelledby="shop-tab-upgrades" data-shop-panel="upgrades">
+            <p id="shop-tuneup-line" class="shop-tuneup-line">«¿Buscando más potencia de fuego?...»</p>
+            <div class="shop-item" data-upgrade-for="sword" tabindex="0">
+              <span class="upgrade-details"><span class="upgrade-label">Espada: Mejora I</span><small class="upgrade-requirement">Disponible</small></span>
+              <button class="shop-btn">10 PO</button>
+            </div>
+            <div class="shop-item" data-upgrade-for="pistol" tabindex="0">
+              <span class="upgrade-details"><span class="upgrade-label">Pistola: Mejora I</span><small class="upgrade-requirement">Desbloquea el arma</small></span>
+              <button class="shop-btn">15 PO</button>
+            </div>
+            <div class="shop-item" data-upgrade-for="musket" tabindex="0">
+              <span class="upgrade-details"><span class="upgrade-label">Mosquete: Mejora I</span><small class="upgrade-requirement">Desbloquea el arma</small></span>
+              <button class="shop-btn">20 PO</button>
+            </div>
+            <div class="shop-item" data-upgrade-for="blunderbuss" tabindex="0">
+              <span class="upgrade-details"><span class="upgrade-label">Trabuco: Mejora I</span><small class="upgrade-requirement">Desbloquea el arma</small></span>
+              <button class="shop-btn">25 PO</button>
+            </div>
+          </section>
 
           <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
         </div>

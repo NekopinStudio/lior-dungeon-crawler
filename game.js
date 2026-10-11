@@ -74,8 +74,8 @@ const TEXT = {
     blastFired: (target, dmg, rays) => `¡Eldritch Blast (${rays} rayos) impacta a ${target} por ${dmg} de daño arcano!`,
     exitLocked: (cnt) => `¡La puerta está sellada! Elimina a las ${cnt} amenazas restantes.`,
     exitDescend: "¡Descendiendo al siguiente nivel...!",
-    floorIntro: (floor, tier, w, h, ac, hit, dmg) =>
-      `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}, Daño: +${dmg}.`,
+    floorIntro: (floor, tier, w, h, ac, hit) =>
+      `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}.`,
     bossArena: (name) => `¡${name} te espera en la arena! Sus esbirros acuden sin descanso.`,
     bunnyCaught: "¡Atrapaste al Conejo Dorado! Obtienes 5 monedas de oro.",
     boughtPistol: "Compraste 6 balas de Pistola (-1 PO).",
@@ -477,7 +477,6 @@ const WEAPONS = {
     id: "sword",
     name: TEXT.weaponNames.sword,
     label: TEXT.weaponLabels.sword,
-    damage: 4,
     range: 1.5,
     isMelee: true,
     ammoType: null
@@ -486,7 +485,6 @@ const WEAPONS = {
     id: "pistol",
     name: TEXT.weaponNames.pistol,
     label: TEXT.weaponLabels.pistol,
-    damage: 6,
     range: 3,
     width: 3,
     isMelee: false,
@@ -497,7 +495,6 @@ const WEAPONS = {
     id: "musket",
     name: TEXT.weaponNames.musket,
     label: TEXT.weaponLabels.musket,
-    damage: 8,
     range: 5,
     width: 3,
     isMelee: false,
@@ -508,7 +505,6 @@ const WEAPONS = {
     id: "blunderbuss",
     name: TEXT.weaponNames.blunderbuss,
     label: TEXT.weaponLabels.blunderbuss,
-    damage: 8,
     range: 2,
     width: 5,
     isMelee: false,
@@ -516,6 +512,33 @@ const WEAPONS = {
     ammoProperty: "ammoBlunderbuss"
   }
 };
+
+const WEAPON_DAMAGE_BY_UPGRADE = {
+  sword: [[1, 4, 0], [1, 6, 0], [1, 8, 0], [1, 10, 0]],
+  pistol: [[1, 6, 0], [2, 6, 0], [2, 6, 2], [2, 6, 5]],
+  musket: [[1, 8, 0], [2, 8, 0], [2, 8, 3], [2, 8, 7]],
+  blunderbuss: [[1, 8, 0], [2, 8, 0], [2, 8, 4], [2, 8, 8]]
+};
+
+const WEAPON_UPGRADE_BASE_PRICES = {
+  sword: 10,
+  pistol: 15,
+  musket: 20,
+  blunderbuss: 25
+};
+
+const WEAPON_UPGRADE_LEVEL_MULTIPLIERS = [1, 3, 5];
+const WEAPON_UPGRADE_REQUIRED_MEGA_TIER = [0, 1, 5];
+
+function calculateWeaponUpgradePrice(weaponId, targetLevel, tier) {
+  const basePrice = WEAPON_UPGRADE_BASE_PRICES[weaponId];
+  const levelMultiplier = WEAPON_UPGRADE_LEVEL_MULTIPLIERS[targetLevel - 1];
+  if (!basePrice || !levelMultiplier) return Infinity;
+
+  const clampedTier = Math.max(1, Math.min(10, Math.floor(tier || 1)));
+  const tierMultiplierPercent = 100 + (clampedTier - 1) * 12;
+  return Math.ceil((basePrice * levelMultiplier * tierMultiplierPercent) / 100);
+}
 
 function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1;
@@ -574,24 +597,19 @@ function calculateEldritchBlastRayCount(floor) {
 }
 
 function calculateEldritchBlastLevel(floor) {
-  if (floor <= 10) return "I";
-  if (floor <= 30) return "II";
-  if (floor <= 60) return "III";
-  return "IV";
+  return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][getTierForFloor(floor) - 1];
 }
 
 function calculateEldritchBlastDamage(floor) {
-  const level = calculateEldritchBlastLevel(floor);
-  return { I: 24, II: 60, III: 168, IV: 420 }[level];
+  return [24, 45, 75, 115, 165, 225, 295, 375, 465, 565][getTierForFloor(floor) - 1];
 }
 
 function getReferenceMaxDamage(originTier) {
   return 6 * originTier;
 }
 
-function getResistanceMultiplier(category, originTier) {
-  const categoryOffset = { minion: 0, miniBoss: 3, megaBoss: 7 }[category];
-  return originTier + categoryOffset;
+function getMegaBossResistanceMultiplier(originTier) {
+  return originTier + 11;
 }
 
 function splitDamageAcrossRays(totalDamage, rayCount) {
@@ -617,7 +635,7 @@ function createMinion(floor, x, y, visionRange = 2) {
   const spawnTier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
   const referenceDamage = getReferenceMaxDamage(entry.tier);
-  const maxHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
+  const maxHp = referenceDamage;
   return {
     id: Math.random().toString(36).substring(2, 9),
     x, y,
@@ -731,6 +749,8 @@ class Player {
     this.ammoBlunderbuss = 0;
     this.unlockedWeapons = new Set([WEAPONS.SWORD.id]);
     this.equippedWeapon = WEAPONS.SWORD;
+    this.weaponUpgrades = { sword: 0, pistol: 0, musket: 0, blunderbuss: 0 };
+    this.highestMegaBossTierDefeated = 0;
 
     this.mistyStepCharges = 2;
 
@@ -907,7 +927,7 @@ class DungeonGenerator {
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
     const referenceDamage = getReferenceMaxDamage(entry.tier);
-    const megaBossHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
+    const megaBossHp = referenceDamage * getMegaBossResistanceMultiplier(entry.tier);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -964,8 +984,11 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const referenceDamage = getReferenceMaxDamage(entry.tier);
-          const miniBossHp = referenceDamage * getResistanceMultiplier(entry.category, entry.tier);
+          const baseTierHp = calculateEldritchBlastDamage((entry.tier - 1) * 10 + 1);
+          const floorWithinBlock = ((this.floorNumber - 1) % 10) + 1;
+          const miniBossHp = floorWithinBlock <= 3
+            ? baseTierHp
+            : Math.round(baseTierHp * 1.55);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
@@ -978,7 +1001,7 @@ class DungeonGenerator {
             originTier: entry.tier,
             spawnTier: this.tier,
             category: entry.category,
-            referenceDamage,
+            referenceDamage: getReferenceMaxDamage(entry.tier),
             ac: 8 + calculateEnemyAttackBonus(this.floorNumber),
             visionRange: 3,
             attackRange: 1.5,
@@ -2732,7 +2755,7 @@ class CombatSystem {
     return damage;
   }
 
-  static rollAttack(game, target, damageSides) {
+  static rollAttack(game, target, weapon = game.player.equippedWeapon) {
     const result = CombatSystem.resolveD20Attack(game.player, target, game.hitBonus);
     if (!result) return false;
     if (result.fumble) {
@@ -2745,12 +2768,21 @@ class CombatSystem {
       return false;
     }
 
-    const baseDamage = rollDie(damageSides) + game.dmgBonus;
+    const baseDamage = CombatSystem.rollWeaponDamage(game.player, weapon);
     const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
     if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
     return false;
+  }
+
+  static rollWeaponDamage(player, weapon = player.equippedWeapon) {
+    const weaponId = weapon.id;
+    const level = Math.max(0, Math.min(3, player.weaponUpgrades[weaponId] || 0));
+    const [diceCount, dieSides, flatBonus] = WEAPON_DAMAGE_BY_UPGRADE[weaponId][level];
+    let damage = flatBonus;
+    for (let die = 0; die < diceCount; die++) damage += rollDie(dieSides);
+    return damage;
   }
 
   // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
@@ -2761,6 +2793,12 @@ class CombatSystem {
     const deadIds = new Set(dead.map(enemy => enemy.id));
     game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
     dead.forEach(enemy => {
+      if (enemy.isMegaBoss) {
+        game.player.highestMegaBossTierDefeated = Math.max(
+          game.player.highestMegaBossTierDefeated,
+          enemy.spawnTier || enemy.originTier || 1
+        );
+      }
       game.player.kills++;
       const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.5 : 0.25);
       if (enemy.isMegaBoss || Math.random() < dropChance) {
@@ -2849,7 +2887,7 @@ class CombatSystem {
 
     let playerFumbled = false;
     for (const target of targets) {
-      if (CombatSystem.rollAttack(game, target, weapon.damage)) {
+      if (CombatSystem.rollAttack(game, target, weapon)) {
         playerFumbled = true;
         break;
       }
@@ -2891,6 +2929,7 @@ class GameController {
     this.dialogTimer = null;
     this.dialogFadeTimer = null;
     this.shopSelection = 0;
+    this.activeShopView = "supplies";
     this.dialogCallback = null;
     this.gamepadMapping = "standard";
     this.controlDevice = this.getPreferredControlDevice();
@@ -2914,10 +2953,6 @@ class GameController {
 
   get hitBonus() {
     return this.tier;
-  }
-
-  get dmgBonus() {
-    return Math.min(20, 1 + Math.floor(((this.floor - 1) * 19) / 99));
   }
 
   initDeviceDetection() {
@@ -3096,7 +3131,7 @@ class GameController {
         });
       }, 300);
     } else {
-      this.log(TEXT.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus, this.dmgBonus));
+      this.log(TEXT.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus));
       const arenaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
       if (arenaBoss) this.log(TEXT.logs.bossArena(arenaBoss.name));
     }
@@ -3168,10 +3203,25 @@ class GameController {
 
   openShop() {
     if (!this.shopModal) return;
-    this.shopSelection = 0;
-    this.updateShopSelection();
+    this.setShopView("supplies");
     this.updateShopHUD();
     this.shopModal.classList.remove("hidden");
+  }
+
+  setShopView(view, focusTab = false) {
+    if (view !== "supplies" && view !== "upgrades") return;
+    this.activeShopView = view;
+    document.querySelectorAll("[data-shop-view]").forEach(tab => {
+      const selected = tab.dataset.shopView === view;
+      tab.classList.toggle("is-active", selected);
+      tab.setAttribute("aria-selected", String(selected));
+      if (selected && focusTab) tab.focus();
+    });
+    document.querySelectorAll("[data-shop-panel]").forEach(panel => {
+      panel.classList.toggle("hidden", panel.dataset.shopPanel !== view);
+    });
+    this.shopSelection = 0;
+    this.updateShopSelection();
   }
 
   closeShop() {
@@ -3180,9 +3230,10 @@ class GameController {
   }
 
   updateShopSelection() {
-    const items = [...(this.shopModal?.querySelectorAll(".shop-item") || [])];
+    const activePanel = this.shopModal?.querySelector(`[data-shop-panel="${this.activeShopView}"]`);
+    const items = [...(activePanel?.querySelectorAll(".shop-item:not(.hidden)") || [])];
     if (items.length === 0) return;
-    this.shopSelection = (this.shopSelection + items.length) % items.length;
+    this.shopSelection = ((this.shopSelection % items.length) + items.length) % items.length;
     items.forEach((item, index) => {
       const selected = index === this.shopSelection;
       item.classList.toggle("is-selected", selected);
@@ -3196,7 +3247,8 @@ class GameController {
   }
 
   purchaseSelectedShopItem() {
-    const item = this.shopModal?.querySelector(`.shop-item[data-shop-index="${this.shopSelection}"]`);
+    const activePanel = this.shopModal?.querySelector(`[data-shop-panel="${this.activeShopView}"]`);
+    const item = activePanel?.querySelectorAll(".shop-item:not(.hidden)")[this.shopSelection];
     item?.querySelector("button")?.click();
   }
 
@@ -3207,6 +3259,77 @@ class GameController {
     if (potionBtn) potionBtn.textContent = `${calculatePotionPrice(this.floor)} PO`;
     const potionLabel = document.getElementById("potion-shop-label");
     if (potionLabel) potionLabel.textContent = `Poción de Vida (${calculatePotionDice(this.floor)}d4 + 4)`;
+    this.updateShopUpgrades();
+  }
+
+  updateShopUpgrades() {
+    const roman = ["I", "II", "III"];
+    this.shopModal?.querySelectorAll("[data-upgrade-for]").forEach(item => {
+      const weaponId = item.dataset.upgradeFor;
+      const weapon = Object.values(WEAPONS).find(candidate => candidate.id === weaponId);
+      const unlocked = this.player.unlockedWeapons.has(weaponId);
+      item.classList.remove("hidden");
+      if (!weapon) return;
+
+      const level = this.player.weaponUpgrades[weaponId];
+      const label = item.querySelector(".upgrade-label");
+      const requirement = item.querySelector(".upgrade-requirement");
+      const button = item.querySelector("button");
+      if (level >= 3) {
+        if (label) label.textContent = `${weapon.name}: Mejora III`;
+        if (requirement) {
+          requirement.textContent = "Nivel máximo";
+          requirement.classList.remove("is-blocked");
+        }
+        button.textContent = "[MÁXIMO]";
+        button.disabled = true;
+        return;
+      }
+
+      if (!Number.isInteger(level) || level < 0) {
+        if (requirement) requirement.textContent = "Estado de mejora inválido";
+        button.disabled = true;
+        return;
+      }
+
+      const targetLevel = level + 1;
+      const requiredMegaTier = WEAPON_UPGRADE_REQUIRED_MEGA_TIER[level];
+      const price = calculateWeaponUpgradePrice(weaponId, targetLevel, this.tier);
+      const hasRequiredProgress = this.player.highestMegaBossTierDefeated >= requiredMegaTier;
+      const canAfford = this.player.gold >= price;
+      const requirements = [];
+      if (!unlocked) requirements.push("Desbloquea el arma en un cofre o comprando munición");
+      if (!hasRequiredProgress) requirements.push(`Requiere derrotar al mega jefe del piso ${requiredMegaTier * 10}`);
+      if (!canAfford) requirements.push(`Faltan ${price - this.player.gold} PO`);
+
+      if (label) label.textContent = `${weapon.name}: Mejora ${roman[level]}`;
+      if (requirement) {
+        requirement.textContent = requirements.length ? requirements.join(" · ") : "Disponible";
+        requirement.classList.toggle("is-blocked", requirements.length > 0);
+      }
+      button.textContent = `${price} PO`;
+      button.disabled = !unlocked || !hasRequiredProgress || !canAfford;
+    });
+  }
+
+  purchaseWeaponUpgrade(weaponId) {
+    if (!this.inMerchantFloor || !this.shopModal || this.shopModal.classList.contains("hidden")) return false;
+    if (!Object.values(WEAPONS).some(weapon => weapon.id === weaponId)) return false;
+
+    const level = this.player.weaponUpgrades[weaponId];
+    if (!Number.isInteger(level) || level < 0 || level >= 3) return false;
+    if (!this.player.unlockedWeapons.has(weaponId)) return false;
+    if (this.player.highestMegaBossTierDefeated < WEAPON_UPGRADE_REQUIRED_MEGA_TIER[level]) return false;
+
+    const price = calculateWeaponUpgradePrice(weaponId, level + 1, this.tier);
+    if (this.player.gold < price) return false;
+
+    this.player.gold -= price;
+    this.player.weaponUpgrades[weaponId] = level + 1;
+    sounds.playCoin();
+    this.updateShopHUD();
+    this.updateHUD();
+    return true;
   }
 
   addGold(amount, x = this.player.x, y = this.player.y) {
@@ -3243,6 +3366,13 @@ class GameController {
   initShopEvents() {
     const btnClose = document.getElementById("close-shop");
     if (btnClose) btnClose.addEventListener("click", () => this.closeShop());
+
+    this.shopModal?.querySelectorAll("[data-shop-view]").forEach(tab => {
+      tab.addEventListener("click", () => this.setShopView(tab.dataset.shopView));
+    });
+    this.shopModal?.querySelectorAll("[data-upgrade-for]").forEach(item => {
+      item.querySelector("button")?.addEventListener("click", () => this.purchaseWeaponUpgrade(item.dataset.upgradeFor));
+    });
 
     if (this.dialogModal) {
       this.dialogModal.addEventListener("click", () => this.dismissMerchantDialog());
@@ -3382,7 +3512,9 @@ class GameController {
     if (elAmmoDisplay) elAmmoDisplay.classList.toggle("weapon-ammo-infinite", !weapon.ammoProperty);
     if (elWeapon) elWeapon.textContent = this.player.equippedWeapon.name;
     if (elWeaponIcon) {
-      elWeaponIcon.className = `weapon-icon weapon-icon-${weapon.id}`;
+      const upgradeClass = ["", "weapon-tier-bronze", "weapon-tier-silver", "weapon-tier-gold"]
+        [this.player.weaponUpgrades[weapon.id] || 0];
+      elWeaponIcon.className = `weapon-icon weapon-icon-${weapon.id} ${upgradeClass}`.trim();
       elWeaponIcon.textContent = "";
     }
     if (elMisty) elMisty.textContent = this.player.mistyStepCharges;
@@ -4184,9 +4316,21 @@ class GameController {
             if (!e.repeat) this.moveShopSelection(1);
             e.preventDefault();
             break;
+          case "ArrowLeft":
+          case "ArrowRight":
+            if (!e.repeat) {
+              const nextView = this.activeShopView === "supplies" ? "upgrades" : "supplies";
+              this.setShopView(nextView, true);
+            }
+            e.preventDefault();
+            break;
           case "Enter":
           case " ":
-            if (!e.repeat) this.purchaseSelectedShopItem();
+            if (!e.repeat) {
+              const focusedTab = e.target.closest?.("[data-shop-view]");
+              if (focusedTab) focusedTab.click();
+              else this.purchaseSelectedShopItem();
+            }
             e.preventDefault();
             break;
           case "Escape":
@@ -4298,6 +4442,7 @@ class GameController {
 
         if (shopOpen) {
           if (movedY) this.moveShopSelection(inputY < 0 ? -1 : 1);
+          if (movedX) this.setShopView(this.activeShopView === "supplies" ? "upgrades" : "supplies");
           if (pressedThisFrame(gamepadActions.attack.index)) this.purchaseSelectedShopItem();
           if (pressedThisFrame(gamepadActions.mist.index)) this.closeShop();
         } else if (this.isPausedForDialog) {
