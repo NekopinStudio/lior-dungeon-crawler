@@ -520,7 +520,7 @@ const WEAPON_DAMAGE_BY_UPGRADE = {
   blunderbuss: [[1, 8], [2, 8], [3, 8], [4, 8]]
 };
 
-const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 2 };
+const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 1 };
 
 const MINION_HP_BY_TIER = [0, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67];
 const MINI_BOSS_HP_BY_TIER = [0, 16, 24, 34, 46, 60, 76, 94, 114, 136, 160];
@@ -536,11 +536,6 @@ const MINI_BOSS_DAMAGE_BY_TIER = [
 ];
 const MEGA_BOSS_DAMAGE_BY_TIER = [
   null, [1, 6, 0], [1, 6, 2], [2, 6, 0], [2, 6, 2], [2, 6, 4],
-  [3, 6, 0], [3, 6, 2], [3, 6, 4], [4, 6, 0], [4, 6, 4]
-];
-
-const ELDRITCH_BLAST_DAMAGE_BY_TIER = [
-  null, [1, 8, 0], [1, 8, 2], [2, 6, 0], [2, 6, 2], [2, 6, 4],
   [3, 6, 0], [3, 6, 2], [3, 6, 4], [4, 6, 0], [4, 6, 4]
 ];
 
@@ -628,8 +623,7 @@ function calculateEldritchBlastLevel(floor) {
 }
 
 function calculateEldritchBlastDamage(floor) {
-  const [diceCount, dieSides, flatBonus] = ELDRITCH_BLAST_DAMAGE_BY_TIER[getTierForFloor(floor)];
-  return CombatSystem.rollDamageDice(diceCount, dieSides) + flatBonus;
+  return MINI_BOSS_HP_BY_TIER[getTierForFloor(floor)];
 }
 
 function calculateMinionMaxHP(originTier) {
