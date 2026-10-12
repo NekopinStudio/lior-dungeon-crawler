@@ -524,7 +524,6 @@ const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 1 };
 
 const MINION_HP_BY_TIER = [0, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67];
 const MINI_BOSS_HP_BY_TIER = [0, 16, 24, 34, 46, 60, 76, 94, 114, 136, 160];
-const MEGA_BOSS_HP_BY_TIER = [0, 40, 60, 85, 115, 150, 190, 235, 285, 340, 400];
 
 const MINION_DAMAGE_BY_TIER = [
   null, [1, 3, 0], [1, 3, 1], [1, 4, 0], [1, 4, 1], [1, 4, 2],
@@ -630,12 +629,11 @@ function calculateMinionMaxHP(originTier) {
   return MINION_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
 }
 
-function calculateMiniBossMaxHP(originTier) {
-  return MINI_BOSS_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
-}
-
-function calculateMegaBossMaxHP(originTier) {
-  return MEGA_BOSS_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
+function calculateMiniBossMaxHP(floor) {
+  const tier = getTierForFloor(floor);
+  const floorWithinTier = ((floor - 1) % 10) + 1;
+  if (floorWithinTier <= 3) return MINI_BOSS_HP_BY_TIER[tier];
+  return calculateEldritchBlastDamage(floor) + 4 * (floorWithinTier - 3);
 }
 
 function getEnemyDamageProfile(enemy) {
@@ -958,7 +956,7 @@ class DungeonGenerator {
     const bossCells = this.generateCells(mx, my, 4);
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-    const megaBossHp = calculateMegaBossMaxHP(entry.tier);
+    const megaBossHp = 4 * calculateEldritchBlastDamage(this.floorNumber);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -1014,7 +1012,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const miniBossHp = calculateMiniBossMaxHP(entry.tier);
+          const miniBossHp = calculateMiniBossMaxHP(this.floorNumber);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
