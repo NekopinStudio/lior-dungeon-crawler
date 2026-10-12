@@ -523,7 +523,10 @@ const WEAPON_DAMAGE_BY_UPGRADE = {
 const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 1 };
 
 const MINION_HP_BY_TIER = [0, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67];
+// Solo define el daño del Eldritch Blast por tier de piso; no es la vida de los jefes.
 const MINI_BOSS_HP_BY_TIER = [0, 16, 24, 34, 46, 60, 76, 94, 114, 136, 160];
+const MINI_BOSS_MAX_HP_BY_ORIGIN_TIER = [0, 16, 22, 32, 44, 58, 80, 100, 122, 146, 174];
+const MEGA_BOSS_MAX_HP_BY_ORIGIN_TIER = [0, 64, 100, 145, 200, 265, 340, 425, 520, 625, 740];
 
 const MINION_DAMAGE_BY_TIER = [
   null, [1, 3, 0], [1, 3, 1], [1, 4, 0], [1, 4, 1], [1, 4, 2],
@@ -629,11 +632,12 @@ function calculateMinionMaxHP(originTier) {
   return MINION_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
 }
 
-function calculateMiniBossMaxHP(floor) {
-  const tier = getTierForFloor(floor);
-  const floorWithinTier = ((floor - 1) % 10) + 1;
-  if (floorWithinTier <= 3) return MINI_BOSS_HP_BY_TIER[tier];
-  return calculateEldritchBlastDamage(floor) + 4 * (floorWithinTier - 3);
+function calculateMiniBossMaxHP(originTier) {
+  return MINI_BOSS_MAX_HP_BY_ORIGIN_TIER[Math.max(1, Math.min(10, originTier))];
+}
+
+function calculateMegaBossMaxHP(originTier) {
+  return MEGA_BOSS_MAX_HP_BY_ORIGIN_TIER[Math.max(1, Math.min(10, originTier))];
 }
 
 function getEnemyDamageProfile(enemy) {
@@ -956,7 +960,7 @@ class DungeonGenerator {
     const bossCells = this.generateCells(mx, my, 4);
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-    const megaBossHp = 4 * calculateEldritchBlastDamage(this.floorNumber);
+    const megaBossHp = calculateMegaBossMaxHP(entry.tier);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -1012,7 +1016,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const miniBossHp = calculateMiniBossMaxHP(this.floorNumber);
+          const miniBossHp = calculateMiniBossMaxHP(entry.tier);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
