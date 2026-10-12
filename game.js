@@ -528,7 +528,6 @@ const WEAPON_UPGRADE_BASE_PRICES = {
 };
 
 const WEAPON_UPGRADE_LEVEL_MULTIPLIERS = [1, 3, 5];
-const WEAPON_UPGRADE_REQUIRED_MEGA_TIER = [0, 1, 5];
 
 function calculateWeaponUpgradePrice(weaponId, targetLevel, tier) {
   const basePrice = WEAPON_UPGRADE_BASE_PRICES[weaponId];
@@ -604,12 +603,22 @@ function calculateEldritchBlastDamage(floor) {
   return [24, 45, 75, 115, 165, 225, 295, 375, 465, 565][getTierForFloor(floor) - 1];
 }
 
-function getReferenceMaxDamage(originTier) {
-  return 6 * originTier;
+function calculateMinionMaxHP(originTier) {
+  return 4 * (1 + 0.5 * (originTier - 1));
 }
 
-function getMegaBossResistanceMultiplier(originTier) {
-  return originTier + 11;
+function calculateMiniBossMaxHP(originTier, floor) {
+  const floorWithinBlock = ((floor - 1) % 10) + 1;
+  const referenceHp = 4 * (4 + originTier - 1);
+  if (floorWithinBlock <= 3) return referenceHp;
+
+  const blastDamage = calculateEldritchBlastDamage(floor);
+  const additionalSwordHits = floorWithinBlock - 3;
+  return Math.max(referenceHp, blastDamage + additionalSwordHits * 4);
+}
+
+function getReferenceMaxDamage(originTier) {
+  return 6 * originTier;
 }
 
 function splitDamageAcrossRays(totalDamage, rayCount) {
@@ -634,7 +643,7 @@ function getBossRoomMinionLimit(tier) {
 function createMinion(floor, x, y, visionRange = 2) {
   const spawnTier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
-  const referenceDamage = getReferenceMaxDamage(entry.tier);
+  const referenceDamage = calculateMinionMaxHP(entry.tier);
   const maxHp = referenceDamage;
   return {
     id: Math.random().toString(36).substring(2, 9),
@@ -927,7 +936,7 @@ class DungeonGenerator {
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
     const referenceDamage = getReferenceMaxDamage(entry.tier);
-    const megaBossHp = referenceDamage * getMegaBossResistanceMultiplier(entry.tier);
+    const megaBossHp = 4 * calculateEldritchBlastDamage(this.floorNumber);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -984,11 +993,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const baseTierHp = calculateEldritchBlastDamage((entry.tier - 1) * 10 + 1);
-          const floorWithinBlock = ((this.floorNumber - 1) % 10) + 1;
-          const miniBossHp = floorWithinBlock <= 3
-            ? baseTierHp
-            : Math.round(baseTierHp * 1.55);
+          const miniBossHp = calculateMiniBossMaxHP(entry.tier, this.floorNumber);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
@@ -3293,13 +3298,10 @@ class GameController {
       }
 
       const targetLevel = level + 1;
-      const requiredMegaTier = WEAPON_UPGRADE_REQUIRED_MEGA_TIER[level];
       const price = calculateWeaponUpgradePrice(weaponId, targetLevel, this.tier);
-      const hasRequiredProgress = this.player.highestMegaBossTierDefeated >= requiredMegaTier;
       const canAfford = this.player.gold >= price;
       const requirements = [];
       if (!unlocked) requirements.push("Desbloquea el arma en un cofre o comprando munición");
-      if (!hasRequiredProgress) requirements.push(`Requiere derrotar al mega jefe del piso ${requiredMegaTier * 10}`);
       if (!canAfford) requirements.push(`Faltan ${price - this.player.gold} PO`);
 
       if (label) label.textContent = `${weapon.name}: Mejora ${roman[level]}`;
@@ -3308,7 +3310,7 @@ class GameController {
         requirement.classList.toggle("is-blocked", requirements.length > 0);
       }
       button.textContent = `${price} PO`;
-      button.disabled = !unlocked || !hasRequiredProgress || !canAfford;
+      button.disabled = !unlocked || !canAfford;
     });
   }
 
@@ -3319,7 +3321,6 @@ class GameController {
     const level = this.player.weaponUpgrades[weaponId];
     if (!Number.isInteger(level) || level < 0 || level >= 3) return false;
     if (!this.player.unlockedWeapons.has(weaponId)) return false;
-    if (this.player.highestMegaBossTierDefeated < WEAPON_UPGRADE_REQUIRED_MEGA_TIER[level]) return false;
 
     const price = calculateWeaponUpgradePrice(weaponId, level + 1, this.tier);
     if (this.player.gold < price) return false;
