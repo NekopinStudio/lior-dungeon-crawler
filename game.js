@@ -78,9 +78,9 @@ const TEXT = {
       `Piso ${floor} (Tier ${tier}): ${w}x${h}. CA Lior: ${ac}, Impacto: +${hit}.`,
     bossArena: (name) => `¡${name} te espera en la arena! Sus esbirros acuden sin descanso.`,
     bunnyCaught: "¡Atrapaste al Conejo Dorado! Obtienes 5 monedas de oro.",
-    boughtPistol: "Compraste 6 balas de Pistola (-1 PO).",
-    boughtMusket: "Compraste 4 balas de Mosquete (-1 PO).",
-    boughtBlunderbuss: "Compraste 2 balas de Trabuco (-1 PO).",
+    boughtPistol: (price) => `Compraste 6 balas de Pistola (-${price} PO).`,
+    boughtMusket: (price) => `Compraste 4 balas de Mosquete (-${price} PO).`,
+    boughtBlunderbuss: (price) => `Compraste 2 balas de Trabuco (-${price} PO).`,
     boughtPotion: (heal, price) => `Bebiste una poción: +${heal} HP (-${price} PO).`
   }
 };
@@ -514,11 +514,35 @@ const WEAPONS = {
 };
 
 const WEAPON_DAMAGE_BY_UPGRADE = {
-  sword: [[1, 4, 0], [1, 6, 0], [1, 8, 0], [1, 10, 0]],
-  pistol: [[1, 6, 0], [2, 6, 0], [2, 6, 2], [2, 6, 5]],
-  musket: [[1, 8, 0], [2, 8, 0], [2, 8, 3], [2, 8, 7]],
-  blunderbuss: [[1, 8, 0], [2, 8, 0], [2, 8, 4], [2, 8, 8]]
+  sword: [[1, 4], [2, 4], [3, 4], [4, 4]],
+  pistol: [[1, 6], [2, 6], [3, 6], [4, 6]],
+  musket: [[1, 8], [2, 8], [3, 8], [4, 8]],
+  blunderbuss: [[1, 8], [2, 8], [3, 8], [4, 8]]
 };
+
+const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 2 };
+
+const MINION_HP_BY_TIER = [0, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67];
+const MINI_BOSS_HP_BY_TIER = [0, 16, 24, 34, 46, 60, 76, 94, 114, 136, 160];
+const MEGA_BOSS_HP_BY_TIER = [0, 40, 60, 85, 115, 150, 190, 235, 285, 340, 400];
+
+const MINION_DAMAGE_BY_TIER = [
+  null, [1, 3, 0], [1, 3, 1], [1, 4, 0], [1, 4, 1], [1, 4, 2],
+  [1, 6, 0], [1, 6, 1], [1, 6, 2], [1, 8, 0], [1, 8, 1]
+];
+const MINI_BOSS_DAMAGE_BY_TIER = [
+  null, [1, 4, 0], [1, 4, 1], [1, 6, 0], [1, 6, 1], [1, 6, 2],
+  [2, 6, 0], [2, 6, 1], [2, 6, 2], [2, 8, 0], [2, 8, 1]
+];
+const MEGA_BOSS_DAMAGE_BY_TIER = [
+  null, [1, 6, 0], [1, 6, 2], [2, 6, 0], [2, 6, 2], [2, 6, 4],
+  [3, 6, 0], [3, 6, 2], [3, 6, 4], [4, 6, 0], [4, 6, 4]
+];
+
+const ELDRITCH_BLAST_DAMAGE_BY_TIER = [
+  null, [1, 8, 0], [1, 8, 2], [2, 6, 0], [2, 6, 2], [2, 6, 4],
+  [3, 6, 0], [3, 6, 2], [3, 6, 4], [4, 6, 0], [4, 6, 4]
+];
 
 const WEAPON_UPGRADE_BASE_PRICES = {
   sword: 10,
@@ -529,14 +553,18 @@ const WEAPON_UPGRADE_BASE_PRICES = {
 
 const WEAPON_UPGRADE_LEVEL_MULTIPLIERS = [1, 3, 5];
 
-function calculateWeaponUpgradePrice(weaponId, targetLevel, tier) {
+function calculateWeaponUpgradePrice(weaponId, targetLevel) {
   const basePrice = WEAPON_UPGRADE_BASE_PRICES[weaponId];
   const levelMultiplier = WEAPON_UPGRADE_LEVEL_MULTIPLIERS[targetLevel - 1];
   if (!basePrice || !levelMultiplier) return Infinity;
+  return Math.ceil(basePrice * levelMultiplier);
+}
 
-  const clampedTier = Math.max(1, Math.min(10, Math.floor(tier || 1)));
-  const tierMultiplierPercent = 100 + (clampedTier - 1) * 12;
-  return Math.ceil((basePrice * levelMultiplier * tierMultiplierPercent) / 100);
+function calculateAmmoPrice(weaponId, weaponUpgrades) {
+  const basePrice = AMMO_BASE_PRICES[weaponId];
+  if (basePrice === undefined) return Infinity;
+  const upgradeLevel = Math.max(0, Math.min(3, Math.floor(weaponUpgrades[weaponId] || 0)));
+  return basePrice + upgradeLevel;
 }
 
 function rollDie(sides) {
@@ -544,7 +572,7 @@ function rollDie(sides) {
 }
 
 function calculateLiorMaxHP(floor) {
-  return 24 + (floor - 1) * 5;
+  return 30 + 3 * (floor - 1) + 8 * Math.floor((floor - 1) / 10);
 }
 
 function calculateLiorAC(floor) {
@@ -600,25 +628,28 @@ function calculateEldritchBlastLevel(floor) {
 }
 
 function calculateEldritchBlastDamage(floor) {
-  return [24, 45, 75, 115, 165, 225, 295, 375, 465, 565][getTierForFloor(floor) - 1];
+  const [diceCount, dieSides, flatBonus] = ELDRITCH_BLAST_DAMAGE_BY_TIER[getTierForFloor(floor)];
+  return CombatSystem.rollDamageDice(diceCount, dieSides) + flatBonus;
 }
 
 function calculateMinionMaxHP(originTier) {
-  return 4 * (1 + 0.5 * (originTier - 1));
+  return MINION_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
 }
 
-function calculateMiniBossMaxHP(originTier, floor) {
-  const floorWithinBlock = ((floor - 1) % 10) + 1;
-  const referenceHp = 4 * (4 + originTier - 1);
-  if (floorWithinBlock <= 3) return referenceHp;
-
-  const blastDamage = calculateEldritchBlastDamage(floor);
-  const additionalSwordHits = floorWithinBlock - 3;
-  return Math.max(referenceHp, blastDamage + additionalSwordHits * 4);
+function calculateMiniBossMaxHP(originTier) {
+  return MINI_BOSS_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
 }
 
-function getReferenceMaxDamage(originTier) {
-  return 6 * originTier;
+function calculateMegaBossMaxHP(originTier) {
+  return MEGA_BOSS_HP_BY_TIER[Math.max(1, Math.min(10, originTier))];
+}
+
+function getEnemyDamageProfile(enemy) {
+  const tier = Math.max(1, Math.min(10, enemy.originTier || enemy.spawnTier || 1));
+  const table = enemy.isMegaBoss
+    ? MEGA_BOSS_DAMAGE_BY_TIER
+    : (enemy.isBoss ? MINI_BOSS_DAMAGE_BY_TIER : MINION_DAMAGE_BY_TIER);
+  return table[tier];
 }
 
 function splitDamageAcrossRays(totalDamage, rayCount) {
@@ -643,8 +674,7 @@ function getBossRoomMinionLimit(tier) {
 function createMinion(floor, x, y, visionRange = 2) {
   const spawnTier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
-  const referenceDamage = calculateMinionMaxHP(entry.tier);
-  const maxHp = referenceDamage;
+  const maxHp = calculateMinionMaxHP(entry.tier);
   return {
     id: Math.random().toString(36).substring(2, 9),
     x, y,
@@ -656,7 +686,6 @@ function createMinion(floor, x, y, visionRange = 2) {
     originTier: entry.tier,
     spawnTier,
     category: entry.category,
-    referenceDamage,
     ac: 6 + calculateEnemyAttackBonus(floor),
     visionRange,
     attackRange: 1,
@@ -935,8 +964,7 @@ class DungeonGenerator {
     const bossCells = this.generateCells(mx, my, 4);
     bossCells.forEach(c => this.dungeon.setTile(c.x, c.y, TILE_FLOOR));
 
-    const referenceDamage = getReferenceMaxDamage(entry.tier);
-    const megaBossHp = 4 * calculateEldritchBlastDamage(this.floorNumber);
+    const megaBossHp = calculateMegaBossMaxHP(entry.tier);
 
     this.dungeon.enemies.push({
       id: Math.random().toString(36).substring(2, 9),
@@ -949,7 +977,6 @@ class DungeonGenerator {
       originTier: entry.tier,
       spawnTier: getTierForFloor(this.floorNumber),
       category: entry.category,
-      referenceDamage,
       ac: 14 + calculateEnemyAttackBonus(this.floorNumber),
       visionRange: 4,
       // 8 casillas desde su fila inferior (y=5) alcanzan hasta y=13: solo queda a salvo la fila pegada al muro sur.
@@ -993,7 +1020,7 @@ class DungeonGenerator {
 
         if (isBoss) {
           const entry = pickCumulativeEntry(ENEMY_ROSTER.miniBoss, this.tier);
-          const miniBossHp = calculateMiniBossMaxHP(entry.tier, this.floorNumber);
+          const miniBossHp = calculateMiniBossMaxHP(entry.tier);
 
           this.dungeon.enemies.push({
             id: Math.random().toString(36).substring(2, 9),
@@ -1006,7 +1033,6 @@ class DungeonGenerator {
             originTier: entry.tier,
             spawnTier: this.tier,
             category: entry.category,
-            referenceDamage: getReferenceMaxDamage(entry.tier),
             ac: 8 + calculateEnemyAttackBonus(this.floorNumber),
             visionRange: 3,
             attackRange: 1.5,
@@ -2760,6 +2786,32 @@ class CombatSystem {
     return damage;
   }
 
+  static applyBlunderbussKnockback(game, target) {
+    if (target.size !== 1 || target.hp <= 0) return false;
+
+    const dx = Math.sign(target.x - game.player.x);
+    const dy = Math.sign(target.y - game.player.y);
+    if (dx === 0 && dy === 0) return false;
+
+    const destination = { x: target.x + dx, y: target.y + dy };
+    const { dungeon, player } = game;
+    if (!dungeon.isInsideBounds(destination.x, destination.y)) return false;
+
+    const tile = dungeon.getTile(destination.x, destination.y);
+    const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(enemy => enemy.hp > 0);
+    if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS || lockedExit
+      || (destination.x === player.x && destination.y === player.y)) return false;
+
+    const occupied = dungeon.enemies.some(enemy => enemy !== target && enemy.hp > 0
+      && enemy.cells?.some(cell => cell.x === destination.x && cell.y === destination.y));
+    if (occupied) return false;
+
+    target.x = destination.x;
+    target.y = destination.y;
+    target.cells = [destination];
+    return true;
+  }
+
   static rollAttack(game, target, weapon = game.player.equippedWeapon) {
     const result = CombatSystem.resolveD20Attack(game.player, target, game.hitBonus);
     if (!result) return false;
@@ -2776,6 +2828,7 @@ class CombatSystem {
     const baseDamage = CombatSystem.rollWeaponDamage(game.player, weapon);
     const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
+    if (weapon.id === "blunderbuss") CombatSystem.applyBlunderbussKnockback(game, target);
     if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
     return false;
@@ -2784,10 +2837,8 @@ class CombatSystem {
   static rollWeaponDamage(player, weapon = player.equippedWeapon) {
     const weaponId = weapon.id;
     const level = Math.max(0, Math.min(3, player.weaponUpgrades[weaponId] || 0));
-    const [diceCount, dieSides, flatBonus] = WEAPON_DAMAGE_BY_UPGRADE[weaponId][level];
-    let damage = flatBonus;
-    for (let die = 0; die < diceCount; die++) damage += rollDie(dieSides);
-    return damage;
+    const [diceCount, dieSides] = WEAPON_DAMAGE_BY_UPGRADE[weaponId][level];
+    return CombatSystem.rollDamageDice(diceCount, dieSides);
   }
 
   // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
@@ -3260,6 +3311,13 @@ class GameController {
   updateShopHUD() {
     const goldDisplay = document.getElementById("shop-gold-display");
     if (goldDisplay) goldDisplay.textContent = this.player.gold;
+    ["pistol", "musket", "blunderbuss"].forEach(weaponId => {
+      const button = document.getElementById(`buy-${weaponId}-ammo`);
+      if (!button) return;
+      const price = calculateAmmoPrice(weaponId, this.player.weaponUpgrades);
+      button.textContent = `${price} PO`;
+      button.disabled = this.player.gold < price;
+    });
     const potionBtn = document.getElementById("buy-potion");
     if (potionBtn) potionBtn.textContent = `${calculatePotionPrice(this.floor)} PO`;
     const potionLabel = document.getElementById("potion-shop-label");
@@ -3298,7 +3356,7 @@ class GameController {
       }
 
       const targetLevel = level + 1;
-      const price = calculateWeaponUpgradePrice(weaponId, targetLevel, this.tier);
+      const price = calculateWeaponUpgradePrice(weaponId, targetLevel);
       const canAfford = this.player.gold >= price;
       const requirements = [];
       if (!unlocked) requirements.push("Desbloquea el arma en un cofre o comprando munición");
@@ -3322,7 +3380,7 @@ class GameController {
     if (!Number.isInteger(level) || level < 0 || level >= 3) return false;
     if (!this.player.unlockedWeapons.has(weaponId)) return false;
 
-    const price = calculateWeaponUpgradePrice(weaponId, level + 1, this.tier);
+    const price = calculateWeaponUpgradePrice(weaponId, level + 1);
     if (this.player.gold < price) return false;
 
     this.player.gold -= price;
@@ -3399,14 +3457,15 @@ class GameController {
     const buyPistol = document.getElementById("buy-pistol-ammo");
     if (buyPistol) {
       buyPistol.addEventListener("click", () => {
-        if (this.player.gold >= 1) {
-          this.player.gold -= 1;
+        const price = calculateAmmoPrice("pistol", this.player.weaponUpgrades);
+        if (this.player.gold >= price) {
+          this.player.gold -= price;
           this.player.ammoPistol += 6;
           this.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log(TEXT.logs.boughtPistol);
+          this.log(TEXT.logs.boughtPistol(price));
         }
       });
     }
@@ -3414,14 +3473,15 @@ class GameController {
     const buyMusket = document.getElementById("buy-musket-ammo");
     if (buyMusket) {
       buyMusket.addEventListener("click", () => {
-        if (this.player.gold >= 1) {
-          this.player.gold -= 1;
+        const price = calculateAmmoPrice("musket", this.player.weaponUpgrades);
+        if (this.player.gold >= price) {
+          this.player.gold -= price;
           this.player.ammoMusket += 4;
           this.player.unlockedWeapons.add(WEAPONS.MUSKET.id);
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log(TEXT.logs.boughtMusket);
+          this.log(TEXT.logs.boughtMusket(price));
         }
       });
     }
@@ -3429,14 +3489,15 @@ class GameController {
     const buyBlunderbuss = document.getElementById("buy-blunderbuss-ammo");
     if (buyBlunderbuss) {
       buyBlunderbuss.addEventListener("click", () => {
-        if (this.player.gold >= 1) {
-          this.player.gold -= 1;
+        const price = calculateAmmoPrice("blunderbuss", this.player.weaponUpgrades);
+        if (this.player.gold >= price) {
+          this.player.gold -= price;
           this.player.ammoBlunderbuss += 2;
           this.player.unlockedWeapons.add(WEAPONS.BLUNDERBUSS.id);
           sounds.playCoin();
           this.updateHUD();
           this.updateShopHUD();
-          this.log(TEXT.logs.boughtBlunderbuss);
+          this.log(TEXT.logs.boughtBlunderbuss(price));
         }
       });
     }
@@ -3919,8 +3980,8 @@ class GameController {
         let hitMessage = "";
 
         if (attack.hit) {
-          const damageSides = enemy.isMegaBoss ? 8 : (enemy.isBoss ? 4 : 2);
-          const baseDamage = CombatSystem.rollDamageDice(this.tier, damageSides);
+          const [damageDice, damageSides, flatBonus] = getEnemyDamageProfile(enemy);
+          const baseDamage = CombatSystem.rollDamageDice(damageDice, damageSides) + flatBonus;
           totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
           hitMessage = TEXT.logs.enemyHit(enemy.name, attack.total, this.player.ac, totalDmg);
         }
