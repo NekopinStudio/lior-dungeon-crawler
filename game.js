@@ -46,8 +46,9 @@ const TEXT = {
   logs: {
     outOfBounds: "El muro exterior te detiene.",
     backOutOfBounds: "Un muro exterior detiene tu retroceso.",
-    wallFront: "Un muro blanco bloquea el camino.",
+    wallFront: "Un muro bloquea el camino.",
     wallBack: "Un muro a tu espalda te impide retroceder.",
+    wallCorner: "Una esquina de piedra bloquea el paso diagonal.",
     enemyBlock: "¡Un enemigo bloquea el paso! Ataca para despejarlo.",
     enemyBlockBack: "Un enemigo te bloquea el paso por la espalda.",
     merchantPeace: "Baja tu arma, tengo cosas buenas para ti.",
@@ -81,14 +82,11 @@ const TEXT = {
     boughtPistol: (price) => `Compraste 6 balas de Pistola (-${price} PO).`,
     boughtMusket: (price) => `Compraste 4 balas de Mosquete (-${price} PO).`,
     boughtBlunderbuss: (price) => `Compraste 2 balas de Trabuco (-${price} PO).`,
-    boughtPotion: (heal, price) => `Bebiste una poción: +${heal} HP (-${price} PO).`
+    boughtPotion: (heal, price) => `Bebiste una poción: +${heal} HP (-${price} PO).`,
+    mistyInvalid: "Destino inválido para Misty Step."
   }
 };
 
-/**
- * LIOR: hoja principal (fila por fila según los rótulos). Cada frame es
- * { x, y, w, h } en píxeles de lior.png; el recorte fino lo hace el Renderer.
- */
 const LIOR_ROWS = {
   IDLE:           { y0: 14,   y1: 128,  xs: [[194, 267], [301, 374], [408, 483]] },
   WALK:           { y0: 135,  y1: 274,  xs: [[302, 380], [408, 490], [519, 598], [640, 725], [760, 844], [873, 964], [995, 1086], [1117, 1207]] },
@@ -106,16 +104,12 @@ const LIOR_SPRITES = Object.fromEntries(Object.entries(LIOR_ROWS).map(([name, ro
   row.xs.map(([x0, x1]) => ({ x: x0, y: row.y0, w: x1 - x0 + 1, h: row.y1 - row.y0 + 1 }))
 ]));
 
-/**
- * lior2.png (alfa real): vistas frontal y lateral derecha. Los rangos x excluyen las etiquetas de fila.
- */
 const LIOR2_ROWS = {
   FRONT_IDLE: { view: "front", y0: 0,    y1: 319,  xs: [[316, 478], [538, 699], [758, 920], [978, 1139], [1199, 1357], [1419, 1577], [1637, 1796]] },
   FRONT_WALK: { view: "front", y0: 337,  y1: 657,  xs: [[328, 472], [550, 695], [774, 918], [998, 1142], [1208, 1368], [1446, 1591]] },
   FRONT_GUN:  { view: "front", y0: 673,  y1: 991,  xs: [[397, 612], [924, 1117], [1308, 1530]] },
   SIDE_IDLE:  { view: "side",  y0: 1012, y1: 1324, xs: [[358, 509], [574, 723], [787, 937], [1001, 1151], [1214, 1365], [1429, 1579], [1646, 1795], [1858, 2009]] },
   SIDE_WALK:  { view: "side",  y0: 1334, y1: 1628, xs: [[407, 556], [697, 848], [983, 1134], [1251, 1400], [1521, 1669]] },
-  // Destello y haz recortados (los dibuja el sistema de efectos); el primer frame se omite porque el rótulo de la hoja le tapa el sombrero.
   SIDE_GUN:   { view: "side",  y0: 1647, y1: 1949, xs: [[732, 933], [1013, 1233]] }
 };
 
@@ -126,7 +120,6 @@ const LIOR2_SPRITES = Object.fromEntries(Object.entries(LIOR2_ROWS).map(([name, 
 
 const flipFrames = frames => frames.map(frame => ({ ...frame, flip: true }));
 
-// Filas de lior2 por encaramiento (1 Este, 2 Sur, 3 Oeste reflejado); el Norte conserva lior.png.
 const LIOR_FACING_FRAMES = {
   2: { IDLE: LIOR2_SPRITES.FRONT_IDLE, WALK: LIOR2_SPRITES.FRONT_WALK, GUN_RECOIL: LIOR2_SPRITES.FRONT_GUN, ELDRITCH_BLAST: LIOR2_SPRITES.FRONT_GUN },
   1: { IDLE: LIOR2_SPRITES.SIDE_IDLE, WALK: LIOR2_SPRITES.SIDE_WALK, GUN_RECOIL: LIOR2_SPRITES.SIDE_GUN, ELDRITCH_BLAST: LIOR2_SPRITES.SIDE_GUN },
@@ -140,10 +133,6 @@ const LIOR_FACING_FRAMES = {
 
 const LIOR2_REFERENCE = { front: LIOR2_SPRITES.FRONT_IDLE[0], side: LIOR2_SPRITES.SIDE_IDLE[0] };
 
-/**
- * EFECTOS DE ARMAS: 3 fases por hoja. "cols" = columnas iguales; "panels" = recortes
- * manuales (el trabuco dibuja un panel completo de 5x2 casillas).
- */
 const EFFECT_SHEETS = {
   eblast:      { src: "Assets/Lior/EBlast.jpg",        cols: 3, trim: false },
   pistol:      { src: "Assets/Lior/PistolShot.jpg",    cols: 3, trim: true },
@@ -159,9 +148,6 @@ const EFFECT_SHEETS = {
   }
 };
 
-/**
- * MOTOR DE AUDIO SINTETIZADO (Web Audio API)
- */
 class SoundEngine {
   constructor() {
     this.ctx = null;
@@ -379,20 +365,18 @@ const ACTION_BINDINGS = {
   }
 };
 
-// Modo vertical: viewport 7x12 con el mundo rotando. Landscape: 11x11 centrado, con el Norte fijo.
 const CAMERA_PROFILES = {
-  classic: { cols: 7, rows: 12, tileSize: 42, anchors: [{ x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }, { x: 3, y: 10 }] },
-  fixed: { cols: 11, rows: 11, tileSize: 40, anchors: [{ x: 5, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 5 }] }
+  classic: { cols: 15, rows: 9, tileSize: 40, anchors: [{ x: 7, y: 4 }, { x: 7, y: 4 }, { x: 7, y: 4 }, { x: 7, y: 4 }] },
+  fixed: { cols: 15, rows: 9, tileSize: 40, anchors: [{ x: 7, y: 4 }, { x: 7, y: 4 }, { x: 7, y: 4 }, { x: 7, y: 4 }] }
 };
 
-// Estado vivo de la cámara; playerScreenX/Y son la casilla entera de Lior en pantalla.
 const CAMERA_CONFIG = {
-  mode: "classic",
-  cols: 7,
-  rows: 12,
-  tileSize: 42,
-  playerScreenX: 3,
-  playerScreenY: 10
+  mode: "fixed",
+  cols: 15,
+  rows: 9,
+  tileSize: 40,
+  playerScreenX: 7,
+  playerScreenY: 4
 };
 
 const CAMERA_CARDINAL_BASIS = [
@@ -441,10 +425,8 @@ const ENEMY_ROSTER = {
   ]
 };
 
-// Milisegundos por frame de cada estado de la máquina de animación de enemigos.
 const ENEMY_ANIM_MS = { idle: 175, attack: 110, hurt: 100, death: 130 };
 
-// disparos.jpg: 3 filas (calibres) x 3 columnas (carga, vuelo, impacto).
 const PROJECTILE_SHEET = {
   src: "Assets/Enemy/disparos.jpg",
   rows: { small: 0, medium: 1, large: 2 },
@@ -523,7 +505,6 @@ const WEAPON_DAMAGE_BY_UPGRADE = {
 const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 1 };
 
 const MINION_HP_BY_TIER = [0, 4, 7, 11, 16, 22, 29, 37, 46, 56, 67];
-// Solo define el daño del Eldritch Blast por tier de piso; no es la vida de los jefes.
 const MINI_BOSS_HP_BY_TIER = [0, 16, 24, 34, 46, 60, 76, 94, 114, 136, 160];
 const MINI_BOSS_MAX_HP_BY_ORIGIN_TIER = [0, 16, 22, 32, 44, 58, 80, 100, 122, 146, 174];
 const MEGA_BOSS_MAX_HP_BY_ORIGIN_TIER = [0, 64, 100, 145, 200, 265, 340, 425, 520, 625, 740];
@@ -592,7 +573,6 @@ function restoreHealth(player, healing) {
   return { hpRestored, extraRestored, totalRestored: hpRestored + extraRestored };
 }
 
-// Dados d4 necesarios para que Nd4 + 4 (máximo 4N + 4) cubra ~25% del HP máximo.
 function calculatePotionDice(floor) {
   const target = calculateLiorMaxHP(floor) * 0.25;
   return Math.max(1, Math.ceil((target - 4) / 4));
@@ -658,7 +638,6 @@ function getTierForFloor(floorNumber) {
   return Math.min(10, calculateTier(floorNumber));
 }
 
-// Población acumulativa: en el tier N pueden aparecer las entradas 1..N.
 function pickCumulativeEntry(list, tier) {
   return list[Math.floor(Math.random() * Math.min(tier, list.length))];
 }
@@ -787,8 +766,6 @@ class Player {
     this.highestMegaBossTierDefeated = 0;
 
     this.mistyStepCharges = 2;
-
-    // Sistema de recarga de Eldritch Blast (10 acciones)
     this.blastMaxCharges = 10;
     this.blastCurrentCharges = 10;
   }
@@ -953,8 +930,6 @@ class DungeonGenerator {
 
   placeMegaBoss() {
     const entry = ENEMY_ROSTER.megaBoss[Math.min(ENEMY_ROSTER.megaBoss.length, this.floorNumber / 10) - 1];
-
-    // Patrulla superior fija: x=6, y=2 en la arena de 15x15.
     const mx = 6;
     const my = 2;
     const bossCells = this.generateCells(mx, my, 4);
@@ -975,7 +950,6 @@ class DungeonGenerator {
       category: entry.category,
       ac: 14 + calculateEnemyAttackBonus(this.floorNumber),
       visionRange: 4,
-      // 8 casillas desde su fila inferior (y=5) alcanzan hasta y=13: solo queda a salvo la fila pegada al muro sur.
       attackRange: 8,
       bossAttackReady: true,
       isMegaBoss: true,
@@ -1211,9 +1185,6 @@ class DungeonGenerator {
   }
 }
 
-/**
- * PROYECCIÓN Y TRANSFORMACIÓN DE CÁMARA RELATIVA
- */
 class CameraTransformer {
   static getBasis(direction) {
     const cardinal = ((direction % 4) + 4) % 4;
@@ -1249,9 +1220,6 @@ class CameraTransformer {
   }
 }
 
-/**
- * SISTEMA DE VISIBILIDAD ROBUSTO
- */
 class VisibilitySystem {
   static hasLineOfSight(screenX0, screenY0, screenX1, screenY1, dungeon, player) {
     if (screenX0 === screenX1 && screenY0 === screenY1) return true;
@@ -1294,6 +1262,12 @@ class VisibilitySystem {
   }
 }
 
+function cellHash(x, y, salt = 0) {
+  let h = (x * 374761393 + y * 668265263 + salt * 1442695041) | 0;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) >>> 0);
+}
+
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
     this.canvas = canvas;
@@ -1304,33 +1278,111 @@ class Renderer {
     this.game = null;
     this.isVictorySequence = false;
     this.victoryStep = 0;
+    this.minimapCanvas = document.getElementById("minimap-canvas");
+    this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext("2d") : null;
 
     this.terrainThemes = [
       {
-        floorColor: "#111713",
-        wallColor: "#292e2c",
-        boundaryColor: "#080c0a",
+        floorColor: "#141821",
+        floorAltColors: ["#171c26", "#12161f", "#191f2a", "#151a24"],
+        wallColor: "#282e3d",
+        wallTopColor: "#394154",
+        wallFrontColor: "#1d2230",
+        boundaryColor: "#06080e",
+        torchColor: "rgba(255, 148, 56, 0.24)",
         wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_1/Dungeon_1.png"),
-        wallCrop: { x: 32, y: 16, w: 16, h: 16 }
+        wallCrops: [
+          { x: 0, y: 0, w: 16, h: 16 },
+          { x: 16, y: 0, w: 16, h: 16 },
+          { x: 32, y: 0, w: 16, h: 16 },
+          { x: 32, y: 16, w: 16, h: 16 },
+          { x: 48, y: 16, w: 16, h: 16 }
+        ],
+        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_1/Dungeon_1.png"),
+        wallOverlayCrops: [
+          { x: 96, y: 0, w: 16, h: 16 },
+          { x: 112, y: 0, w: 16, h: 16 },
+          { x: 144, y: 0, w: 16, h: 16 },
+          { x: 96, y: 16, w: 16, h: 16 }
+        ],
+        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_1/Grass_Type_1.png"),
+        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_1/Grass_Type_2.png"),
+        pebbleCrops: [
+          { x: 0, y: 144, w: 16, h: 16 },
+          { x: 16, y: 144, w: 16, h: 16 },
+          { x: 32, y: 144, w: 16, h: 16 },
+          { x: 64, y: 144, w: 16, h: 16 }
+        ],
+        archCrop: { x: 0, y: 0, w: 48, h: 48 }
       },
       {
-        floorColor: "#20170f",
+        floorColor: "#1f1612",
+        floorAltColors: ["#241a15", "#1c1410", "#271c17", "#211813"],
         wallColor: "#4a2f1d",
-        boundaryColor: "#0d0906",
+        wallTopColor: "#5e3d28",
+        wallFrontColor: "#332014",
+        boundaryColor: "#0a0705",
+        torchColor: "rgba(255, 160, 66, 0.25)",
         wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_2/Dungeon_2.png"),
-        wallCrop: { x: 32, y: 16, w: 16, h: 16 }
+        wallCrops: [
+          { x: 0, y: 0, w: 16, h: 16 },
+          { x: 16, y: 0, w: 16, h: 16 },
+          { x: 32, y: 0, w: 16, h: 16 },
+          { x: 32, y: 16, w: 16, h: 16 },
+          { x: 48, y: 16, w: 16, h: 16 }
+        ],
+        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_2/Dungeon_2_Wall_Additions.png"),
+        wallOverlayCrops: [
+          { x: 0, y: 0, w: 32, h: 16 },
+          { x: 32, y: 0, w: 32, h: 16 },
+          { x: 64, y: 0, w: 32, h: 16 }
+        ],
+        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_2/Grass_Type_1.png"),
+        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_2/Grass_Type_2.png"),
+        pebbleCrops: [
+          { x: 0, y: 192, w: 16, h: 16 },
+          { x: 16, y: 192, w: 16, h: 16 },
+          { x: 48, y: 192, w: 16, h: 16 }
+        ],
+        archCrop: { x: 0, y: 0, w: 48, h: 48 }
       },
       {
-        floorColor: "#111c2d",
+        floorColor: "#121a2b",
+        floorAltColors: ["#151e31", "#101726", "#182238", "#131c2e"],
         wallColor: "#293b57",
-        boundaryColor: "#070e1b",
+        wallTopColor: "#3c5275",
+        wallFrontColor: "#1b273b",
+        boundaryColor: "#060b14",
+        torchColor: "rgba(155, 195, 255, 0.24)",
         wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_3/Dungeon_3.png"),
-        wallCrop: { x: 96, y: 16, w: 16, h: 16 }
+        wallCrops: [
+          { x: 96, y: 0, w: 16, h: 16 },
+          { x: 112, y: 0, w: 16, h: 16 },
+          { x: 128, y: 0, w: 16, h: 16 },
+          { x: 96, y: 16, w: 16, h: 16 },
+          { x: 128, y: 16, w: 16, h: 16 }
+        ],
+        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_3/Dungeon3_Wall_Additions.png"),
+        wallOverlayCrops: [
+          { x: 0, y: 0, w: 32, h: 32 },
+          { x: 32, y: 0, w: 32, h: 32 },
+          { x: 64, y: 0, w: 32, h: 32 }
+        ],
+        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_3/Snow_Type_1.png"),
+        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_3/Snow_type_2.png"),
+        pebbleCrops: [
+          { x: 208, y: 192, w: 16, h: 16 },
+          { x: 224, y: 192, w: 16, h: 16 },
+          { x: 208, y: 208, w: 16, h: 16 }
+        ],
+        archCrop: { x: 96, y: 0, w: 48, h: 48 }
       }
     ];
     this.mapDecorations = {
       chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png"),
-      pickups: this.loadTerrainTexture("Assets/Map/PowerUps/PickUp_Items-Sheet.png")
+      pickups: this.loadTerrainTexture("Assets/Map/PowerUps/PickUp_Items-Sheet.png"),
+      mushrooms: this.loadTerrainTexture("Assets/Map/Animated Mushrooms/Dungeon_Animated_Mushrooms.png"),
+      uiBallsy: this.loadTerrainTexture("Assets/Map/UI/UI_Ballsy.png")
     };
     this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
     this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
@@ -1342,7 +1394,6 @@ class Renderer {
       Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
     );
     this.enemyImages = new Map();
-    // Precarga y segmenta disparos.jpg para que el primer proyectil no caiga al dibujo de respaldo.
     const projectileSheet = this.loadTerrainTexture(PROJECTILE_SHEET.src);
     this.enemyImages.set(PROJECTILE_SHEET.src, projectileSheet);
     projectileSheet.addEventListener("load", () => this.getProjectileSprite("small", 1));
@@ -1358,40 +1409,83 @@ class Renderer {
     this.damageFlashUntil = 0;
     this.floatingNumbers = [];
 
-    this.cameraAnchor = { x: 3, y: 10 };
+    this.cameraAnchor = { x: 7, y: 4 };
     this.cameraFacing = player.direction;
     this.cameraOffset = { x: 0, y: 0 };
     this.lastCameraTick = 0;
-    this.cameraMode = null;
-    this.setCameraMode(Renderer.detectCameraMode(), false);
+    this.cameraMode = "fixed";
+    this.isPortraitBlocked = false;
 
-    // Girar el dispositivo o redimensionar solo cambia el viewport; la partida no se toca.
+    this.setCameraMode("fixed", false);
+    this.updateOrientationState();
+
     let resizeTimer = null;
     const onViewportChange = () => {
+      this.updateOrientationState();
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const mode = Renderer.detectCameraMode();
-        if (mode !== this.cameraMode) this.setCameraMode(mode, true);
-      }, 120);
+        this.updateOrientationState();
+        this.setCameraMode("fixed", false);
+      }, 60);
     };
     window.addEventListener("resize", onViewportChange);
     window.addEventListener("orientationchange", onViewportChange);
 
-    // Ciclo de reposo (IDLE) de Lior.
     setInterval(() => {
       if (!this.playerAnimation && !this.chestOpening) this.draw();
     }, 100);
   }
 
   static detectCameraMode() {
-    return window.innerWidth > window.innerHeight ? "fixed" : "classic";
+    return "fixed";
   }
 
-  // Cambia viewport, tamaño de celda y canvas sin tocar mazmorra, niebla, enemigos ni estado de Lior.
-  setCameraMode(mode, animate) {
-    const profile = CAMERA_PROFILES[mode];
-    this.cameraMode = mode;
-    CAMERA_CONFIG.mode = mode;
+  static isPortraitViewport() {
+    return window.innerHeight > window.innerWidth;
+  }
+
+  updateOrientationState() {
+    const portrait = Renderer.isPortraitViewport();
+    this.isPortraitBlocked = portrait;
+    const overlay = document.getElementById("rotate-device-overlay");
+    if (overlay) {
+      overlay.classList.toggle("hidden", !portrait);
+    }
+    if (portrait && this.game?.touchController) {
+      this.game.touchController.cancelAllGestures();
+    }
+  }
+
+  computeResponsiveProfile() {
+    const vw = Math.max(320, window.innerWidth || 640);
+    const vh = Math.max(220, window.innerHeight || 360);
+    const isPortrait = vh > vw;
+    const effW = isPortrait ? vh : vw;
+    const effH = isPortrait ? vw : vh;
+    const aspect = Math.max(1.2, Math.min(2.6, effW / Math.max(1, effH)));
+
+    const rows = aspect >= 1.65 ? 9 : 11;
+    const tileSize = Math.max(36, Math.min(64, Math.floor(effH / rows)));
+    let cols = Math.max(11, Math.min(25, Math.round(rows * aspect)));
+    if (cols % 2 === 0) cols += 1;
+
+    const anchorX = Math.floor(cols / 2);
+    const anchorY = Math.floor(rows / 2);
+    const anchors = [
+      { x: anchorX, y: anchorY },
+      { x: anchorX, y: anchorY },
+      { x: anchorX, y: anchorY },
+      { x: anchorX, y: anchorY }
+    ];
+    return { cols, rows, tileSize, anchors };
+  }
+
+  setCameraMode(mode = "fixed", animate = false) {
+    const profile = this.computeResponsiveProfile();
+    CAMERA_PROFILES.fixed = profile;
+    CAMERA_PROFILES.classic = profile;
+    this.cameraMode = "fixed";
+    CAMERA_CONFIG.mode = "fixed";
     CAMERA_CONFIG.cols = profile.cols;
     CAMERA_CONFIG.rows = profile.rows;
     CAMERA_CONFIG.tileSize = profile.tileSize;
@@ -1399,7 +1493,7 @@ class Renderer {
     this.canvas.width = profile.cols * profile.tileSize;
     this.canvas.height = profile.rows * profile.tileSize;
     this.canvas.style.aspectRatio = `${profile.cols} / ${profile.rows}`;
-    document.body.classList.toggle("mode-landscape", mode === "fixed");
+    document.body.classList.add("mode-landscape");
 
     this.snapCamera();
 
@@ -1413,27 +1507,24 @@ class Renderer {
 
   snapCamera() {
     this.cameraFacing = this.player.direction;
-    const anchor = CAMERA_PROFILES[this.cameraMode].anchors[this.cameraFacing];
+    const anchors = CAMERA_PROFILES.fixed.anchors;
+    const anchor = anchors[this.cameraFacing] || anchors[0];
     this.cameraAnchor = { ...anchor };
     CAMERA_CONFIG.playerScreenX = anchor.x;
     CAMERA_CONFIG.playerScreenY = anchor.y;
     this.cameraOffset = { x: 0, y: 0 };
   }
 
-  // Fija el encaramiento del ancla solo al caminar o ejecutar/preparar una acción balística; un giro no la mueve.
   commitCameraFacing() {
     if (this.cameraFacing === this.player.direction) return;
     this.cameraFacing = this.player.direction;
     this.lastCameraTick = performance.now();
-    this.keepAnimating(700);
+    this.keepAnimating(400);
   }
 
   updateCamera(now) {
-    if (this.cameraMode !== "fixed") {
-      this.cameraOffset = { x: 0, y: 0 };
-      return;
-    }
-    const target = CAMERA_PROFILES.fixed.anchors[this.cameraFacing];
+    const anchors = CAMERA_PROFILES.fixed.anchors;
+    const target = anchors[this.cameraFacing] || anchors[0];
     const anchor = this.cameraAnchor;
     const dt = Math.min(100, Math.max(0, now - (this.lastCameraTick || now)));
     this.lastCameraTick = now;
@@ -1455,7 +1546,6 @@ class Renderer {
     };
   }
 
-  // En la cámara fija el giro se ve en el sprite; en la clásica Lior siempre mira hacia arriba.
   getLiorFacing() {
     return CAMERA_CONFIG.mode === "fixed" ? this.player.direction : 0;
   }
@@ -1464,7 +1554,6 @@ class Renderer {
     return CAMERA_CONFIG.mode === "fixed" ? this.player.direction * Math.PI / 2 : 0;
   }
 
-  // Filas de Lior para el encaramiento actual; `count` remuestrea para conservar el ritmo de los efectos.
   getLiorRow(name, count = 0) {
     const frames = LIOR_FACING_FRAMES[this.getLiorFacing()]?.[name] ?? LIOR_SPRITES[name];
     if (!count || count === frames.length) return frames;
@@ -1478,7 +1567,6 @@ class Renderer {
     return image;
   }
 
-  // Magenta puro y sus variantes de compresión JPG / fondos púrpura / rejillas rosadas.
   static isMagentaPixel(r, g, b) {
     const minRB = Math.min(r, b);
     if (minRB < 70 || Math.abs(r - b) > 70) return false;
@@ -1491,12 +1579,16 @@ class Renderer {
     return !!bgRef && Math.abs(r - bgRef[0]) + Math.abs(g - bgRef[1]) + Math.abs(b - bgRef[2]) < 60;
   }
 
-  // Si la esquina no es magenta, usa su color como fondo alternativo.
   static getBackgroundReference(data) {
     const r = data[0], g = data[1], b = data[2];
     return Renderer.isMagentaPixel(r, g, b) || data[3] === 0 ? null : [r, g, b];
   }
 
+  /**
+   * Recorta únicamente el espacio transparente sobrante sin cortar ningún píxel visible,
+   * y calcula el punto de anclaje estable de los pies (footAnchorX, footAnchorY) para evitar
+   * saltos laterales o verticales cuando armas, capas o efectos sobresalen del cuerpo.
+   */
   trimCanvas(sprite) {
     const { width, height } = sprite;
     const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
@@ -1505,28 +1597,51 @@ class Renderer {
     const cols = new Uint32Array(width);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        if (data[(y * width + x) * 4 + 3] > 16) { rows[y]++; cols[x]++; }
+        if (data[(y * width + x) * 4 + 3] > 16) {
+          rows[y]++;
+          cols[x]++;
+        }
       }
     }
     let minY = 0, maxY = height - 1, minX = 0, maxX = width - 1;
-    while (minY < maxY && rows[minY] < 2) minY++;
-    while (maxY > minY && rows[maxY] < 2) maxY--;
-    while (minX < maxX && cols[minX] < 2) minX++;
-    while (maxX > minX && cols[maxX] < 2) maxX--;
+    while (minY < maxY && rows[minY] < 1) minY++;
+    while (maxY > minY && rows[maxY] < 1) maxY--;
+    while (minX < maxX && cols[minX] < 1) minX++;
+    while (maxX > minX && cols[maxX] < 1) maxX--;
 
+    const trimmedW = Math.max(1, maxX - minX + 1);
+    const trimmedH = Math.max(1, maxY - minY + 1);
     const trimmed = document.createElement("canvas");
-    trimmed.width = maxX - minX + 1;
-    trimmed.height = maxY - minY + 1;
-    trimmed.getContext("2d").drawImage(sprite, minX, minY, trimmed.width, trimmed.height,
-      0, 0, trimmed.width, trimmed.height);
+    trimmed.width = trimmedW;
+    trimmed.height = trimmedH;
+    trimmed.getContext("2d").drawImage(sprite, minX, minY, trimmedW, trimmedH, 0, 0, trimmedW, trimmedH);
+
+    // Calcular el centro horizontal estable de los pies/base en el 15% inferior del sprite recortado
+    const footBandStart = Math.max(minY, maxY - Math.max(4, Math.floor(trimmedH * 0.14)));
+    let footMinX = maxX;
+    let footMaxX = minX;
+    let foundFoot = false;
+    for (let x = minX; x <= maxX; x++) {
+      let colCount = 0;
+      for (let y = footBandStart; y <= maxY; y++) {
+        if (data[(y * width + x) * 4 + 3] > 28) colCount++;
+      }
+      if (colCount >= 2) {
+        if (x < footMinX) footMinX = x;
+        if (x > footMaxX) footMaxX = x;
+        foundFoot = true;
+      }
+    }
+
+    trimmed.trimLeft = minX;
+    trimmed.trimTop = minY;
+    trimmed.sourceWidth = width;
+    trimmed.sourceHeight = height;
+    trimmed.footAnchorX = foundFoot ? ((footMinX + footMaxX) / 2 - minX) : (trimmedW / 2);
+    trimmed.footAnchorY = trimmedH;
     return trimmed;
   }
 
-  /**
-   * Recorta una región de la hoja y elimina el fondo.
-   * backgroundType: "magenta" (chroma key #FF00FF, PNG o JPG), "alpha" (ya transparente),
-   * "gray" / "black" (relleno por inundación desde los bordes).
-   */
   getKeyedSprite(sheet, sourceRect, backgroundType, options = {}) {
     if (!sheet.complete || sheet.naturalWidth === 0) return null;
     const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}:${options.trim ? 1 : 0}:${options.bgRef || ""}`;
@@ -1603,7 +1718,6 @@ class Renderer {
     }
   }
 
-  // Tramos consecutivos de `counts` con al menos `minCount`; une huecos de hasta `maxGap` posiciones.
   static findRuns(counts, minCount, maxGap) {
     const runs = [];
     let current = null;
@@ -1615,7 +1729,6 @@ class Renderer {
     return runs;
   }
 
-  // Une los tramos estrechos (restos de un mismo frame) con su vecino más cercano.
   static mergeNarrowRuns(runs) {
     const widths = runs.map(r => r.end - r.start + 1).sort((a, b) => a - b);
     const median = widths[Math.floor(widths.length / 2)] || 0;
@@ -1633,11 +1746,7 @@ class Renderer {
     return result;
   }
 
-  /**
-   * Segmenta una hoja sobre fondo magenta: franjas horizontales de contenido y, dentro de cada una, frames.
-   * Devuelve filas de canvas ya sin fondo (null si no hay contenido).
-   */
-  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true, denseFractions = [0.06, 0.15] } = {}) {
+  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true, denseFractions = [0.06, 0.15], trimFrames = true } = {}) {
     const STEP = 4;
     const width = Math.floor(image.naturalWidth / STEP);
     const height = Math.floor(image.naturalHeight / STEP);
@@ -1663,7 +1772,6 @@ class Renderer {
       }
     }
 
-    // Descarta rótulos y ruido: franjas mucho más bajas que la mayor.
     let bands = Renderer.findRuns(rowCounts, 3, rowGap);
     const tallest = bands.reduce((max, b) => Math.max(max, b.end - b.start + 1), 0);
     bands = bands.filter(b => b.end - b.start + 1 >= tallest * 0.2);
@@ -1673,8 +1781,6 @@ class Renderer {
       for (let y = band.start; y <= band.end; y++) {
         for (let x = 0; x < width; x++) colCounts[x] += solid[y * width + x];
       }
-      // Frames que se tocan (o con armas finas que los parten) se separan por columnas densas (cuerpos),
-      // cortando en el valle; entre las particiones candidatas gana la de anchos más uniformes.
       const bandSteps = band.end - band.start + 1;
       let segments = Renderer.findRuns(colCounts, 2, colGap);
       if (mergeNarrow && segments.length > 1) segments = Renderer.mergeNarrowRuns(segments);
@@ -1713,7 +1819,7 @@ class Renderer {
       return segments.map(segment => {
         const x0 = Math.max(0, segment.start * STEP - 2);
         const x1 = Math.min(image.naturalWidth, (segment.end + 1) * STEP + 2);
-        return this.getKeyedSprite(image, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, "magenta", { bgRef });
+        return this.getKeyedSprite(image, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, "magenta", { bgRef, trim: trimFrames });
       }).filter(Boolean);
     }).filter(frames => frames.length > 0);
 
@@ -1729,13 +1835,12 @@ class Renderer {
     return image.complete && image.naturalWidth > 0 ? image : null;
   }
 
-  // Ciclos del enemigo: fila superior = idle, siguiente = ataque, última = daño y muerte.
   getEnemyAnimation(src) {
     if (this.enemyAnimCache.has(src)) return this.enemyAnimCache.get(src);
     const image = this.loadSheetImage(src);
     if (!image) return null;
 
-    const rows = this.segmentSheet(image);
+    const rows = this.segmentSheet(image, { trimFrames: true });
     let animation = null;
     if (rows) {
       const idle = rows[0];
@@ -1755,7 +1860,6 @@ class Renderer {
     return animation;
   }
 
-  // Duración total (ms) de la animación de muerte, o un valor por defecto si la hoja aún no carga.
   getEnemyDeathDuration(enemy) {
     const animation = this.getEnemyAnimation(enemy.spriteSrc);
     return (animation ? animation.death.length : 4) * ENEMY_ANIM_MS.death + 250;
@@ -1779,7 +1883,6 @@ class Renderer {
     );
   }
 
-  // Redibuja a cada frame del navegador mientras haya animaciones de enemigos o proyectiles.
   keepAnimating(durationMs) {
     this.animUntil = Math.max(this.animUntil, performance.now() + durationMs);
     if (this.animLoopActive) return;
@@ -1854,7 +1957,6 @@ class Renderer {
     return animation.idle[Math.floor((now + enemy.animOffset) / ENEMY_ANIM_MS.idle) % animation.idle.length];
   }
 
-  // Proyectil enemigo: calibre pequeño/mediano/grande = fila de disparos.jpg; fases 0 carga, 1 vuelo, 2 impacto.
   getProjectileSprite(caliber, phase) {
     if (this.projectileRows === undefined) {
       const image = this.loadSheetImage(PROJECTILE_SHEET.src);
@@ -1863,13 +1965,13 @@ class Renderer {
         rowGap: Math.floor(image.naturalHeight / 4 * 0.05),
         colGap: Math.floor(image.naturalWidth / 4 * 0.1),
         mergeNarrow: false,
-        denseFractions: []
+        denseFractions: [],
+        trimFrames: true
       });
     }
     return this.projectileRows?.[PROJECTILE_SHEET.rows[caliber]]?.[phase] ?? null;
   }
 
-  // Lanza un proyectil hacia Lior; devuelve los ms hasta el impacto para sincronizar el daño visual.
   fireEnemyProjectile(enemy, hit) {
     const caliber = enemy.isMegaBoss || enemy.size >= 4 ? "large" : (enemy.size === 2 ? "medium" : "small");
     const cells = enemy.cells;
@@ -1881,7 +1983,6 @@ class Renderer {
     const distance = Math.hypot(to.x - from.x, to.y - from.y);
     const travelMs = Math.min(420, 150 + distance * 70);
 
-    // Un disparo fallado sobrepasa a Lior y no deja destello.
     if (!hit && distance > 0) {
       const overshoot = 1.5 / distance;
       to.x += (to.x - from.x) * overshoot;
@@ -1939,7 +2040,6 @@ class Renderer {
         return;
       }
 
-      // Destello en la casilla de Lior antes de que se muestre el daño.
       const progress = (now - flightEnd) / PROJECTILE_IMPACT_MS;
       if (!drawSprite(this.getProjectileSprite(shot.caliber, 2), target, size * 1.3, 0, 1 - progress * 0.5)) {
         targetCtx.save();
@@ -1985,14 +2085,21 @@ class Renderer {
     }
 
     const sprite = this.getEnemyFrame(enemy, animation, performance.now());
-    // Escala común a todo el ciclo, calculada con el reposo, para que el sprite no "respire" entre frames.
     const scale = Math.min(drawSize / animation.refWidth, drawSize / animation.refHeight);
     const width = sprite.width * scale;
     const height = sprite.height * scale;
+    const anchorX = (sprite.footAnchorX ?? sprite.width / 2) * scale;
 
     targetCtx.save();
     targetCtx.imageSmoothingEnabled = false;
-    targetCtx.drawImage(sprite, px + (drawSize - width) / 2, py + drawSize - height, width, height);
+    // Sombra elíptica sutil bajo los pies del enemigo
+    targetCtx.fillStyle = "rgba(0, 0, 0, 0.38)";
+    targetCtx.beginPath();
+    targetCtx.ellipse(px + drawSize / 2, py + drawSize - 3, drawSize * 0.32, drawSize * 0.11, 0, 0, Math.PI * 2);
+    targetCtx.fill();
+
+    const drawX = Math.max(px - drawSize * 0.25, Math.min(px + drawSize * 1.25 - width, px + drawSize / 2 - anchorX));
+    targetCtx.drawImage(sprite, drawX, py + drawSize - height, width, height);
     targetCtx.restore();
   }
 
@@ -2001,15 +2108,15 @@ class Renderer {
     const frame = fleeing
       ? BUNNY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % BUNNY_SPRITES.bunnyFlee.length]
       : BUNNY_SPRITES.bunnyIdle;
-    const sprite = this.getKeyedSprite(this.goldenBunnySheet, frame, "black");
+    const sprite = this.getKeyedSprite(this.goldenBunnySheet, frame, "black", { trim: true });
     if (!sprite) return;
 
     const tileSize = CAMERA_CONFIG.tileSize;
-    const scale = Math.min(tileSize / frame.w, tileSize / frame.h);
-    const width = frame.w * scale;
-    const height = frame.h * scale;
+    const scale = Math.min((tileSize * 0.88) / sprite.width, (tileSize * 0.88) / sprite.height);
+    const width = sprite.width * scale;
+    const height = sprite.height * scale;
     const px = screenX * tileSize + (tileSize - width) / 2;
-    const py = screenY * tileSize + tileSize - height;
+    const py = screenY * tileSize + tileSize - height - 2;
     const nextScreen = CameraTransformer.worldToScreen(
       bunny.x + bunny.fleeDirection.dx,
       bunny.y + bunny.fleeDirection.dy,
@@ -2032,12 +2139,16 @@ class Renderer {
   drawMerchantSprite(targetCtx, px, py) {
     const tileSize = CAMERA_CONFIG.tileSize;
     const frame = { x: 12, y: 9, w: 37, h: 47 };
-    const sprite = this.getKeyedSprite(this.merchantSpriteSheet, frame, "gray");
+    const sprite = this.getKeyedSprite(this.merchantSpriteSheet, frame, "gray", { trim: true });
     if (sprite) {
-      const height = tileSize * 1.25;
-      const width = height * (frame.w / frame.h);
+      const height = tileSize * 1.22;
+      const width = height * (sprite.width / sprite.height);
       targetCtx.save();
       targetCtx.imageSmoothingEnabled = false;
+      targetCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      targetCtx.beginPath();
+      targetCtx.ellipse(px + tileSize / 2, py + tileSize - 3, tileSize * 0.34, tileSize * 0.12, 0, 0, Math.PI * 2);
+      targetCtx.fill();
       targetCtx.drawImage(sprite, px + (tileSize - width) / 2,
         py + tileSize - height, width, height);
       targetCtx.restore();
@@ -2052,12 +2163,6 @@ class Renderer {
     targetCtx.arc(px + tileSize / 2, py + tileSize / 2, tileSize * 0.4, 0, Math.PI * 2);
     targetCtx.fill();
     targetCtx.stroke();
-
-    targetCtx.fillStyle = "#000000";
-    targetCtx.font = "bold 16px monospace";
-    targetCtx.textAlign = "center";
-    targetCtx.textBaseline = "middle";
-    targetCtx.fillText("✦", px + tileSize / 2, py + tileSize / 2);
     targetCtx.restore();
   }
 
@@ -2078,6 +2183,260 @@ class Renderer {
       targetCtx.drawImage(texture, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h,
         x, y, CAMERA_CONFIG.tileSize, CAMERA_CONFIG.tileSize);
     }
+    targetCtx.restore();
+  }
+
+  /**
+   * Mejora estética del escenario (exclusivamente visual, sin cambiar geometría ni colisiones):
+   * - Losas de piedra con variaciones tonales deterministas, juntas de mortero y grietas finas.
+   * - Variaciones de musgo/raíces/escarcha desde Grass_Type_1/2 y Snow_Type_1/2 en bordes junto a muros.
+   * - Muros con relieve 3D frontal, sombras proyectadas y detalles de Wall_Additions.
+   * - Antorchas animadas en muros adyacentes a pasillos/puertas con halo cálido (como en el Panel 13).
+   * - Pequeños hongos luminiscentes animados en esquinas de muro (Dungeon_Animated_Mushrooms.png).
+   */
+  drawEnhancedFloorCell(targetCtx, theme, wx, wy, px, py, tileSize, inLineOfSight, now) {
+    const opacity = inLineOfSight ? 1 : 0.42;
+    const h = cellHash(wx, wy, this.generator?.floorNumber || 1);
+    const slabColor = theme.floorAltColors[h % theme.floorAltColors.length] || theme.floorColor;
+
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.fillStyle = slabColor;
+    targetCtx.fillRect(px, py, tileSize, tileSize);
+
+    // Subdivisión de losas de piedra estilo Panel 13 (bloques irregulares con bisel oscuro/claro)
+    const splitX = Math.floor(tileSize * (0.42 + ((h >> 4) % 16) * 0.01));
+    const splitY = Math.floor(tileSize * (0.46 + ((h >> 8) % 14) * 0.01));
+    targetCtx.strokeStyle = "rgba(7, 9, 15, 0.62)";
+    targetCtx.lineWidth = 1;
+    targetCtx.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1);
+    targetCtx.beginPath();
+    targetCtx.moveTo(px + splitX, py + 1);
+    targetCtx.lineTo(px + splitX, py + splitY);
+    targetCtx.moveTo(px + 1, py + splitY);
+    targetCtx.lineTo(px + tileSize - 1, py + splitY);
+    targetCtx.moveTo(px + (tileSize - splitX), py + splitY);
+    targetCtx.lineTo(px + (tileSize - splitX), py + tileSize - 1);
+    targetCtx.stroke();
+
+    // Brillo de borde superior en las losas
+    targetCtx.strokeStyle = "rgba(180, 195, 230, 0.06)";
+    targetCtx.beginPath();
+    targetCtx.moveTo(px + 2, py + 1.5);
+    targetCtx.lineTo(px + tileSize - 2, py + 1.5);
+    targetCtx.moveTo(px + 2, py + splitY + 1.5);
+    targetCtx.lineTo(px + tileSize - 2, py + splitY + 1.5);
+    targetCtx.stroke();
+
+    const northWall = this.dungeon.getTile(wx, wy - 1) === TILE_WALL;
+    const southWall = this.dungeon.getTile(wx, wy + 1) === TILE_WALL;
+    const westWall = this.dungeon.getTile(wx - 1, wy) === TILE_WALL;
+    const eastWall = this.dungeon.getTile(wx + 1, wy) === TILE_WALL;
+
+    // Textura orgánica sutil junto a muros usando Grass_Type / Snow_Type de Assets/Map
+    if ((northWall || southWall || westWall || eastWall) && (h % 3 === 0)) {
+      const overlaySheet = (h & 1) ? theme.floorOverlay1 : theme.floorOverlay2;
+      if (overlaySheet?.complete && overlaySheet.naturalWidth >= 48) {
+        targetCtx.save();
+        targetCtx.globalAlpha = opacity * 0.22;
+        targetCtx.imageSmoothingEnabled = false;
+        const ox = ((h >> 3) % 3) * 16;
+        targetCtx.drawImage(overlaySheet, ox, 0, 16, 16, px, py, tileSize, tileSize);
+        targetCtx.restore();
+      }
+    }
+
+    // Pequeñas piedras/escombros decorativos de la hoja del tema (en los bordes, sin confundirse con pickups)
+    if (theme.pebbleCrops && (h % 11 === 0) && theme.wallAtlas?.complete && theme.wallAtlas.naturalWidth > 0) {
+      const crop = theme.pebbleCrops[(h >> 5) % theme.pebbleCrops.length];
+      targetCtx.save();
+      targetCtx.globalAlpha = opacity * 0.45;
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.drawImage(theme.wallAtlas, crop.x, crop.y, crop.w, crop.h,
+        px + 2, py + 2, tileSize - 4, tileSize - 4);
+      targetCtx.restore();
+    }
+
+    // Pequeños hongos animados en esquinas pegadas a muros (Dungeon_Animated_Mushrooms.png)
+    const mushrooms = this.mapDecorations.mushrooms;
+    if ((northWall && (westWall || eastWall)) && (h % 5 === 0) && mushrooms?.complete && mushrooms.naturalWidth > 0) {
+      const frameIdx = Math.floor(now / 260 + (h % 7)) % 8;
+      const rowIdx = ((h >> 6) % 3) * 2;
+      const mSize = Math.round(tileSize * 0.34);
+      const mx = westWall ? px + 2 : px + tileSize - mSize - 2;
+      const my = py + 2;
+      targetCtx.save();
+      targetCtx.globalAlpha = opacity * 0.72;
+      targetCtx.imageSmoothingEnabled = false;
+      targetCtx.drawImage(mushrooms, frameIdx * 16, rowIdx * 16, 16, 16, mx, my, mSize, mSize);
+      targetCtx.restore();
+    }
+
+    // Sombra proyectada por muros adyacentes (profundidad 2.5D estilo Panel 13)
+    if (northWall) {
+      const grad = targetCtx.createLinearGradient(px, py, px, py + tileSize * 0.42);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.58)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      targetCtx.fillStyle = grad;
+      targetCtx.fillRect(px, py, tileSize, tileSize * 0.42);
+    }
+    if (westWall) {
+      const grad = targetCtx.createLinearGradient(px, py, px + tileSize * 0.26, py);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.38)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      targetCtx.fillStyle = grad;
+      targetCtx.fillRect(px, py, tileSize * 0.26, tileSize);
+    }
+
+    targetCtx.restore();
+  }
+
+  hasWallTorch(wx, wy) {
+    if (this.dungeon.getTile(wx, wy) !== TILE_WALL) return false;
+    const southTile = this.dungeon.getTile(wx, wy + 1);
+    if (southTile === TILE_WALL || southTile === TILE_OUT_OF_BOUNDS) return false;
+    // Antorchas flanqueando la entrada/salida (como en el Panel 13) y distribuidas en muros largos
+    const nearEntrance = Math.abs(wy + 1 - this.dungeon.entrance.y) <= 1 && Math.abs(wx - this.dungeon.entrance.x) === 1;
+    const nearExit = Math.abs(wy - this.dungeon.exit.y) <= 1 && Math.abs(wx - this.dungeon.exit.x) === 1;
+    if (nearEntrance || nearExit) return true;
+    return cellHash(wx, wy, 99) % 6 === 0;
+  }
+
+  drawEnhancedWallCell(targetCtx, theme, wx, wy, px, py, tileSize, inLineOfSight, now) {
+    const opacity = inLineOfSight ? 1 : 0.46;
+    const h = cellHash(wx, wy, (this.generator?.floorNumber || 1) + 31);
+    const crop = theme.wallCrops[h % theme.wallCrops.length];
+
+    this.drawTerrainTile(targetCtx, theme.wallAtlas, crop, px, py,
+      inLineOfSight ? theme.wallColor : "#11131a", opacity);
+
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.imageSmoothingEnabled = false;
+
+    // Detalles adicionales de muro (musgo, enredaderas, grietas de Wall_Additions)
+    if ((h % 4 === 0) && theme.wallOverlayAtlas?.complete && theme.wallOverlayAtlas.naturalWidth > 0) {
+      const ov = theme.wallOverlayCrops[(h >> 3) % theme.wallOverlayCrops.length];
+      targetCtx.save();
+      targetCtx.globalAlpha = opacity * 0.65;
+      targetCtx.drawImage(theme.wallOverlayAtlas, ov.x, ov.y, Math.min(16, ov.w), Math.min(16, ov.h),
+        px, py, tileSize, tileSize);
+      targetCtx.restore();
+    }
+
+    // Frente de piedra con volumen cuando debajo hay suelo
+    const southIsFloor = this.dungeon.getTile(wx, wy + 1) !== TILE_WALL && this.dungeon.getTile(wx, wy + 1) !== TILE_OUT_OF_BOUNDS;
+    if (southIsFloor) {
+      const ledgeH = Math.max(5, Math.round(tileSize * 0.18));
+      targetCtx.fillStyle = "rgba(8, 10, 18, 0.55)";
+      targetCtx.fillRect(px, py + tileSize - ledgeH, tileSize, ledgeH);
+      targetCtx.strokeStyle = "rgba(180, 195, 225, 0.16)";
+      targetCtx.lineWidth = 1;
+      targetCtx.beginPath();
+      targetCtx.moveTo(px, py + tileSize - ledgeH + 0.5);
+      targetCtx.lineTo(px + tileSize, py + tileSize - ledgeH + 0.5);
+      targetCtx.stroke();
+    }
+
+    // Borde superior sutil para separar muros contiguos con claridad
+    targetCtx.strokeStyle = "rgba(12, 15, 24, 0.72)";
+    targetCtx.lineWidth = 1;
+    targetCtx.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1);
+
+    // Antorcha de muro animada (estilo Panel 13)
+    if (this.hasWallTorch(wx, wy)) {
+      const flicker = 0.85 + 0.15 * Math.sin(now / 95 + wx * 1.7 + wy * 2.3);
+      const cx = px + tileSize / 2;
+      const cy = py + tileSize * 0.64;
+
+      // Soporte de hierro de la antorcha
+      targetCtx.fillStyle = "#1a181d";
+      targetCtx.fillRect(cx - 2, cy - 1, 4, 8);
+      targetCtx.fillStyle = "#4d3826";
+      targetCtx.fillRect(cx - 1.5, cy - 3, 3, 6);
+
+      // Llama pixelada cálida
+      targetCtx.fillStyle = "#ff7b1c";
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy - 5, 4.2 * flicker, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.fillStyle = "#ffd966";
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy - 5.5, 2.3 * flicker, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+
+    targetCtx.restore();
+  }
+
+  drawPortalDoorCell(targetCtx, theme, tileType, wx, wy, px, py, tileSize, inLineOfSight, now) {
+    this.drawEnhancedFloorCell(targetCtx, theme, wx, wy, px, py, tileSize, inLineOfSight, now);
+    const opacity = inLineOfSight ? 1 : 0.45;
+    const isEntrance = tileType === TILE_ENTRANCE;
+    const enemiesRemain = this.dungeon.enemies.length > 0;
+
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.imageSmoothingEnabled = false;
+
+    // Arco de piedra del atlas del tema si está disponible
+    if (theme.wallAtlas?.complete && theme.wallAtlas.naturalWidth >= 48 && theme.archCrop) {
+      targetCtx.save();
+      targetCtx.globalAlpha = opacity * 0.62;
+      targetCtx.drawImage(
+        theme.wallAtlas,
+        theme.archCrop.x, theme.archCrop.y, theme.archCrop.w, theme.archCrop.h,
+        px + 1, py + 1, tileSize - 2, tileSize - 2
+      );
+      targetCtx.restore();
+    }
+
+    if (inLineOfSight) {
+      const pulse = 0.72 + 0.28 * Math.sin(now / 260);
+      const glowColor = isEntrance
+        ? `rgba(255, 65, 65, ${0.24 * pulse})`
+        : (enemiesRemain ? `rgba(255, 215, 0, ${0.24 * pulse})` : `rgba(57, 239, 115, ${0.32 * pulse})`);
+      const strokeColor = isEntrance
+        ? "#ff4141"
+        : (enemiesRemain ? "#ffd700" : "#39ef73");
+
+      targetCtx.fillStyle = glowColor;
+      targetCtx.fillRect(px + 4, py + 4, tileSize - 8, tileSize - 8);
+      targetCtx.strokeStyle = strokeColor;
+      targetCtx.lineWidth = 1.5;
+      targetCtx.strokeRect(px + 4, py + 4, tileSize - 8, tileSize - 8);
+
+      targetCtx.font = "bold 18px monospace";
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.lineWidth = 3;
+      targetCtx.strokeStyle = "#000000";
+      targetCtx.fillStyle = strokeColor;
+      const symbol = isEntrance ? "▼" : "▲";
+      targetCtx.strokeText(symbol, px + tileSize / 2, py + tileSize / 2);
+      targetCtx.fillText(symbol, px + tileSize / 2, py + tileSize / 2);
+    }
+    targetCtx.restore();
+  }
+
+  drawTorchLightPools(targetCtx, visibleTorches, tileSize, now) {
+    if (!visibleTorches.length) return;
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = "screen";
+    visibleTorches.forEach(({ sx, sy, wx, wy }) => {
+      const flicker = 0.9 + 0.1 * Math.sin(now / 110 + wx * 1.9 + wy * 1.3);
+      const cx = (sx + 0.5) * tileSize;
+      const cy = (sy + 0.85) * tileSize;
+      const radius = tileSize * 2.35 * flicker;
+      const grad = targetCtx.createRadialGradient(cx, cy, tileSize * 0.1, cx, cy, radius);
+      grad.addColorStop(0, "rgba(255, 165, 72, 0.26)");
+      grad.addColorStop(0.5, "rgba(255, 115, 38, 0.11)");
+      grad.addColorStop(1, "rgba(255, 90, 20, 0)");
+      targetCtx.fillStyle = grad;
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+      targetCtx.fill();
+    });
     targetCtx.restore();
   }
 
@@ -2149,6 +2508,9 @@ class Renderer {
     animate();
   }
 
+  /**
+   * Dibuja a Lior anclando sus pies (footAnchorX, footAnchorY) al centro-base estable de su casilla.
+   */
   drawLiorSprite(targetCtx, px, py, tileSize) {
     targetCtx.save();
     targetCtx.imageSmoothingEnabled = false;
@@ -2169,19 +2531,29 @@ class Renderer {
     }
 
     const sprite = this.getLiorFrame(frameRect);
-    // Cada hoja se escala con su propia pose de reposo para que Lior mida lo mismo en los cuatro encaramientos.
     const reference = this.getLiorFrame(frameRect.sheet === "lior2" ? LIOR2_REFERENCE[frameRect.view] : LIOR_SPRITES.IDLE[0]);
 
+    // Sombra bajo los pies de Lior (punto de anclaje estable)
+    targetCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
+    targetCtx.beginPath();
+    targetCtx.ellipse(px + tileSize / 2, py + tileSize - 3, tileSize * 0.3, tileSize * 0.11, 0, 0, Math.PI * 2);
+    targetCtx.fill();
+
     if (sprite && reference) {
-      const scale = (tileSize * 1.35) / reference.height;
+      const scale = (tileSize * 1.32) / reference.height;
       const renderW = sprite.width * scale;
       const renderH = sprite.height * scale;
+      const footAnchorX = (sprite.footAnchorX ?? sprite.width / 2) * scale;
+      const footBaselineY = py + tileSize - 2;
+
       if (frameRect.flip) {
         targetCtx.translate(px + tileSize / 2, 0);
         targetCtx.scale(-1, 1);
         targetCtx.translate(-(px + tileSize / 2), 0);
       }
-      targetCtx.drawImage(sprite, px + (tileSize - renderW) / 2, py + tileSize - renderH + 2, renderW, renderH);
+      const drawX = (px + tileSize / 2) - footAnchorX;
+      const drawY = footBaselineY - renderH;
+      targetCtx.drawImage(sprite, drawX, drawY, renderW, renderH);
     } else {
       const centerX = px + tileSize / 2;
       const centerY = py + tileSize / 2;
@@ -2194,21 +2566,12 @@ class Renderer {
       targetCtx.strokeStyle = "#ffffff";
       targetCtx.lineWidth = 2.5;
       targetCtx.stroke();
-
-      if (this.player.hp > 0) {
-        targetCtx.beginPath();
-        targetCtx.moveTo(centerX, centerY);
-        targetCtx.lineTo(centerX, centerY - tileSize * 0.55);
-        targetCtx.stroke();
-      }
     }
     targetCtx.restore();
 
     if (actionFrame?.effects) this.drawEffects(targetCtx, actionFrame.effects, this.playerAnimation.origin);
   }
 
-  // Coordenadas en casillas de pantalla relativas al ancla de Lior al crear el efecto (`origin`);
-  // `rotation` gira haz y área alrededor de Lior hacia su encaramiento real.
   drawEffects(targetCtx, effects, origin) {
     const tileSize = CAMERA_CONFIG.tileSize;
     const shiftX = (CAMERA_CONFIG.playerScreenX - origin.x) * tileSize;
@@ -2258,6 +2621,267 @@ class Renderer {
       }
       targetCtx.restore();
     });
+  }
+
+  /**
+   * Indicadores visuales de combate discretos y claros (Sección 10):
+   * - Mira de apuntado y trayectoria real del arma equipada.
+   * - Previsualización arcana violeta de Eldritch Blast.
+   * - Previsualización de destino de Misty Step (válido cian vs inválido carmesí).
+   * - Marcador de objetivo práctico durante el Paso 1 del tutorial.
+   */
+  drawCombatIndicators(targetCtx, now) {
+    if (!this.game) return;
+    const tileSize = CAMERA_CONFIG.tileSize;
+    const pScreenX = CAMERA_CONFIG.playerScreenX;
+    const pScreenY = CAMERA_CONFIG.playerScreenY;
+    const liorCenterX = (pScreenX + 0.5) * tileSize;
+    const liorCenterY = (pScreenY + 0.5) * tileSize;
+
+    // 1. Marcador de ejercicio de movimiento del Tutorial (Paso 1)
+    if (this.game.tutorial?.isActive && this.game.tutorial.step === 1 && this.game.tutorial.practiceTarget) {
+      const target = this.game.tutorial.practiceTarget;
+      const { screenX, screenY } = CameraTransformer.worldToScreen(target.x, target.y, this.player);
+      const pulse = 0.65 + 0.35 * Math.sin(now / 180);
+      const tx = screenX * tileSize;
+      const ty = screenY * tileSize;
+      targetCtx.save();
+      targetCtx.fillStyle = `rgba(77, 240, 120, ${0.18 * pulse})`;
+      targetCtx.strokeStyle = `rgba(77, 240, 120, ${0.9 * pulse})`;
+      targetCtx.lineWidth = 2;
+      targetCtx.fillRect(tx + 3, ty + 3, tileSize - 6, tileSize - 6);
+      targetCtx.strokeRect(tx + 3, ty + 3, tileSize - 6, tileSize - 6);
+      targetCtx.restore();
+    }
+
+    // 2. Mira de apuntado de arma y trayectoria (Sección 8.3 y 10)
+    if (this.game.isAiming || this.game.showWeaponRange) {
+      const weapon = this.player.equippedWeapon;
+      const dirVec = DIR_VECTORS[this.player.direction];
+      const maxReach = weapon.isMelee ? 1 : weapon.range;
+      let aimCell = { x: this.player.x + dirVec.x, y: this.player.y + dirVec.y };
+      for (let step = 1; step <= maxReach; step++) {
+        const cx = this.player.x + dirVec.x * step;
+        const cy = this.player.y + dirVec.y * step;
+        if (!this.dungeon.isInsideBounds(cx, cy) || this.dungeon.getTile(cx, cy) === TILE_WALL) break;
+        aimCell = { x: cx, y: cy };
+        const hasEnemy = this.dungeon.enemies.some(e => e.cells?.some(c => c.x === cx && c.y === cy));
+        if (hasEnemy) break;
+      }
+
+      const { screenX, screenY } = CameraTransformer.worldToScreen(aimCell.x, aimCell.y, this.player);
+      const reticleX = (screenX + 0.5) * tileSize;
+      const reticleY = (screenY + 0.5) * tileSize;
+
+      targetCtx.save();
+      // Línea de trayectoria punteada desde Lior hasta la mira
+      targetCtx.strokeStyle = "rgba(255, 90, 90, 0.72)";
+      targetCtx.lineWidth = 1.8;
+      targetCtx.setLineDash([5, 4]);
+      targetCtx.beginPath();
+      targetCtx.moveTo(liorCenterX, liorCenterY);
+      targetCtx.lineTo(reticleX, reticleY);
+      targetCtx.stroke();
+      targetCtx.setLineDash([]);
+
+      // Retícula de apuntado (mira clara sin ocultar el sprite)
+      const r = tileSize * 0.36;
+      targetCtx.strokeStyle = "rgba(255, 215, 90, 0.92)";
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.arc(reticleX, reticleY, r, 0, Math.PI * 2);
+      targetCtx.moveTo(reticleX - r - 4, reticleY);
+      targetCtx.lineTo(reticleX - r * 0.45, reticleY);
+      targetCtx.moveTo(reticleX + r * 0.45, reticleY);
+      targetCtx.lineTo(reticleX + r + 4, reticleY);
+      targetCtx.moveTo(reticleX, reticleY - r - 4);
+      targetCtx.lineTo(reticleX, reticleY - r * 0.45);
+      targetCtx.moveTo(reticleX, reticleY + r * 0.45);
+      targetCtx.lineTo(reticleX, reticleY + r + 4);
+      targetCtx.stroke();
+      targetCtx.restore();
+    }
+
+    // 3. Previsualización arcana violeta de Eldritch Blast (o marcador de cancelación sobre Lior)
+    if (this.game.eldritchBlastCanceled) {
+      const pulse = 0.75 + 0.25 * Math.sin(now / 120);
+      const px = pScreenX * tileSize;
+      const py = pScreenY * tileSize;
+      targetCtx.save();
+      targetCtx.fillStyle = `rgba(251, 191, 36, ${0.22 * pulse})`;
+      targetCtx.strokeStyle = `rgba(251, 191, 36, ${0.95 * pulse})`;
+      targetCtx.lineWidth = 2.2;
+      targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+      targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+      targetCtx.font = "bold 13px monospace";
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.fillStyle = "#fef3c7";
+      targetCtx.fillText("✕", px + tileSize / 2, py + tileSize / 2);
+      targetCtx.restore();
+    } else if (this.game.eldritchBlastPreviewDir !== null && this.game.eldritchBlastPreviewDir !== undefined) {
+      const dirVec = DIR_VECTORS[this.game.eldritchBlastPreviewDir] || DIR_VECTORS[this.player.direction] || DIR_VECTORS[0];
+      const pulse = 0.7 + 0.3 * Math.sin(now / 120);
+      targetCtx.save();
+      let endScreen = { screenX: pScreenX, screenY: pScreenY };
+
+      for (let dist = 1; dist <= 8; dist++) {
+        const tx = this.player.x + dirVec.x * dist;
+        const ty = this.player.y + dirVec.y * dist;
+        if (!this.dungeon.isInsideBounds(tx, ty) || this.dungeon.getTile(tx, ty) === TILE_WALL) break;
+        const sc = CameraTransformer.worldToScreen(tx, ty, this.player);
+        endScreen = sc;
+        const px = sc.screenX * tileSize;
+        const py = sc.screenY * tileSize;
+
+        targetCtx.fillStyle = `rgba(168, 85, 247, ${0.22 * pulse})`;
+        targetCtx.strokeStyle = `rgba(216, 180, 254, ${0.88 * pulse})`;
+        targetCtx.lineWidth = 2;
+        targetCtx.fillRect(px + 3, py + 3, tileSize - 6, tileSize - 6);
+        targetCtx.strokeRect(px + 3, py + 3, tileSize - 6, tileSize - 6);
+
+        const enemyHit = this.dungeon.enemies.some(e => e.cells?.some(c => c.x === tx && c.y === ty));
+        if (enemyHit) break;
+      }
+
+      // Haz guía central violeta
+      targetCtx.strokeStyle = `rgba(233, 213, 255, ${0.92 * pulse})`;
+      targetCtx.lineWidth = 3;
+      targetCtx.beginPath();
+      targetCtx.moveTo(liorCenterX, liorCenterY);
+      targetCtx.lineTo((endScreen.screenX + 0.5) * tileSize, (endScreen.screenY + 0.5) * tileSize);
+      targetCtx.stroke();
+      targetCtx.restore();
+    }
+
+    // 4. Previsualización de destino de Misty Step (8 direcciones + cancelación sobre Lior)
+    if (this.game.mistyStepPreview) {
+      const dest = this.game.mistyStepPreview;
+      const isSelfCancel = !!dest.canceled || (dest.x === this.player.x && dest.y === this.player.y && !dest.blocked);
+      const isValid = !isSelfCancel && !dest.blocked && !dest.dangerous && this.dungeon.isInsideBounds(dest.x, dest.y);
+      const { screenX, screenY } = CameraTransformer.worldToScreen(dest.x, dest.y, this.player);
+      const px = screenX * tileSize;
+      const py = screenY * tileSize;
+      const pulse = 0.72 + 0.28 * Math.sin(now / 130);
+
+      targetCtx.save();
+      if (isSelfCancel) {
+        targetCtx.strokeStyle = `rgba(251, 191, 36, ${0.95 * pulse})`;
+        targetCtx.fillStyle = `rgba(251, 191, 36, ${0.22 * pulse})`;
+      } else {
+        targetCtx.strokeStyle = isValid
+          ? `rgba(56, 189, 248, ${0.92 * pulse})`
+          : `rgba(255, 75, 92, ${0.92 * pulse})`;
+        targetCtx.fillStyle = isValid
+          ? `rgba(56, 189, 248, ${0.22 * pulse})`
+          : `rgba(255, 75, 92, ${0.22 * pulse})`;
+      }
+      targetCtx.lineWidth = 2.2;
+      if (!isSelfCancel) {
+        targetCtx.setLineDash([4, 3]);
+        targetCtx.beginPath();
+        targetCtx.moveTo(liorCenterX, liorCenterY);
+        targetCtx.lineTo(px + tileSize / 2, py + tileSize / 2);
+        targetCtx.stroke();
+        targetCtx.setLineDash([]);
+      }
+
+      targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+      targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+
+      targetCtx.font = "bold 14px monospace";
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.fillStyle = isSelfCancel ? "#fef3c7" : (isValid ? "#e0f2fe" : "#ffe4e6");
+      targetCtx.fillText(isValid ? "◈" : "✕", px + tileSize / 2, py + tileSize / 2);
+      targetCtx.restore();
+    }
+  }
+
+  /**
+   * Dibuja el minimapa del Panel 13 en la esquina superior derecha con los datos reales de la mazmorra.
+   */
+  drawMinimap() {
+    if (!this.minimapCtx || !this.minimapCanvas || !this.dungeon) return;
+    const mCanvas = this.minimapCanvas;
+    const mCtx = this.minimapCtx;
+    const W = mCanvas.width;
+    const H = mCanvas.height;
+
+    mCtx.clearRect(0, 0, W, H);
+    mCtx.fillStyle = "#060812";
+    mCtx.fillRect(0, 0, W, H);
+
+    const dw = Math.max(1, this.dungeon.width);
+    const dh = Math.max(1, this.dungeon.height);
+    const pad = 8;
+    const cellPx = Math.max(3, Math.min(10, Math.floor(Math.min((W - pad * 2) / dw, (H - pad * 2) / dh))));
+    const mapW = dw * cellPx;
+    const mapH = dh * cellPx;
+    const offsetX = Math.floor((W - mapW) / 2);
+    const offsetY = Math.floor((H - mapH) / 2);
+
+    for (let y = 0; y < dh; y++) {
+      for (let x = 0; x < dw; x++) {
+        if (!this.dungeon.isRevealed(x, y)) continue;
+        const tile = this.dungeon.getTile(x, y);
+        const rx = offsetX + x * cellPx;
+        const ry = offsetY + y * cellPx;
+
+        if (tile === TILE_WALL) {
+          mCtx.fillStyle = "#5a6382";
+          mCtx.fillRect(rx, ry, cellPx, cellPx);
+        } else {
+          mCtx.fillStyle = "#252b3d";
+          mCtx.fillRect(rx, ry, cellPx, cellPx);
+          if (tile === TILE_ENTRANCE) {
+            mCtx.fillStyle = "#f87171";
+            mCtx.fillRect(rx + 1, ry + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
+          } else if (tile === TILE_EXIT) {
+            mCtx.fillStyle = this.dungeon.enemies.length > 0 ? "#fbbf24" : "#34d399";
+            mCtx.fillRect(rx + 1, ry + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
+          } else if (tile === TILE_CHEST) {
+            mCtx.fillStyle = "#f59e0b";
+            mCtx.fillRect(rx + 1, ry + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
+          }
+        }
+      }
+    }
+
+    // Enemigos visibles en el minimapa
+    this.dungeon.enemies.forEach(enemy => {
+      if (!enemy.cells) return;
+      enemy.cells.forEach(cell => {
+        if (!this.dungeon.isRevealed(cell.x, cell.y)) return;
+        if (!VisibilitySystem.hasWorldLineOfSight(this.player.x, this.player.y, cell.x, cell.y, this.dungeon)) return;
+        mCtx.fillStyle = enemy.isBoss ? "#f43f5e" : "#ef4444";
+        mCtx.fillRect(offsetX + cell.x * cellPx + 0.5, offsetY + cell.y * cellPx + 0.5, Math.max(2, cellPx - 1), Math.max(2, cellPx - 1));
+      });
+    });
+
+    // Posición y orientación de Lior (marcador azul brillante como en el Panel 13)
+    const lx = offsetX + (this.player.x + 0.5) * cellPx;
+    const ly = offsetY + (this.player.y + 0.5) * cellPx;
+    const dirVec = DIR_VECTORS[this.player.direction] || DIR_VECTORS[0];
+
+    mCtx.save();
+    mCtx.fillStyle = "rgba(56, 189, 248, 0.32)";
+    mCtx.beginPath();
+    mCtx.arc(lx, ly, Math.max(4, cellPx * 0.95), 0, Math.PI * 2);
+    mCtx.fill();
+
+    mCtx.fillStyle = "#38bdf8";
+    mCtx.beginPath();
+    mCtx.arc(lx, ly, Math.max(2.2, cellPx * 0.52), 0, Math.PI * 2);
+    mCtx.fill();
+
+    mCtx.strokeStyle = "#e0f2fe";
+    mCtx.lineWidth = 1.4;
+    mCtx.beginPath();
+    mCtx.moveTo(lx, ly);
+    mCtx.lineTo(lx + dirVec.x * Math.max(3, cellPx * 0.85), ly + dirVec.y * Math.max(3, cellPx * 0.85));
+    mCtx.stroke();
+    mCtx.restore();
   }
 
   drawDamageFlash(targetCtx) {
@@ -2314,7 +2938,6 @@ class Renderer {
 
   playRow(rowName, frameDuration, interruptible = false) {
     const frames = this.getLiorRow(rowName);
-    // Si la fila de lior2 tiene otro número de frames, la duración total se mantiene.
     const duration = frameDuration * LIOR_SPRITES[rowName].length / frames.length;
     this.playSpriteAnimation(frames.map(sprite => ({ sprite })), duration, interruptible);
   }
@@ -2335,7 +2958,6 @@ class Renderer {
     this.playRow("WALK", 35, true);
   }
 
-  // El golpe espera a que termine la animación en curso para no taparla.
   playHurt(isFatal, minDelay = 0) {
     const start = () => {
       this.damageFlashUntil = performance.now() + 180;
@@ -2347,7 +2969,6 @@ class Renderer {
     else start();
   }
 
-  // beamReach: distancia en casillas desde Lior hasta el final del rayo.
   playEldritchBlastAnimation(beamReach) {
     const rayCount = 1;
     const centerX = CAMERA_CONFIG.playerScreenX + 0.5;
@@ -2370,10 +2991,6 @@ class Renderer {
     this.playSpriteAnimation(frames, 110);
   }
 
-  /**
-   * shot: { impact: {x, y} mundo, area: [{x, y}] celdas mundo (trabuco) }.
-   * Pistola y mosquete: proyectil rotado hacia el impacto. Trabuco: dispersión sobre el área 2x5.
-   */
   playRangedAttack(weaponId, shot) {
     const lior = { x: CAMERA_CONFIG.playerScreenX + 0.5, y: CAMERA_CONFIG.playerScreenY + 0.5 };
     const frames = this.getLiorRow("GUN_RECOIL", LIOR_SPRITES.GUN_RECOIL.length);
@@ -2428,14 +3045,16 @@ class Renderer {
 
   draw() {
     this.drawBase(this.ctx);
+    this.drawMinimap();
   }
 
   drawBase(targetCtx) {
     const { canvas } = this;
-    this.updateCamera(performance.now());
+    const frameNow = performance.now();
+    this.updateCamera(frameNow);
     const { cols, rows, tileSize, playerScreenX, playerScreenY } = CAMERA_CONFIG;
 
-    targetCtx.fillStyle = "#000000";
+    targetCtx.fillStyle = "#04050a";
     targetCtx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (this.isVictorySequence) {
@@ -2444,9 +3063,9 @@ class Renderer {
           const px = sx * tileSize;
           const py = sy * tileSize;
 
-          if (sy < 4) {
+          if (sy < 3) {
             targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#38bdf8" : "#0284c7";
-          } else if (sy === 4 || sy === 5) {
+          } else if (sy === 3 || sy === 4) {
             targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#8b5a2b" : "#6f431b";
           } else {
             targetCtx.fillStyle = (sx + sy) % 2 === 0 ? "#22c55e" : "#16a34a";
@@ -2457,34 +3076,8 @@ class Renderer {
         }
       }
 
-      const sparklePositions = [[1, 1], [5, 1], [2, 3], [4, 2], [6, 4], [0, 5]];
-      const sparkleTime = performance.now() / 350;
-
-      for (const [sx, sy] of sparklePositions) {
-        const px = sx * tileSize + tileSize / 2;
-        const py = sy * tileSize + tileSize / 2;
-        const pulse = 0.5 + Math.sin(sparkleTime + sx + sy) * 0.5;
-        const size = 3 + pulse * 4;
-
-        targetCtx.save();
-        targetCtx.globalAlpha = 0.45 + pulse * 0.55;
-        targetCtx.fillStyle = "#ffffff";
-        targetCtx.beginPath();
-        targetCtx.moveTo(px, py - size);
-        targetCtx.lineTo(px + size * 0.35, py - size * 0.35);
-        targetCtx.lineTo(px + size, py);
-        targetCtx.lineTo(px + size * 0.35, py + size * 0.35);
-        targetCtx.lineTo(px, py + size);
-        targetCtx.lineTo(px - size * 0.35, py + size * 0.35);
-        targetCtx.lineTo(px - size, py);
-        targetCtx.lineTo(px - size * 0.35, py - size * 0.35);
-        targetCtx.closePath();
-        targetCtx.fill();
-        targetCtx.restore();
-      }
-
       const liorPx = playerScreenX * tileSize;
-      const liorPy = (playerScreenY - this.victoryStep) * tileSize;
+      const liorPy = Math.max(0, (playerScreenY - this.victoryStep * 0.5)) * tileSize;
       this.drawLiorSprite(targetCtx, liorPx, liorPy, tileSize);
       return;
     }
@@ -2492,8 +3085,8 @@ class Renderer {
     const theme = this.getTerrainTheme();
     this.dungeon.markRevealed(this.player.x, this.player.y);
 
-    // El desplazamiento fraccionario de la cámara fija se aplica a todo el mundo; sobra una casilla de margen.
-    const margin = CAMERA_CONFIG.mode === "fixed" ? 1 : 0;
+    const margin = 1;
+    const visibleTorches = [];
     targetCtx.save();
     targetCtx.translate(this.cameraOffset.x, this.cameraOffset.y);
 
@@ -2509,56 +3102,41 @@ class Renderer {
           playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player
         );
 
-        if (inLineOfSight) this.dungeon.markRevealed(worldCoord.x, worldCoord.y);
+        if (inLineOfSight && tileType !== TILE_OUT_OF_BOUNDS) {
+          this.dungeon.markRevealed(worldCoord.x, worldCoord.y);
+        }
         const wasEverRevealed = this.dungeon.isRevealed(worldCoord.x, worldCoord.y);
 
         if (!inLineOfSight && !wasEverRevealed) {
-          targetCtx.fillStyle = "#000000";
+          targetCtx.fillStyle = "#060810";
           targetCtx.fillRect(px, py, tileSize, tileSize);
+          targetCtx.strokeStyle = "rgba(24, 30, 48, 0.38)";
+          targetCtx.lineWidth = 1;
+          targetCtx.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1);
           continue;
         }
 
         if (tileType === TILE_WALL) {
-          const opacity = inLineOfSight ? 1 : 0.45;
-          this.drawTerrainTile(targetCtx, theme.wallAtlas, theme.wallCrop, px, py,
-            inLineOfSight ? theme.wallColor : "#111111", opacity);
-        } else if (tileType === TILE_CHEST) {
-          this.drawTerrainTile(targetCtx, null, null, px, py,
-            theme.floorColor, inLineOfSight ? 1 : 0.4);
-          this.drawChestSprite(targetCtx, px, py, inLineOfSight ? 1 : 0.4);
-        } else if (tileType === TILE_ENTRANCE || tileType === TILE_EXIT) {
-          this.drawTerrainTile(targetCtx, null, null, px, py, theme.floorColor,
-            inLineOfSight ? 1 : 0.4);
-          if (inLineOfSight) {
-            targetCtx.save();
-            targetCtx.font = "bold 18px monospace";
-            targetCtx.textAlign = "center";
-            targetCtx.textBaseline = "middle";
-            targetCtx.lineWidth = 3;
-            targetCtx.strokeStyle = "#000000";
-            targetCtx.fillStyle = tileType === TILE_ENTRANCE
-              ? "#ff4141"
-              : (this.dungeon.enemies.length > 0 ? "#ffd700" : "#39ef73");
-            targetCtx.strokeText(tileType === TILE_ENTRANCE ? "▼" : "▲",
-              px + tileSize / 2, py + tileSize / 2);
-            targetCtx.fillText(tileType === TILE_ENTRANCE ? "▼" : "▲",
-              px + tileSize / 2, py + tileSize / 2);
-            targetCtx.restore();
+          this.drawEnhancedWallCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
+          if (inLineOfSight && this.hasWallTorch(worldCoord.x, worldCoord.y)) {
+            visibleTorches.push({ sx, sy, wx: worldCoord.x, wy: worldCoord.y });
           }
+        } else if (tileType === TILE_CHEST) {
+          this.drawEnhancedFloorCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
+          this.drawChestSprite(targetCtx, px, py, inLineOfSight ? 1 : 0.42);
+        } else if (tileType === TILE_ENTRANCE || tileType === TILE_EXIT) {
+          this.drawPortalDoorCell(targetCtx, theme, tileType, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
         } else if (tileType === TILE_FLOOR) {
-          this.drawTerrainTile(targetCtx, null, null, px, py, theme.floorColor,
-            inLineOfSight ? 1 : 0.4);
+          this.drawEnhancedFloorCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
         } else if (tileType === TILE_OUT_OF_BOUNDS) {
-          this.drawTerrainTile(targetCtx, null, null, px, py, theme.boundaryColor,
-            inLineOfSight ? 1 : 0.45);
+          this.drawEnhancedWallCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, false, frameNow);
+          targetCtx.fillStyle = "rgba(4, 6, 12, 0.55)";
+          targetCtx.fillRect(px, py, tileSize, tileSize);
         }
 
-        targetCtx.strokeStyle = inLineOfSight ? "#2e2e34" : "#141416";
-        targetCtx.lineWidth = 1;
-        targetCtx.strokeRect(px, py, tileSize, tileSize);
-
-        const entryPreview = this.game && this.game.entryPreviewUntil > performance.now();
-        if (this.game && (this.game.showWeaponRange || entryPreview)) {
+        // Indicador de alcance del arma equipada
+        const entryPreview = this.game && this.game.entryPreviewUntil > frameNow;
+        if (this.game && (this.game.showWeaponRange || this.game.isAiming || entryPreview)) {
           const inRange = CombatSystem.isCellInWeaponRange(
             this.player,
             worldCoord.x,
@@ -2566,26 +3144,37 @@ class Renderer {
             this.player.equippedWeapon
           );
           if (inRange && !(worldCoord.x === this.player.x && worldCoord.y === this.player.y)) {
+            const blocked = CombatSystem.findBlockingCell(
+              this.dungeon, this.player.x, this.player.y, worldCoord.x, worldCoord.y
+            );
+            const isBlockedCell = !!blocked;
             targetCtx.save();
-            targetCtx.strokeStyle = entryPreview && !this.game.showWeaponRange
-              ? "rgba(255, 202, 72, 0.95)"
-              : "rgba(255, 45, 45, 0.9)";
-            targetCtx.lineWidth = 2.5;
-            targetCtx.fillStyle = entryPreview && !this.game.showWeaponRange
-              ? "rgba(255, 190, 40, 0.18)"
-              : "rgba(255, 0, 0, 0.14)";
-            targetCtx.fillRect(px + 1, py + 1, tileSize - 2, tileSize - 2);
-            targetCtx.strokeRect(px + 1.5, py + 1.5, tileSize - 3, tileSize - 3);
+            if (isBlockedCell) {
+              targetCtx.strokeStyle = "rgba(140, 140, 155, 0.38)";
+              targetCtx.fillStyle = "rgba(90, 90, 105, 0.08)";
+            } else if (entryPreview && !this.game.showWeaponRange && !this.game.isAiming) {
+              targetCtx.strokeStyle = "rgba(255, 202, 72, 0.85)";
+              targetCtx.fillStyle = "rgba(255, 190, 40, 0.14)";
+            } else {
+              targetCtx.strokeStyle = "rgba(255, 72, 72, 0.85)";
+              targetCtx.fillStyle = "rgba(255, 35, 35, 0.14)";
+            }
+            targetCtx.lineWidth = 1.75;
+            targetCtx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+            targetCtx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
             targetCtx.restore();
           }
         }
       }
     }
 
-    this.drawGroundPickups(targetCtx, performance.now());
-    this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
+    // Halos cálidos de las antorchas sobre las losas de piedra
+    this.drawTorchLightPools(targetCtx, visibleTorches, tileSize, frameNow);
 
-    const frameNow = performance.now();
+    this.drawGroundPickups(targetCtx, frameNow);
+    this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
+    this.drawCombatIndicators(targetCtx, frameNow);
+
     this.pruneDyingEnemies(frameNow);
     [...this.dungeon.enemies, ...this.dungeon.dyingEnemies].forEach(enemy => {
       if (!enemy.cells || enemy.cells.length === 0) return;
@@ -2671,7 +3260,6 @@ class CombatSystem {
     return forward >= 1 && forward <= weapon.range && lateral >= leftEdge && lateral <= rightEdge;
   }
 
-  // Línea de tiro: devuelve la primera celda de muro (o límite) entre el origen y el destino, o null si está despejada.
   static findBlockingCell(dungeon, x0, y0, x1, y1) {
     let x = x0;
     let y = y0;
@@ -2691,7 +3279,6 @@ class CombatSystem {
     return null;
   }
 
-  // Resuelve un disparo: objetivos alcanzados, punto de impacto y, en el trabuco, el área cubierta.
   static resolveShot(player, dungeon, weapon) {
     const basis = CameraTransformer.getBasis(player.direction);
     const toWorld = (forward, lateral) => ({
@@ -2735,7 +3322,6 @@ class CombatSystem {
     if (clear) return { targets: [clear.enemy], impact: clear.cell, area: null, hitWall: false };
     if (candidates.length > 0) return { targets: [], impact: candidates[0].blocker, area: null, hitWall: true };
 
-    // Sin objetivos: la bala sigue recto hasta el muro o el alcance máximo.
     let impact = { x: player.x, y: player.y };
     let hitWall = false;
     for (let step = 1; step <= weapon.range; step++) {
@@ -2837,7 +3423,6 @@ class CombatSystem {
     return CombatSystem.rollDamageDice(diceCount, dieSides);
   }
 
-  // Retira a los enemigos caídos, reparte oro y devuelve los minijefes muertos.
   static processDeaths(game, targets) {
     const dead = targets.filter(enemy => enemy.hp <= 0);
     if (dead.length === 0) return [];
@@ -2887,14 +3472,26 @@ class CombatSystem {
 
   static executeAttack(game) {
     const { player, dungeon } = game;
-    if (game.isAnimatingTurn || game.isVictory || player.hp <= 0 || game.isPausedForDialog) {
-      if (player.hp <= 0) game.log(TEXT.logs.deadPlayer);
+    if (game.isVictory || !player || player.hp <= 0 || game.isPausedForDialog || game.isShopOpen() || game.isIntroActive() || game.tutorial?.isHelpModalOpen() || game.renderer?.isPortraitBlocked) {
+      if (player && player.hp <= 0) game.log(TEXT.logs.deadPlayer);
+      return;
+    }
+    // Asegurar que la orientación del personaje sea siempre una de las 4 direcciones cardinales (0..3)
+    player.direction = ((player.direction % 4) + 4) % 4;
+
+    // Modo de práctica segura del Tutorial (Paso 3): demuestra/valida el ataque sin gastar munición ni turnos si está en práctica controlada
+    if (game.tutorial?.isActive && game.tutorial.step === 2) {
+      sounds.playSword();
+      game.renderer?.playSwordSpin();
+      game.tutorial.onPlayerAction("attack");
+      game.updateHUD();
+      game.renderer?.draw();
       return;
     }
 
     if (game.consumeStunnedTurn()) return;
     game.clearMistyStepConfirmation();
-    game.showWeaponRange = false;
+    if (!game.isAiming) game.showWeaponRange = false;
 
     if (dungeon.isMerchantRoom) {
       game.log(TEXT.logs.merchantNoAttack);
@@ -2947,21 +3544,1058 @@ class CombatSystem {
     const deadMiniBosses = CombatSystem.processDeaths(game, targets);
     CombatSystem.applyPanic(game, deadMiniBosses);
 
-    if (playerFumbled) {
-      game.processEnemiesTurn();
-      game.updateHUD();
-      game.renderer.draw();
-      return;
-    }
-
     game.processEnemiesTurn();
     game.updateHUD();
     game.renderer.draw();
   }
 }
 
+/**
+ * INTRODUCCIÓN NARRATIVA CINEMATOGRÁFICA: DESCENSO DE LIOR AL ABISMO (Paneles 1 al 12)
+ * Cada uno de los 12 paneles de la cuadrícula se muestra COMPLETO (contain) sin recortar ni distorsionar.
+ * El Panel 13 es exclusivamente referencia de HUD/UI y NUNCA se reproduce en la historia.
+ */
+const NARRATIVE_PANELS = [
+  { id: 1,  crop: { x: 0,    y: 0,   w: 903, h: 407 }, fx: "eclipse",       duration: 4200 },
+  { id: 2,  crop: { x: 905,  y: 0,   w: 407, h: 407 }, fx: "chains",        duration: 4200 },
+  { id: 3,  crop: { x: 0,    y: 410, w: 334, h: 266 }, fx: "wind",          duration: 3200 },
+  { id: 4,  crop: { x: 336,  y: 410, w: 497, h: 266 }, fx: "crimson",       duration: 4200 },
+  { id: 5,  crop: { x: 836,  y: 410, w: 476, h: 266 }, fx: "starPulse",     duration: 4000 },
+  { id: 6,  crop: { x: 0,    y: 679, w: 305, h: 229 }, fx: "dissolve",      duration: 3400 },
+  { id: 7,  crop: { x: 308,  y: 679, w: 231, h: 229 }, fx: "shock",         duration: 3400 },
+  { id: 8,  crop: { x: 543,  y: 679, w: 241, h: 229 }, fx: "moonlight",     duration: 3400 },
+  { id: 9,  crop: { x: 787,  y: 679, w: 260, h: 229 }, fx: "breath",        duration: 3600 },
+  { id: 10, crop: { x: 1050, y: 679, w: 262, h: 229 }, fx: "resolve",       duration: 3800 },
+  { id: 11, crop: { x: 0,    y: 912, w: 267, h: 287 }, fx: "wind",          duration: 3800 },
+  { id: 12, crop: { x: 270,  y: 912, w: 679, h: 287 }, fx: "portalDescent", duration: 4400 }
+];
+
+class NarrativeIntroController {
+  constructor(game) {
+    this.game = game;
+    this.container = document.getElementById("narrative-intro");
+    this.canvas = document.getElementById("intro-canvas");
+    this.ctx = this.canvas ? this.canvas.getContext("2d") : null;
+    this.textEl = document.getElementById("intro-text");
+    this.progressEl = document.getElementById("intro-progress");
+    this.skipBtn = document.getElementById("btn-skip-intro");
+
+    this.isActive = false;
+    this.panelIndex = 0;
+    this.panelStartedAt = 0;
+    this.prevPanelIndex = -1;
+    this.rafId = null;
+    this.onCompleteCallback = null;
+
+    this.sheetImage = new Image();
+    this.sheetLoaded = false;
+    this.sheetImage.addEventListener("load", () => {
+      this.sheetLoaded = true;
+    });
+    this.sheetImage.addEventListener("error", () => {
+      if (!this.sheetImage.src.includes("Descenso%20de%20lior")) {
+        this.sheetImage.src = "Descenso de lior al abismo.png";
+      }
+    });
+    this.sheetImage.src = "Descenso de Lior al Abismo.png";
+
+    this.particles = Array.from({ length: 32 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 1 + Math.random() * 2.2,
+      vx: (Math.random() - 0.5) * 0.00035,
+      vy: -0.00025 - Math.random() * 0.0005,
+      alpha: 0.2 + Math.random() * 0.55
+    }));
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    if (this.skipBtn) {
+      this.skipBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.finish(true);
+      });
+    }
+    if (this.container) {
+      this.container.addEventListener("click", (e) => {
+        if (e.target.closest("#btn-skip-intro, #btn-intro-fullscreen")) return;
+        this.advanceOrReveal();
+      });
+    }
+  }
+
+  buildProgressDots() {
+    if (!this.progressEl) return;
+    this.progressEl.innerHTML = "";
+    NARRATIVE_PANELS.forEach((_, idx) => {
+      const dot = document.createElement("span");
+      dot.className = "intro-dot";
+      dot.dataset.idx = String(idx);
+      this.progressEl.appendChild(dot);
+    });
+  }
+
+  updateProgressDots() {
+    if (!this.progressEl) return;
+    this.progressEl.querySelectorAll(".intro-dot").forEach((dot, idx) => {
+      dot.classList.toggle("is-active", idx === this.panelIndex);
+      dot.classList.toggle("is-done", idx < this.panelIndex);
+    });
+  }
+
+  start(onComplete) {
+    if (!this.container || !this.canvas) {
+      if (onComplete) onComplete();
+      return;
+    }
+    this.onCompleteCallback = onComplete;
+    this.isActive = true;
+    this.panelIndex = 0;
+    this.prevPanelIndex = -1;
+    this.buildProgressDots();
+    this.container.classList.remove("hidden");
+    this.showPanel(0);
+
+    const loop = (now) => {
+      if (!this.isActive) return;
+      this.renderFrame(now);
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+
+  showPanel(index) {
+    if (index >= NARRATIVE_PANELS.length) {
+      this.finish(false);
+      return;
+    }
+    this.prevPanelIndex = this.panelIndex;
+    this.panelIndex = index;
+    this.panelStartedAt = performance.now();
+    const panel = NARRATIVE_PANELS[index];
+
+    if (this.textEl) {
+      this.textEl.textContent = `Escena ${index + 1} / ${NARRATIVE_PANELS.length} — Toca la pantalla o pulsa Espacio para continuar ▶`;
+    }
+    this.updateProgressDots();
+
+    if (panel.fx === "starPulse" || panel.fx === "shock") {
+      sounds.playEldritchBlast();
+    } else if (panel.fx === "portalDescent") {
+      sounds.playMisty();
+    } else {
+      sounds.playStep();
+    }
+  }
+
+  advanceOrReveal() {
+    if (!this.isActive) return;
+    if (this.panelIndex + 1 < NARRATIVE_PANELS.length) {
+      this.showPanel(this.panelIndex + 1);
+    } else {
+      this.finish(false);
+    }
+  }
+
+  /**
+   * Dibuja el panel consecutivo COMPLETO (modo contain) respetando su proporción exacta,
+   * sin recortar bordes ni distorsionar la imagen original.
+   */
+  renderPanelArtwork(targetCtx, panel, progress, alpha = 1) {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    targetCtx.save();
+    targetCtx.globalAlpha = alpha;
+
+    if (this.sheetLoaded && this.sheetImage.naturalWidth > 0) {
+      const { x, y, w, h } = panel.crop;
+      const padTop = 44;
+      const padBottom = 38;
+      const padSides = 20;
+      const availW = Math.max(120, W - padSides * 2);
+      const availH = Math.max(100, H - padTop - padBottom);
+
+      // Escalado 'contain' puro para que el cuadro salga 100% completo sin distorsión
+      const fitScale = Math.min(availW / w, availH / h);
+      const drawW = Math.round(w * fitScale);
+      const drawH = Math.round(h * fitScale);
+      const dx = Math.round((W - drawW) / 2);
+      const dy = Math.round(padTop + (availH - drawH) / 2);
+
+      // Resplandor ambiental detrás del cuadro
+      const glow = targetCtx.createRadialGradient(
+        W / 2, dy + drawH / 2, Math.min(drawW, drawH) * 0.15,
+        W / 2, dy + drawH / 2, Math.max(drawW, drawH) * 0.75
+      );
+      glow.addColorStop(0, "rgba(126, 87, 194, 0.22)");
+      glow.addColorStop(1, "rgba(4, 5, 12, 0)");
+      targetCtx.fillStyle = glow;
+      targetCtx.fillRect(0, 0, W, H);
+
+      // Sombra y marco gótico alrededor del cuadro completo
+      targetCtx.fillStyle = "#050711";
+      targetCtx.fillRect(dx - 4, dy - 4, drawW + 8, drawH + 8);
+
+      targetCtx.drawImage(this.sheetImage, x, y, w, h, dx, dy, drawW, drawH);
+
+      targetCtx.strokeStyle = "#9ea6c8";
+      targetCtx.lineWidth = 2;
+      targetCtx.strokeRect(dx - 1, dy - 1, drawW + 2, drawH + 2);
+      targetCtx.strokeStyle = "#2b314d";
+      targetCtx.lineWidth = 1;
+      targetCtx.strokeRect(dx - 4, dy - 4, drawW + 8, drawH + 8);
+    } else {
+      const grad = targetCtx.createRadialGradient(W / 2, H * 0.4, 20, W / 2, H / 2, W * 0.7);
+      grad.addColorStop(0, "#2b1644");
+      grad.addColorStop(1, "#05060f");
+      targetCtx.fillStyle = grad;
+      targetCtx.fillRect(0, 0, W, H);
+    }
+
+    targetCtx.restore();
+  }
+
+  renderFrame(now) {
+    if (!this.ctx || !this.canvas) return;
+    const targetW = Math.max(320, window.innerWidth || 800);
+    const targetH = Math.max(220, window.innerHeight || 450);
+    if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+      this.canvas.width = targetW;
+      this.canvas.height = targetH;
+    }
+
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const panel = NARRATIVE_PANELS[this.panelIndex];
+    if (!panel) return;
+
+    const elapsed = now - this.panelStartedAt;
+    const progress = Math.min(1, elapsed / panel.duration);
+
+    this.ctx.fillStyle = "#03040a";
+    this.ctx.fillRect(0, 0, W, H);
+
+    if (elapsed < 300 && this.prevPanelIndex >= 0 && this.prevPanelIndex !== this.panelIndex) {
+      const prevPanel = NARRATIVE_PANELS[this.prevPanelIndex];
+      if (prevPanel) {
+        this.renderPanelArtwork(this.ctx, prevPanel, 1, 1 - elapsed / 300);
+      }
+      this.renderPanelArtwork(this.ctx, panel, progress, elapsed / 300);
+    } else {
+      this.renderPanelArtwork(this.ctx, panel, progress, 1);
+    }
+
+    // Partículas arcanas discretas en los márgenes
+    this.ctx.save();
+    this.particles.forEach(p => {
+      p.x = (p.x + p.vx + 1) % 1;
+      p.y = (p.y + p.vy + 1) % 1;
+      this.ctx.fillStyle = `rgba(210, 180, 255, ${p.alpha * 0.45})`;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+      this.ctx.fill();
+    });
+    this.ctx.restore();
+  }
+
+  finish(skipped = false) {
+    if (!this.isActive) return;
+    this.isActive = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    if (this.container) {
+      this.container.classList.add("hidden");
+    }
+    try {
+      sessionStorage.setItem("lior_narrative_intro_seen", "true");
+    } catch {}
+    if (typeof this.onCompleteCallback === "function") {
+      const cb = this.onCompleteCallback;
+      this.onCompleteCallback = null;
+      cb(skipped);
+    }
+  }
+}
+
+/**
+ * TUTORIAL INTERACTIVO DURANTE EL NIVEL 1 (5 pasos adaptados a los controles simplificados)
+ * - Paso 1: Lado izquierdo (Deslizar) -> Moverse en 8 direcciones.
+ * - Paso 2: Lado derecho (Un toque / Tap) -> Ataque básico.
+ * - Paso 3: Lado derecho (Mantener presionado y soltar) -> Apuntar y lanzar Eldritch Blast.
+ * - Paso 4: Lado izquierdo (Mantener presionado y soltar) -> Apuntar y ejecutar Misty Step.
+ * - Paso 5: Presionar ambas zonas (izquierda y derecha) al mismo tiempo -> Cambiar de arma.
+ */
+class TutorialController {
+  constructor(game) {
+    this.game = game;
+    this.overlay = document.getElementById("tutorial-overlay");
+    this.badgeEl = document.getElementById("tutorial-step-badge");
+    this.titleEl = document.getElementById("tutorial-step-title");
+    this.descEl = document.getElementById("tutorial-step-desc");
+    this.progressEl = document.getElementById("tutorial-step-progress");
+    this.diagramEl = document.getElementById("tutorial-gesture-diagram");
+    this.leftZone = document.getElementById("touch-zone-left");
+    this.rightZone = document.getElementById("touch-zone-right");
+    this.helpModal = document.getElementById("tutorial-help-modal");
+
+    this.isActive = false;
+    this.step = 1;
+    this.practiceTarget = null;
+    this.tempGrantedWeapon = null;
+
+    this.bindEvents();
+  }
+
+  static isCompletedInStorage() {
+    try {
+      return localStorage.getItem("lior_tutorial_done") === "true"
+        || sessionStorage.getItem("lior_tutorial_done") === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  static markCompletedInStorage() {
+    try {
+      localStorage.setItem("lior_tutorial_done", "true");
+      sessionStorage.setItem("lior_tutorial_done", "true");
+    } catch {}
+  }
+
+  bindEvents() {
+    const pauseBtn = document.getElementById("btn-tutorial-pause");
+    const skipBtn = document.getElementById("btn-tutorial-skip");
+    const helpBtn = document.getElementById("btn-tutorial-help");
+    const resumeBtn = document.getElementById("btn-tutorial-resume");
+    const restartBtn = document.getElementById("btn-tutorial-restart");
+    const menuFsBtn = document.getElementById("btn-menu-fullscreen");
+    const menuResetBtn = document.getElementById("btn-menu-restart-game");
+
+    if (pauseBtn) pauseBtn.addEventListener("click", () => this.openHelpModal());
+    if (skipBtn) skipBtn.addEventListener("click", () => this.skipTutorial());
+    if (helpBtn) helpBtn.addEventListener("click", () => this.openHelpModal());
+    if (resumeBtn) resumeBtn.addEventListener("click", () => this.closeHelpModal());
+    if (restartBtn) {
+      restartBtn.addEventListener("click", () => {
+        this.closeHelpModal();
+        this.start(true);
+      });
+    }
+    if (menuFsBtn) {
+      menuFsBtn.addEventListener("click", () => {
+        this.game.toggleFullscreen(true);
+      });
+    }
+    if (menuResetBtn) {
+      menuResetBtn.addEventListener("click", () => {
+        this.closeHelpModal();
+        this.game.resetGame();
+      });
+    }
+  }
+
+  openHelpModal() {
+    if (!this.helpModal) return;
+    this.game.touchController?.cancelAllGestures();
+    this.helpModal.classList.remove("hidden");
+  }
+
+  closeHelpModal() {
+    if (!this.helpModal) return;
+    this.helpModal.classList.add("hidden");
+  }
+
+  isHelpModalOpen() {
+    return !!(this.helpModal && !this.helpModal.classList.contains("hidden"));
+  }
+
+  startIfEligible() {
+    if (this.game.floor !== 1 || this.game.inMerchantFloor) return;
+    if (TutorialController.isCompletedInStorage()) return;
+    if (this.game.controlDevice !== "touch") return;
+    this.start(false);
+  }
+
+  start(force = false) {
+    if (!force && TutorialController.isCompletedInStorage()) return;
+    this.isActive = true;
+    const fb = document.getElementById("floor-banner");
+    if (fb) fb.classList.add("hidden");
+    this.step = 1;
+    this.cleanupTempWeapon();
+    if (this.overlay) this.overlay.classList.remove("hidden");
+    this.setupStep(1);
+  }
+
+  findPracticeTargetTile() {
+    const { player, dungeon } = this.game;
+    const candidates = [
+      { x: player.x, y: player.y - 1 },
+      { x: player.x + 1, y: player.y - 1 },
+      { x: player.x - 1, y: player.y - 1 },
+      { x: player.x + 1, y: player.y },
+      { x: player.x - 1, y: player.y }
+    ];
+    for (const c of candidates) {
+      if (dungeon.isInsideBounds(c.x, c.y) && dungeon.getTile(c.x, c.y) === TILE_FLOOR
+        && !dungeon.enemies.some(e => e.cells?.some(cell => cell.x === c.x && cell.y === c.y))) {
+        return c;
+      }
+    }
+    return { x: player.x, y: Math.max(1, player.y - 1) };
+  }
+
+  getGestureSVG(step) {
+    switch (step) {
+      case 1:
+        return `<svg viewBox="0 0 90 46"><rect x="2" y="2" width="42" height="42" fill="rgba(56,189,248,0.18)" stroke="#38bdf8"/><circle cx="23" cy="28" r="5" fill="#ffd970"/><path d="M23 28 L23 8 M23 28 L36 12" stroke="#7cf59a" stroke-width="2"/><text x="66" y="26" fill="#94a3b8" font-size="6.5" text-anchor="middle">DESLIZAR</text></svg>`;
+      case 2:
+        return `<svg viewBox="0 0 90 46"><rect x="47" y="2" width="41" height="42" fill="rgba(248,113,113,0.18)" stroke="#f87171"/><circle cx="67" cy="23" r="8" fill="none" stroke="#ffd970" stroke-width="2"/><circle cx="67" cy="23" r="3.5" fill="#f87171"/><text x="23" y="26" fill="#ffd970" font-size="6.5" text-anchor="middle">1 TOQUE</text></svg>`;
+      case 3:
+        return `<svg viewBox="0 0 90 46"><rect x="47" y="2" width="41" height="42" fill="rgba(192,132,252,0.18)" stroke="#c084fc"/><circle cx="67" cy="27" r="7" fill="rgba(192,132,252,0.45)" stroke="#e9d5ff" stroke-width="1.8"/><path d="M67 20 L67 5" stroke="#e9d5ff" stroke-width="2.2"/><text x="23" y="26" fill="#d8b4fe" font-size="6.2" text-anchor="middle">MANTENER</text></svg>`;
+      case 4:
+        return `<svg viewBox="0 0 90 46"><rect x="2" y="2" width="41" height="42" fill="rgba(56,189,248,0.18)" stroke="#38bdf8"/><circle cx="22" cy="27" r="7" fill="rgba(56,189,248,0.45)" stroke="#7dd3fc" stroke-width="1.8"/><path d="M22 20 L22 5" stroke="#7dd3fc" stroke-width="2.2"/><text x="67" y="26" fill="#7dd3fc" font-size="6.2" text-anchor="middle">MANTENER</text></svg>`;
+      case 5:
+        return `<svg viewBox="0 0 90 46"><rect x="2" y="2" width="41" height="42" fill="rgba(56,189,248,0.16)" stroke="#ffd970"/><rect x="47" y="2" width="41" height="42" fill="rgba(248,113,113,0.16)" stroke="#ffd970"/><circle cx="22" cy="23" r="6.5" fill="#ffd970"/><circle cx="67" cy="23" r="6.5" fill="#ffd970"/><text x="45" y="41" fill="#ffd970" font-size="6" text-anchor="middle">IZQ + DER</text></svg>`;
+      default:
+        return "";
+    }
+  }
+
+  setZoneHighlights(leftVisible, rightVisible) {
+    if (this.leftZone) this.leftZone.classList.toggle("hidden", !leftVisible);
+    if (this.rightZone) this.rightZone.classList.toggle("hidden", !rightVisible);
+  }
+
+  setupStep(stepNumber) {
+    this.step = stepNumber;
+    this.cleanupTempWeapon();
+
+    if (this.diagramEl) this.diagramEl.innerHTML = this.getGestureSVG(stepNumber);
+    if (this.badgeEl) this.badgeEl.textContent = `TUTORIAL · PASO ${stepNumber}/5`;
+
+    switch (stepNumber) {
+      case 1:
+        this.practiceTarget = this.findPracticeTargetTile();
+        this.setZoneHighlights(true, false);
+        if (this.titleEl) this.titleEl.textContent = "Paso 1: Moverse (Deslizar en Lado Izquierdo)";
+        if (this.descEl) {
+          this.descEl.textContent = "Desliza el dedo hacia cualquier dirección en el LADO IZQUIERDO de la pantalla para mover a Lior en los 8 puntos cardinales.";
+        }
+        if (this.progressEl) this.progressEl.textContent = "Objetivo: Desliza en el lado izquierdo para mover a Lior.";
+        break;
+
+      case 2:
+        this.practiceTarget = null;
+        this.setZoneHighlights(false, true);
+        if (this.titleEl) this.titleEl.textContent = "Paso 2: Ataque Básico (Toque en Lado Derecho)";
+        if (this.descEl) {
+          this.descEl.textContent = "Toca una vez (tap) el LADO DERECHO de la pantalla para ejecutar tu ataque básico hacia donde mira Lior.";
+        }
+        if (this.progressEl) this.progressEl.textContent = "Objetivo: Toca una vez en el lado derecho para atacar.";
+        break;
+
+      case 3:
+        this.setZoneHighlights(false, true);
+        if (this.titleEl) this.titleEl.textContent = "Paso 3: Eldritch Blast (Mantener en Lado Derecho)";
+        if (this.descEl) {
+          this.descEl.textContent = "Mantén presionado el LADO DERECHO para que aparezca el apuntador violeta, dirígelo hacia tu objetivo y suelta el dedo para lanzar el Eldritch Blast.";
+        }
+        if (this.progressEl) this.progressEl.textContent = "Objetivo: Mantén presionado el lado derecho, apunta y suelta.";
+        break;
+
+      case 4:
+        this.setZoneHighlights(true, false);
+        if (this.titleEl) this.titleEl.textContent = "Paso 4: Misty Step (Mantener en Lado Izquierdo)";
+        if (this.descEl) {
+          this.descEl.textContent = "Mantén presionado el dedo en el LADO IZQUIERDO para apuntar el Misty Step, inclina hacia la dirección deseada y suelta para teletransportarte.";
+        }
+        if (this.progressEl) this.progressEl.textContent = "Objetivo: Mantén presionado el lado izquierdo, apunta y suelta.";
+        break;
+
+      case 5:
+        this.setZoneHighlights(true, true);
+        if (this.game.player.getAvailableWeapons().length < 2) {
+          this.tempGrantedWeapon = {
+            hadPistolUnlocked: this.game.player.unlockedWeapons.has(WEAPONS.PISTOL.id),
+            prevAmmoPistol: this.game.player.ammoPistol,
+            prevEquipped: this.game.player.equippedWeapon
+          };
+          this.game.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
+          if (this.game.player.ammoPistol <= 0) this.game.player.ammoPistol = 6;
+          this.game.updateHUD();
+        }
+        if (this.titleEl) this.titleEl.textContent = "Paso 5: Cambio de Arma (Ambas Zonas a la Vez)";
+        if (this.descEl) {
+          this.descEl.textContent = "Presiona el LADO IZQUIERDO y el LADO DERECHO de la pantalla al mismo tiempo para cambiar tu arma equipada.";
+        }
+        if (this.progressEl) this.progressEl.textContent = "Objetivo: Presiona ambas zonas de la pantalla al mismo tiempo.";
+        break;
+
+      default:
+        this.completeTutorial();
+        break;
+    }
+
+    this.game.renderer?.draw();
+  }
+
+  cleanupTempWeapon() {
+    if (!this.tempGrantedWeapon || !this.game.player) return;
+    if (!this.tempGrantedWeapon.hadPistolUnlocked) {
+      this.game.player.unlockedWeapons.delete(WEAPONS.PISTOL.id);
+    }
+    this.game.player.ammoPistol = this.tempGrantedWeapon.prevAmmoPistol;
+    this.game.player.equippedWeapon = this.tempGrantedWeapon.prevEquipped;
+    this.tempGrantedWeapon = null;
+    this.game.updateHUD();
+  }
+
+  onPlayerAction(actionType) {
+    if (!this.isActive) return;
+
+    if (this.step === 1 && actionType === "move") {
+      this.setupStep(2);
+      return;
+    }
+    if (this.step === 2 && actionType === "attack") {
+      this.setupStep(3);
+      return;
+    }
+    if (this.step === 3 && actionType === "eldritch_blast") {
+      this.setupStep(4);
+      return;
+    }
+    if (this.step === 4 && actionType === "misty_step") {
+      this.setupStep(5);
+      return;
+    }
+    if (this.step === 5 && actionType === "weapon_switch") {
+      this.completeTutorial();
+    }
+  }
+
+  skipTutorial() {
+    this.cleanupTempWeapon();
+    this.isActive = false;
+    this.practiceTarget = null;
+    this.setZoneHighlights(false, false);
+    if (this.overlay) this.overlay.classList.add("hidden");
+    TutorialController.markCompletedInStorage();
+    this.game.log("Tutorial omitido. Puedes abrir el botón ☰ MENÚ en el HUD cuando quieras.");
+    this.game.renderer?.draw();
+  }
+
+  completeTutorial() {
+    this.cleanupTempWeapon();
+    this.isActive = false;
+    this.practiceTarget = null;
+    this.setZoneHighlights(false, false);
+    if (this.overlay) this.overlay.classList.add("hidden");
+    TutorialController.markCompletedInStorage();
+    sounds.playCoin();
+    this.game.log("¡Tutorial completado! Ya dominas todos los controles.");
+    this.game.renderer?.draw();
+  }
+}
+
+/**
+ * SISTEMA DE CONTROLES TÁCTILES SIMPLIFICADO:
+ * 1. Lado izquierdo de la pantalla:
+ *    - Deslizar hacia cualquier dirección -> Mueve a Lior en los 8 puntos cardinales.
+ *    - Mantener presionado -> Activa el apuntador para dirigir y ejecutar el Misty Step al soltar.
+ * 2. Lado derecho de la pantalla:
+ *    - Tocar una vez (tap) -> Ejecuta el ataque básico hacia donde mira Lior.
+ *    - Mantener presionado -> Muestra el apuntador para dirigir el Eldritch Blast; al soltar el dedo, se lanza el Eldritch Blast.
+ * 3. Cambio de arma:
+ *    - Presionar ambas zonas de la pantalla (izquierda y derecha) al mismo tiempo -> Cambia de arma.
+ */
+class TouchGestureController {
+  constructor(game, surface) {
+    this.game = game;
+    this.surface = surface;
+    this.pointers = new Map();
+    this.leftPointerId = null;
+    this.rightPointerId = null;
+    this.leftHoldTimer = null;
+    this.rightHoldTimer = null;
+    this.twoFingerTimer = null;
+    this.moveRepeatTimer = null;
+    this.weaponSwitchTriggered = false;
+    this.specialGestureActive = null; // "eldritch" | "misty" | null
+    this.HOLD_MISTY_MS = 260;
+    this.HOLD_BLAST_MS = 240;
+    this.MOVE_REPEAT_MS = 265;
+
+    this.bindEvents();
+  }
+
+  getHalf(clientX) {
+    const mid = (window.innerWidth || document.documentElement.clientWidth || 640) / 2;
+    return clientX < mid ? "left" : "right";
+  }
+
+  bindEvents() {
+    if (!this.surface) return;
+
+    this.surface.addEventListener("pointerdown", (e) => this.onPointerDown(e));
+    window.addEventListener("pointermove", (e) => this.onPointerMove(e));
+    window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    window.addEventListener("pointercancel", (e) => this.onPointerCancel(e));
+    window.addEventListener("blur", () => this.cancelAllGestures());
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.cancelAllGestures();
+    });
+  }
+
+  isInteractiveOverlayTarget(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest(
+      "button, #shop-modal, #merchant-dialog-modal, #narrative-intro, #tutorial-help-modal, #death-screen, #victory-screen, #rotate-device-overlay"
+    );
+  }
+
+  /**
+   * Comprueba si las coordenadas de pantalla del puntero están colocadas directamente
+   * sobre la casilla actual del propio personaje (Lior) en el canvas.
+   */
+  isPointerOverPlayerCell(clientX, clientY) {
+    const canvas = this.game?.canvas;
+    if (!canvas) return false;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return false;
+    const cols = CAMERA_CONFIG.cols || 15;
+    const rows = CAMERA_CONFIG.rows || 9;
+    const cellW = rect.width / cols;
+    const cellH = rect.height / rows;
+    const liorScreenX = rect.left + (CAMERA_CONFIG.playerScreenX + 0.5) * cellW;
+    const liorScreenY = rect.top + (CAMERA_CONFIG.playerScreenY + 0.5) * cellH;
+    const radius = Math.max(cellW, cellH) * 0.78;
+    return Math.hypot(clientX - liorScreenX, clientY - liorScreenY) <= radius;
+  }
+
+  stopContinuousMove() {
+    if (this.moveRepeatTimer !== null) {
+      clearInterval(this.moveRepeatTimer);
+      this.moveRepeatTimer = null;
+    }
+  }
+
+  clearHoldTimers() {
+    if (this.leftHoldTimer !== null) {
+      clearTimeout(this.leftHoldTimer);
+      this.leftHoldTimer = null;
+    }
+    if (this.rightHoldTimer !== null) {
+      clearTimeout(this.rightHoldTimer);
+      this.rightHoldTimer = null;
+    }
+    if (this.twoFingerTimer !== null) {
+      clearTimeout(this.twoFingerTimer);
+      this.twoFingerTimer = null;
+    }
+  }
+
+  startContinuousMove(track) {
+    if (this.moveRepeatTimer !== null) return;
+    const stepOnce = () => {
+      const current = this.pointers.get(track.id);
+      if (!current || this.weaponSwitchTriggered || current.mode !== "move") {
+        this.stopContinuousMove();
+        return;
+      }
+      const dx = current.curX - current.startX;
+      const dy = current.curY - current.startY;
+      if (Math.hypot(dx, dy) < 15) return;
+      const moveDir = TouchGestureController.vectorTo8Dir(dx, dy);
+      current.stepCount = (current.stepCount || 0) + 1;
+      this.game.moveStep(moveDir.dx, moveDir.dy, moveDir.cardinal);
+    };
+
+    stepOnce();
+    this.moveRepeatTimer = setInterval(stepOnce, this.MOVE_REPEAT_MS);
+  }
+
+  activateMistyHold(track) {
+    if (!track || track.consumedAction || this.weaponSwitchTriggered || track.mode === "move") return;
+    this.stopContinuousMove();
+    track.mode = "misty";
+    this.specialGestureActive = "misty";
+    const dx = track.curX - track.startX;
+    const dy = track.curY - track.startY;
+    const dist = Math.hypot(dx, dy);
+    if (this.isPointerOverPlayerCell(track.curX, track.curY)) {
+      this.game.setMistyStepPreview({ canceled: true });
+      return;
+    }
+    if (dist >= 14) {
+      track.hasAimedOutward = true;
+      const dir8 = TouchGestureController.vectorTo8Dir(dx, dy);
+      const steps = dist < 24 ? 8 : Math.max(1, Math.min(8, Math.round(dist / 18)));
+      this.game.setMistyStepPreview(dir8, steps);
+    } else {
+      const cardinal = ((this.game.player.direction % 4) + 4) % 4;
+      const dirVec = DIR_VECTORS[cardinal];
+      this.game.setMistyStepPreview({ dx: dirVec.x, dy: dirVec.y, cardinal }, 8);
+    }
+  }
+
+  activateEldritchHold(track) {
+    if (!track || track.consumedAction || this.weaponSwitchTriggered) return;
+    track.mode = "eldritch";
+    this.specialGestureActive = "eldritch";
+    const dx = track.curX - track.startX;
+    const dy = track.curY - track.startY;
+    const dist = Math.hypot(dx, dy);
+    if (this.isPointerOverPlayerCell(track.curX, track.curY)) {
+      this.game.setEldritchBlastPreview(null, true);
+      return;
+    }
+    if (dist >= 12) {
+      track.hasAimedOutward = true;
+      const dir = TouchGestureController.vectorToCardinal(dx, dy);
+      this.game.setEldritchBlastPreview(dir, false);
+    } else {
+      const dir = ((this.game.player.direction % 4) + 4) % 4;
+      this.game.setEldritchBlastPreview(dir, false);
+    }
+  }
+
+  onPointerDown(e) {
+    if (this.isInteractiveOverlayTarget(e.target)) return;
+    if (this.game.renderer?.isPortraitBlocked) return;
+    if (this.game.isIntroActive() || this.game.isShopOpen() || this.game.isPausedForDialog || this.game.tutorial?.isHelpModalOpen()) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    if (e.pointerType === "touch") {
+      this.game.setControlDevice("touch");
+    }
+
+    e.preventDefault();
+    const side = this.getHalf(e.clientX);
+    const now = performance.now();
+
+    const track = {
+      id: e.pointerId,
+      side,
+      startX: e.clientX,
+      startY: e.clientY,
+      curX: e.clientX,
+      curY: e.clientY,
+      startTime: now,
+      totalDist: 0,
+      stepCount: 0,
+      hasAimedOutward: false,
+      mode: null, // "move" | "misty" | "eldritch" | "weapon_switch" | null
+      consumedAction: false
+    };
+
+    this.pointers.set(e.pointerId, track);
+
+    if (side === "left" && this.leftPointerId === null) {
+      this.leftPointerId = e.pointerId;
+    } else if (side === "right" && this.rightPointerId === null) {
+      this.rightPointerId = e.pointerId;
+    }
+
+    // Comprobar si es una pulsación simultánea en ambas zonas (izquierda + derecha) para cambiar de arma,
+    // SIN confundirse con un dedo que ya se estaba moviendo o apuntando.
+    const activePts = [...this.pointers.values()];
+    const leftPt = activePts.find(pt => pt.side === "left");
+    const rightPt = activePts.find(pt => pt.side === "right");
+
+    if (leftPt && rightPt) {
+      const timeDiff = Math.abs(rightPt.startTime - leftPt.startTime);
+      const neitherMovingOrAiming = activePts.every(
+        pt => pt.mode === null && pt.totalDist < 16 && (pt.stepCount || 0) === 0
+      );
+
+      if (timeDiff <= 180 && neitherMovingOrAiming && !this.weaponSwitchTriggered) {
+        this.clearHoldTimers();
+        this.stopContinuousMove();
+        this.specialGestureActive = null;
+        this.game.setEldritchBlastPreview(null, false);
+        this.game.setMistyStepPreview(null);
+        this.weaponSwitchTriggered = true;
+        activePts.forEach(pt => {
+          pt.consumedAction = true;
+          pt.mode = "weapon_switch";
+        });
+        this.game.cycleWeapon(true);
+        return;
+      }
+    }
+
+    // Si es un toque en el lado derecho (incluso si el dedo izquierdo sigue apoyado tras moverse),
+    // preparar el temporizador de mantenido para Eldritch Blast; si suelta antes, dispara el arma equipada.
+    if (side === "right" && !this.weaponSwitchTriggered) {
+      clearTimeout(this.rightHoldTimer);
+      this.rightHoldTimer = setTimeout(() => {
+        const cur = this.pointers.get(e.pointerId);
+        if (!cur || this.weaponSwitchTriggered || cur.consumedAction) return;
+        this.activateEldritchHold(cur);
+      }, this.HOLD_BLAST_MS);
+    }
+
+    // Si es un toque en el lado izquierdo con un solo dedo, preparar el temporizador de mantenido para Misty Step.
+    if (side === "left" && this.pointers.size === 1 && !this.weaponSwitchTriggered) {
+      clearTimeout(this.leftHoldTimer);
+      this.leftHoldTimer = setTimeout(() => {
+        const cur = this.pointers.get(e.pointerId);
+        if (!cur || this.pointers.size !== 1 || this.weaponSwitchTriggered || cur.mode === "move" || cur.consumedAction) return;
+        this.activateMistyHold(cur);
+      }, this.HOLD_MISTY_MS);
+    }
+  }
+
+  /**
+   * Convierte cualquier vector (dx, dy) en una de las 4 direcciones cardinales (0: Norte, 1: Este, 2: Sur, 3: Oeste).
+   * Garantiza que Lior siempre mire hacia uno de los 4 puntos cardinales que tienen sprites disponibles.
+   */
+  static vectorToCardinal(dx, dy) {
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return dx >= 0 ? 1 : 3; // Este (1) u Oeste (3)
+    }
+    return dy >= 0 ? 2 : 0; // Sur (2) o Norte (0)
+  }
+
+  /**
+   * Convierte un vector (dx, dy) en una de las 8 direcciones de movimiento (incluidas las diagonales),
+   * asignando siempre una orientación visual cardinal (0, 1, 2, 3) para respetar los sprites disponibles.
+   */
+  static vectorTo8Dir(dx, dy) {
+    const angle = Math.atan2(dy, dx);
+    const octant = Math.round(angle / (Math.PI / 4));
+    const cardinal = TouchGestureController.vectorToCardinal(dx, dy);
+    const table = {
+      0:    { dx: 1,  dy: 0,  cardinal: 1 },        // E
+      1:    { dx: 1,  dy: 1,  cardinal },           // SE (cardinal 1 o 2)
+      2:    { dx: 0,  dy: 1,  cardinal: 2 },        // S
+      3:    { dx: -1, dy: 1,  cardinal },           // SW (cardinal 3 o 2)
+      4:    { dx: -1, dy: 0,  cardinal: 3 },        // W
+      "-4": { dx: -1, dy: 0,  cardinal: 3 },        // W
+      "-3": { dx: -1, dy: -1, cardinal },           // NW (cardinal 3 o 0)
+      "-2": { dx: 0,  dy: -1, cardinal: 0 },        // N
+      "-1": { dx: 1,  dy: -1, cardinal }            // NE (cardinal 1 o 0)
+    };
+    return table[octant] || { dx: 0, dy: -1, cardinal: 0 };
+  }
+
+  onPointerMove(e) {
+    const track = this.pointers.get(e.pointerId);
+    if (!track) return;
+    if (this.game.renderer?.isPortraitBlocked) {
+      this.cancelAllGestures();
+      return;
+    }
+
+    const stepDist = Math.hypot(e.clientX - track.curX, e.clientY - track.curY);
+    track.totalDist += stepDist;
+    track.curX = e.clientX;
+    track.curY = e.clientY;
+
+    if (this.weaponSwitchTriggered || track.consumedAction) return;
+
+    const dx = track.curX - track.startX;
+    const dy = track.curY - track.startY;
+    const dispFromStart = Math.hypot(dx, dy);
+
+    // 1. LADO DERECHO: Apuntado especial de Eldritch Blast (mantener presionado)
+    if (track.side === "right") {
+      if (track.mode === "eldritch" || this.specialGestureActive === "eldritch") {
+        // Si el jugador coloca el marcador sobre el propio personaje (o regresa al centro tras haber apuntado),
+        // muestra el marcador de cancelación sobre Lior.
+        if (this.isPointerOverPlayerCell(track.curX, track.curY) || (track.hasAimedOutward && dispFromStart < 18)) {
+          this.game.setEldritchBlastPreview(null, true);
+        } else if (dispFromStart >= 14) {
+          track.hasAimedOutward = true;
+          const dir = TouchGestureController.vectorToCardinal(dx, dy);
+          this.game.setEldritchBlastPreview(dir, false);
+        }
+      }
+      return;
+    }
+
+    // 2. LADO IZQUIERDO:
+    if (track.side === "left") {
+      // Si está en modo de apuntado de Misty Step (pulsación prolongada en el lado izquierdo):
+      // permite seleccionar las 8 direcciones (incluidas las diagonales) y cancelar sobre el propio personaje.
+      if (track.mode === "misty" || this.specialGestureActive === "misty") {
+        if (this.isPointerOverPlayerCell(track.curX, track.curY) || (track.hasAimedOutward && dispFromStart < 18)) {
+          this.game.setMistyStepPreview({ canceled: true });
+        } else if (dispFromStart >= 14) {
+          track.hasAimedOutward = true;
+          const dir8 = TouchGestureController.vectorTo8Dir(dx, dy);
+          const desiredSteps = dispFromStart < 26 ? 8 : Math.max(1, Math.min(8, Math.round(dispFromStart / 18)));
+          this.game.setMistyStepPreview(dir8, desiredSteps);
+        }
+        return;
+      }
+
+      // Si desliza el dedo antes de que se cumpla el tiempo de pulsación prolongada -> Movimiento en 8 direcciones
+      if (dispFromStart >= 18 && this.pointers.size === 1) {
+        clearTimeout(this.leftHoldTimer);
+        this.leftHoldTimer = null;
+        track.mode = "move";
+        this.startContinuousMove(track);
+      }
+    }
+  }
+
+  onPointerUp(e) {
+    const track = this.pointers.get(e.pointerId);
+    if (!track) return;
+
+    if (e.pointerId === this.leftPointerId) {
+      clearTimeout(this.leftHoldTimer);
+      this.leftHoldTimer = null;
+      this.stopContinuousMove();
+    }
+    if (e.pointerId === this.rightPointerId) {
+      clearTimeout(this.rightHoldTimer);
+      this.rightHoldTimer = null;
+    }
+
+    const dx = track.curX - track.startX;
+    const dy = track.curY - track.startY;
+    const displacement = Math.hypot(dx, dy);
+    const duration = performance.now() - track.startTime;
+
+    // 1. Lado derecho: resolución del apuntado especial de Eldritch Blast al soltar el dedo
+    if ((track.mode === "eldritch" || this.specialGestureActive === "eldritch") && track.side === "right") {
+      const wasCanceled = !!this.game.eldritchBlastCanceled || this.isPointerOverPlayerCell(track.curX, track.curY);
+      const previewDir = this.game.eldritchBlastPreviewDir ?? this.game.player.direction;
+      this.game.setEldritchBlastPreview(null, false);
+      this.specialGestureActive = null;
+      this.pointers.delete(e.pointerId);
+      if (this.rightPointerId === e.pointerId) this.rightPointerId = null;
+
+      if (wasCanceled) {
+        this.game.log("Eldritch Blast cancelado.");
+        return;
+      }
+      if (previewDir !== null && previewDir !== undefined) {
+        this.game.player.direction = ((previewDir % 4) + 4) % 4;
+        this.game.castEldritchBlast();
+      }
+      return;
+    }
+
+    // 2. Lado izquierdo: resolución del apuntado de Misty Step (8 direcciones + cancelación sobre el propio personaje)
+    if ((track.mode === "misty" || this.specialGestureActive === "misty") && track.side === "left") {
+      const preview = this.game.mistyStepPreview;
+      const wasCanceled = !preview
+        || !!preview.canceled
+        || (preview.x === this.game.player.x && preview.y === this.game.player.y && !preview.blocked)
+        || this.isPointerOverPlayerCell(track.curX, track.curY);
+      const hasValidPreview = preview && !wasCanceled && !preview.blocked && !preview.dangerous;
+      const targetSteps = preview?.steps || 8;
+      const dirVec = preview?.dirVec || null;
+      const cardinal = preview?.cardinal ?? this.game.player.direction;
+      this.game.setMistyStepPreview(null);
+      this.specialGestureActive = null;
+      this.pointers.delete(e.pointerId);
+      if (this.leftPointerId === e.pointerId) this.leftPointerId = null;
+
+      if (wasCanceled) {
+        this.game.log("Misty Step cancelado.");
+        return;
+      }
+      if (preview) {
+        if (hasValidPreview) {
+          this.game.player.direction = ((cardinal % 4) + 4) % 4;
+          this.game.castMistyStep(targetSteps, dirVec);
+        } else {
+          this.game.log(TEXT.logs.mistyInvalid);
+        }
+      }
+      return;
+    }
+
+    // 3. Lado derecho: un solo toque (tap) dispara inmediatamente el arma equipada (pistola, mosquete, trabuco o espada)
+    // utilizando la orientación cardinal actual del personaje, sin abrir apuntador manual.
+    if (
+      track.side === "right"
+      && !this.weaponSwitchTriggered
+      && !track.consumedAction
+      && track.mode !== "eldritch"
+      && track.mode !== "weapon_switch"
+      && duration < 550
+    ) {
+      this.pointers.delete(e.pointerId);
+      if (this.rightPointerId === e.pointerId) this.rightPointerId = null;
+      CombatSystem.executeAttack(this.game);
+      return;
+    }
+
+    // 4. Lado izquierdo: si fue un deslizamiento rápido que aún no había dado su primer paso, da 1 paso en 8 direcciones
+    if (
+      track.side === "left"
+      && !this.weaponSwitchTriggered
+      && !track.consumedAction
+      && track.mode !== "misty"
+      && track.mode !== "weapon_switch"
+      && (track.stepCount || 0) === 0
+      && displacement >= 15
+    ) {
+      const moveDir = TouchGestureController.vectorTo8Dir(dx, dy);
+      this.pointers.delete(e.pointerId);
+      if (this.leftPointerId === e.pointerId) this.leftPointerId = null;
+      this.game.moveStep(moveDir.dx, moveDir.dy, moveDir.cardinal);
+      return;
+    }
+
+    // 5. Limpieza del puntero
+    this.pointers.delete(e.pointerId);
+    if (e.pointerId === this.leftPointerId) {
+      this.leftPointerId = null;
+      this.game.setMistyStepPreview(null);
+    }
+    if (e.pointerId === this.rightPointerId) {
+      this.rightPointerId = null;
+      this.game.setEldritchBlastPreview(null, false);
+    }
+    if (this.pointers.size === 0) {
+      this.clearHoldTimers();
+      this.stopContinuousMove();
+      this.weaponSwitchTriggered = false;
+      this.specialGestureActive = null;
+    }
+  }
+
+  onPointerCancel(e) {
+    if (e.pointerId === this.leftPointerId) {
+      this.stopContinuousMove();
+    }
+    this.pointers.delete(e.pointerId);
+    if (this.pointers.size === 0) {
+      this.cancelAllGestures();
+    }
+  }
+
+  cancelAllGestures() {
+    this.clearHoldTimers();
+    this.stopContinuousMove();
+    this.pointers.clear();
+    this.leftPointerId = null;
+    this.rightPointerId = null;
+    this.weaponSwitchTriggered = false;
+    this.specialGestureActive = null;
+    if (this.game) {
+      this.game.setAimMode(false);
+      this.game.setEldritchBlastPreview(null, false);
+      this.game.setMistyStepPreview(null);
+    }
+  }
+}
+
 class GameController {
-  constructor() {
+  constructor(options = {}) {
+    window.gameController = this;
     this.floor = 1;
     this.inMerchantFloor = false;
     this.canvas = document.getElementById("viewport");
@@ -2974,25 +4608,44 @@ class GameController {
     this.isAnimatingTurn = false;
     this.pendingEnemyProjectiles = 0;
     this.showWeaponRange = false;
+    this.isAiming = false;
+    this.eldritchBlastPreviewDir = null;
+    this.mistyStepPreview = null;
     this.entryPreviewUntil = 0;
     this.mistyStepConfirmation = null;
     this.statusMessageTimer = null;
     this.statusMessageFadeTimer = null;
+    this.floorBannerTimer = null;
+    this.floorBannerFadeTimer = null;
+    this.weaponToastTimer = null;
     this.dialogTimer = null;
     this.dialogFadeTimer = null;
+    this.merchantInitTimer = null;
+    this.shopClosingCooldown = 0;
+    this.stopDpadHold = null;
     this.shopSelection = 0;
     this.activeShopView = "supplies";
     this.dialogCallback = null;
     this.gamepadMapping = "standard";
     this.controlDevice = this.getPreferredControlDevice();
 
-    this.initDungeonFloor();
+    this.narrativeIntro = new NarrativeIntroController(this);
+    this.tutorial = new TutorialController(this);
+
+    this.initDungeonFloor(false);
+    this.touchController = new TouchGestureController(this, document.getElementById("game-container"));
     this.bindEvents();
     this.initShopEvents();
     this.initDeviceDetection();
     this.initOrientationNotice();
     this.startGamepadLoop();
     window.__lior = this;
+
+    if (options.playNarrativeIntro) {
+      this.startNewGameIntro();
+    } else {
+      this.tutorial.startIfEligible();
+    }
   }
 
   get tier() {
@@ -3007,10 +4660,153 @@ class GameController {
     return this.tier;
   }
 
+  isShopOpen() {
+    return !!(this.shopModal && !this.shopModal.classList.contains("hidden"));
+  }
+
+  isIntroActive() {
+    return !!(this.narrativeIntro && this.narrativeIntro.isActive);
+  }
+
+  isGameplayBlocked() {
+    return (
+      this.isVictory
+      || this.isPausedForDialog
+      || this.isShopOpen()
+      || this.isIntroActive()
+      || this.tutorial?.isHelpModalOpen()
+      || this.renderer?.isPortraitBlocked
+      || performance.now() < this.shopClosingCooldown
+      || !this.player
+      || this.player.hp <= 0
+    );
+  }
+
+  startNewGameIntro() {
+    if (!this.narrativeIntro) {
+      this.tutorial?.startIfEligible();
+      return;
+    }
+    this.narrativeIntro.start(() => {
+      this.showFloorBanner(this.floor, "El descenso.");
+      this.tutorial?.startIfEligible();
+      this.renderer?.draw();
+    });
+  }
+
+  showFloorBanner(floorNum, subtitle = "El descenso.") {
+    const banner = document.getElementById("floor-banner");
+    const titleEl = document.getElementById("floor-banner-title");
+    const subEl = document.getElementById("floor-banner-subtitle");
+    if (!banner || !titleEl || !subEl) return;
+    if (this.tutorial?.isActive) return;
+
+    clearTimeout(this.floorBannerTimer);
+    clearTimeout(this.floorBannerFadeTimer);
+    titleEl.textContent = `Nivel ${floorNum}`;
+    subEl.textContent = subtitle;
+    banner.classList.remove("is-fading", "hidden");
+
+    this.floorBannerFadeTimer = setTimeout(() => banner.classList.add("is-fading"), 2100);
+    this.floorBannerTimer = setTimeout(() => {
+      banner.classList.add("hidden");
+      banner.classList.remove("is-fading");
+    }, 2550);
+  }
+
+  showWeaponToast(text) {
+    const toast = document.getElementById("weapon-toast");
+    if (!toast) return;
+    clearTimeout(this.weaponToastTimer);
+    toast.textContent = text;
+    toast.classList.remove("hidden");
+    this.weaponToastTimer = setTimeout(() => {
+      toast.classList.add("hidden");
+    }, 1350);
+  }
+
+  setAimMode(active) {
+    this.isAiming = false;
+    this.showWeaponRange = !!active;
+    this.renderer?.draw();
+  }
+
+  setAimDirection(direction) {
+    const dir = ((direction % 4) + 4) % 4;
+    this.player.direction = dir;
+    this.renderer?.commitCameraFacing();
+    this.updateHUD();
+    this.renderer?.draw();
+  }
+
+  setEldritchBlastPreview(dir, canceled = false) {
+    if (canceled) {
+      this.eldritchBlastPreviewDir = null;
+      this.eldritchBlastCanceled = true;
+      this.renderer?.draw();
+      return;
+    }
+    this.eldritchBlastCanceled = false;
+    if (dir === null || dir === undefined) {
+      if (this.eldritchBlastPreviewDir !== null) {
+        this.eldritchBlastPreviewDir = null;
+        this.renderer?.draw();
+      }
+      return;
+    }
+    const cardinal = ((dir % 4) + 4) % 4;
+    this.eldritchBlastPreviewDir = cardinal;
+    this.player.direction = cardinal;
+    this.renderer?.commitCameraFacing();
+    this.updateHUD();
+    this.renderer?.draw();
+  }
+
+  setMistyStepPreview(dirOrObj, maxSteps = 8) {
+    if (dirOrObj === null || dirOrObj === undefined) {
+      if (this.mistyStepPreview !== null) {
+        this.mistyStepPreview = null;
+        this.renderer?.draw();
+      }
+      return;
+    }
+    if (typeof dirOrObj === "object" && dirOrObj.canceled) {
+      this.mistyStepPreview = {
+        x: this.player.x,
+        y: this.player.y,
+        steps: 0,
+        dangerous: false,
+        blocked: false,
+        canceled: true
+      };
+      this.renderer?.draw();
+      return;
+    }
+    if (typeof dirOrObj === "object" && ("dx" in dirOrObj || "x" in dirOrObj)) {
+      const dx = Math.sign(dirOrObj.dx ?? dirOrObj.x ?? 0);
+      const dy = Math.sign(dirOrObj.dy ?? dirOrObj.y ?? 0);
+      const cardinal = dirOrObj.cardinal !== undefined
+        ? (((dirOrObj.cardinal % 4) + 4) % 4)
+        : TouchGestureController.vectorToCardinal(dx, dy);
+      this.player.direction = cardinal;
+      this.mistyStepPreview = this.getMistyStepDestination({ dx, dy, cardinal }, maxSteps);
+      this.renderer?.commitCameraFacing();
+      this.updateHUD();
+      this.renderer?.draw();
+      return;
+    }
+    const cardinal = ((dirOrObj % 4) + 4) % 4;
+    this.player.direction = cardinal;
+    this.mistyStepPreview = this.getMistyStepDestination(cardinal, maxSteps);
+    this.renderer?.commitCameraFacing();
+    this.updateHUD();
+    this.renderer?.draw();
+  }
+
   initDeviceDetection() {
     this.setControlDevice(this.controlDevice);
     window.addEventListener("keydown", () => this.setControlDevice("keyboard"));
-    window.addEventListener("touchstart", () => this.setControlDevice("touch"));
+    window.addEventListener("touchstart", () => this.setControlDevice("touch"), { passive: true });
     window.addEventListener("gamepadconnected", (event) => {
       this.gamepadMapping = event.gamepad?.mapping || "";
       this.lastGamepadButtons = [];
@@ -3025,20 +4821,181 @@ class GameController {
   }
 
   initOrientationNotice() {
-    const isMobilePhone = navigator.maxTouchPoints > 0
-      && window.matchMedia("(pointer: coarse)").matches
-      && Math.min(window.screen.width, window.screen.height) <= 600;
-    if (!isMobilePhone || sessionStorage.getItem("lior_orientation_notice_shown")) return;
+    const tryLockLandscape = () => {
+      if (screen.orientation && typeof screen.orientation.lock === "function") {
+        screen.orientation.lock("landscape").catch(() => {});
+      }
+    };
+    window.addEventListener("pointerdown", tryLockLandscape, { once: true, passive: true });
+    this.initFullscreenControls();
+  }
 
-    const notice = document.getElementById("orientation-notice");
-    const dismiss = document.getElementById("orientation-notice-dismiss");
-    if (!notice || !dismiss) return;
+  isNativeFullscreenActive() {
+    return !!(
+      document.fullscreenElement
+      || document.webkitFullscreenElement
+      || document.mozFullScreenElement
+      || document.msFullscreenElement
+    );
+  }
 
-    notice.classList.remove("hidden");
-    dismiss.addEventListener("click", () => {
-      sessionStorage.setItem("lior_orientation_notice_shown", "true");
-      notice.classList.add("hidden");
-    });
+  isFullscreenActive() {
+    return this.isNativeFullscreenActive() || document.body.classList.contains("pseudo-fullscreen");
+  }
+
+  updateFullscreenUI() {
+    const active = this.isFullscreenActive();
+    document.body.classList.toggle("is-fullscreen", active);
+    const hudBtn = document.getElementById("btn-fullscreen");
+    if (hudBtn) {
+      hudBtn.textContent = active ? "🗗" : "⛶";
+      hudBtn.title = active ? "Salir de pantalla completa (F)" : "Pantalla completa (F)";
+      hudBtn.setAttribute("aria-pressed", String(active));
+    }
+    const introBtn = document.getElementById("btn-intro-fullscreen");
+    if (introBtn) {
+      introBtn.textContent = active ? "🗗 SALIR PANTALLA COMPLETA" : "⛶ PANTALLA COMPLETA";
+      introBtn.setAttribute("aria-pressed", String(active));
+    }
+    const menuFsBtn = document.getElementById("btn-menu-fullscreen");
+    if (menuFsBtn) {
+      menuFsBtn.textContent = active ? "🗗 Salir de Pantalla Completa" : "⛶ Activar Pantalla Completa";
+    }
+    if (this.renderer) {
+      this.renderer.updateOrientationState();
+      this.renderer.setCameraMode("fixed", false);
+    }
+  }
+
+  async requestAutoFullscreen() {
+    if (this.userExitedFullscreen) return;
+    document.body.classList.add("pseudo-fullscreen");
+    if (this.isNativeFullscreenActive()) {
+      this.updateFullscreenUI();
+      return;
+    }
+    const docEl = document.documentElement;
+    const req = docEl.requestFullscreen
+      || docEl.webkitRequestFullscreen
+      || docEl.mozRequestFullScreen
+      || docEl.msRequestFullscreen;
+    if (req) {
+      try {
+        await req.call(docEl, { navigationUI: "hide" });
+        if (screen.orientation && typeof screen.orientation.lock === "function") {
+          screen.orientation.lock("landscape").catch(() => {});
+        }
+      } catch {
+        // Mantiene pseudo-fullscreen activo si el navegador requiere gesto de usuario
+      }
+    }
+    this.updateFullscreenUI();
+  }
+
+  async toggleFullscreen(manual = true) {
+    const docEl = document.documentElement;
+    const isNativeFs = this.isNativeFullscreenActive();
+
+    if (isNativeFs) {
+      if (manual) this.userExitedFullscreen = true;
+      try {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) await document.msExitFullscreen();
+      } catch {}
+      document.body.classList.remove("pseudo-fullscreen");
+      this.updateFullscreenUI();
+      return;
+    }
+
+    if (manual && document.body.classList.contains("pseudo-fullscreen")) {
+      // Si estaba en pseudo-fullscreen pero aún no en nativo, intentamos nativo primero;
+      // si ya había intentado salir manualmente, desactivamos pseudo-fullscreen.
+      const req = docEl.requestFullscreen
+        || docEl.webkitRequestFullscreen
+        || docEl.mozRequestFullScreen
+        || docEl.msRequestFullscreen;
+      if (req && !this._triedManualNativeFs) {
+        this._triedManualNativeFs = true;
+        try {
+          this.userExitedFullscreen = false;
+          await req.call(docEl, { navigationUI: "hide" });
+          if (screen.orientation && typeof screen.orientation.lock === "function") {
+            screen.orientation.lock("landscape").catch(() => {});
+          }
+          this.updateFullscreenUI();
+          return;
+        } catch {}
+      }
+      this._triedManualNativeFs = false;
+      this.userExitedFullscreen = true;
+      document.body.classList.remove("pseudo-fullscreen");
+      this.updateFullscreenUI();
+      return;
+    }
+
+    this.userExitedFullscreen = false;
+    const req = docEl.requestFullscreen
+      || docEl.webkitRequestFullscreen
+      || docEl.mozRequestFullScreen
+      || docEl.msRequestFullscreen;
+
+    if (req) {
+      try {
+        await req.call(docEl, { navigationUI: "hide" });
+        if (screen.orientation && typeof screen.orientation.lock === "function") {
+          screen.orientation.lock("landscape").catch(() => {});
+        }
+        document.body.classList.add("pseudo-fullscreen");
+        this.updateFullscreenUI();
+        return;
+      } catch {
+        // Fallback si el contenedor o navegador bloquea la API nativa
+      }
+    }
+
+    document.body.classList.add("pseudo-fullscreen");
+    this.updateFullscreenUI();
+  }
+
+  initFullscreenControls() {
+    this.userExitedFullscreen = false;
+    const hudBtn = document.getElementById("btn-fullscreen");
+    const introBtn = document.getElementById("btn-intro-fullscreen");
+
+    if (hudBtn) {
+      hudBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.toggleFullscreen(true);
+      });
+    }
+    if (introBtn) {
+      introBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.toggleFullscreen(true);
+      });
+    }
+
+    for (const evt of ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"]) {
+      document.addEventListener(evt, () => this.updateFullscreenUI());
+    }
+
+    // 1. Activar pantalla completa desde el inicio (pseudo-fullscreen inmediato + intento nativo)
+    this.requestAutoFullscreen();
+
+    // 2. Si el navegador requirió un gesto de usuario para la API nativa, activarla automáticamente
+    // en el primer toque, clic o pulsación de tecla del jugador sin que tenga que buscar el botón.
+    const onFirstUserGesture = (e) => {
+      if (e.target && e.target.closest && e.target.closest("#btn-fullscreen, #btn-intro-fullscreen, #btn-menu-fullscreen")) {
+        return;
+      }
+      if (!this.userExitedFullscreen && !this.isNativeFullscreenActive()) {
+        this.requestAutoFullscreen();
+      }
+    };
+    window.addEventListener("pointerdown", onFirstUserGesture, { passive: true });
+    window.addEventListener("touchstart", onFirstUserGesture, { passive: true });
+    window.addEventListener("keydown", onFirstUserGesture);
   }
 
   getPreferredControlDevice() {
@@ -3052,87 +5009,33 @@ class GameController {
     const changed = this.controlDevice !== device;
     this.controlDevice = device;
     document.body.classList.toggle("pad-hidden", device !== "touch");
-    this.updateControlLegend();
     if (!changed) return;
-    // Conserva los controles visibles y sincroniza sus leyendas con el dispositivo activo.
     this.updateButtonLabels();
   }
 
   updateControlLegend() {
-    const legend = document.getElementById("pc-legend");
-    if (!legend) return;
-    legend.textContent = this.controlDevice === "gamepad"
-      ? "[D-Pad / Stick] Mover/Girar | [A] Atacar | [X] Blast | [B] Bruma | [Y / LB] Cambiar Arma"
-      : "[WASD] Mover/Girar | [K] Atacar | [J] Blast | [L] Bruma | [I] Cambiar Arma";
+    // El panel lateral #pc-legend conserva su diseño estructurado con etiquetas <kbd>
   }
 
   updateButtonLabels() {
-    const btnUp = document.getElementById("btn-forward");
-    const btnDown = document.getElementById("btn-backward");
-    const btnLeft = document.getElementById("btn-left");
-    const btnRight = document.getElementById("btn-right");
-
-    const btnD = document.getElementById("btn-d");
-    const btnC = document.getElementById("btn-c");
-    const btnB = document.getElementById("btn-b");
-    const btnA = document.getElementById("btn-a");
-
-    const capD = document.getElementById("caption-d");
     const capC = document.getElementById("caption-c");
-    const capB = document.getElementById("caption-b");
-    const capA = document.getElementById("caption-a");
-
-    const blastInner = btnC ? (btnC.querySelector(".arcade-btn-inner") || btnC) : null;
-
-    const keyLabels = this.controlDevice === "keyboard" || this.controlDevice === "touch";
-    if (this.controlDevice === "keyboard") {
-      btnUp.textContent = "W";
-      btnDown.textContent = "S";
-      btnLeft.textContent = "A";
-      btnRight.textContent = "D";
-    } else {
-      btnUp.textContent = "▲";
-      btnDown.textContent = "▼";
-      btnLeft.textContent = "◀";
-      btnRight.textContent = "▶";
-    }
-
-    if (keyLabels) {
-      btnD.textContent = ACTION_BINDINGS.keyboard.weapon;
-      if (blastInner) blastInner.textContent = ACTION_BINDINGS.keyboard.blast;
-      btnB.textContent = ACTION_BINDINGS.keyboard.mist;
-      btnA.textContent = ACTION_BINDINGS.keyboard.attack;
-
-      capD.textContent = TEXT.captionsKeyboard.weapon;
-      capB.textContent = TEXT.captionsKeyboard.mist;
-      capA.textContent = TEXT.captionsKeyboard.attack;
-    } else {
-      const gamepadLabel = binding => this.controlDevice === "gamepad" && this.gamepadMapping !== "standard"
-        ? binding.genericLabel
-        : binding.standardLabel;
-      btnD.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.weapon);
-      if (blastInner) blastInner.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.blast);
-      btnB.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.mist);
-      btnA.textContent = gamepadLabel(ACTION_BINDINGS.gamepad.attack);
-
-      capD.textContent = TEXT.captions.weapon;
-      capB.textContent = TEXT.captions.mist;
-      capA.textContent = TEXT.captions.attack;
-    }
-
     if (capC) {
-      const cur = this.player ? this.player.blastCurrentCharges : 10;
-      const max = this.player ? this.player.blastMaxCharges : 10;
       const level = calculateEldritchBlastLevel(this.floor || 1);
-      capC.innerHTML = `E. BLAST ${level} (<span id="blast-counter">${cur}/${max}</span>)`;
+      capC.textContent = `E. BLAST ${level}`;
     }
   }
 
   initDungeonFloor(isMerchantTransition = false) {
     this.inMerchantFloor = isMerchantTransition;
     this.showWeaponRange = false;
+    this.isAiming = false;
+    this.eldritchBlastPreviewDir = null;
+    this.mistyStepPreview = null;
     this.mistyStepConfirmation = null;
     this.entryPreviewUntil = 0;
+    clearTimeout(this.merchantInitTimer);
+    this.touchController?.cancelAllGestures();
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
 
     if (isMerchantTransition) {
       this.dungeon = new Dungeon(5, 5);
@@ -3177,18 +5080,42 @@ class GameController {
 
     if (isMerchantTransition) {
       this.log(`[MERCADER]: «${TEXT.logs.merchantPeace}»`);
-      setTimeout(() => {
-        this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
-          this.openShop();
-        });
+      this.merchantInitTimer = setTimeout(() => {
+        if (!this.inMerchantFloor || this.isShopOpen() || this.isPausedForDialog) return;
+        this.triggerMerchantInteraction();
       }, 300);
     } else {
       this.log(TEXT.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus));
       const arenaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
-      if (arenaBoss) this.log(TEXT.logs.bossArena(arenaBoss.name));
+      if (arenaBoss) {
+        this.log(TEXT.logs.bossArena(arenaBoss.name));
+        this.showFloorBanner(this.floor, `¡${arenaBoss.name}!`);
+      } else if (!this.isIntroActive()) {
+        this.showFloorBanner(this.floor, "El descenso.");
+      }
     }
 
     this.renderer.draw();
+  }
+
+  triggerMerchantInteraction() {
+    if (this.isShopOpen() || this.isPausedForDialog || performance.now() < this.shopClosingCooldown) {
+      return false;
+    }
+    clearTimeout(this.merchantInitTimer);
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+    this.touchController?.cancelAllGestures();
+
+    this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
+      if (!this.isShopOpen()) {
+        this.openShop();
+      }
+    });
+    return true;
+  }
+
+  isMerchantAt(x, y) {
+    return this.dungeon.npcs.some(npc => npc.isMerchant && npc.x === x && npc.y === y);
   }
 
   showMerchantDialog(text, onDismiss, speaker = "✦ MERCADER DE SOMBRAS ✦") {
@@ -3196,6 +5123,9 @@ class GameController {
       if (onDismiss) onDismiss();
       return;
     }
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+    this.touchController?.cancelAllGestures();
+
     this.isPausedForDialog = true;
     this.dialogCallback = onDismiss;
     clearTimeout(this.dialogTimer);
@@ -3236,6 +5166,9 @@ class GameController {
     this.isAnimatingTurn = false;
     this.pendingEnemyProjectiles = 0;
     this.showWeaponRange = false;
+    this.isAiming = false;
+    this.eldritchBlastPreviewDir = null;
+    this.mistyStepPreview = null;
 
     this.deathScreen.classList.remove("visible");
     this.deathScreen.classList.add("hidden");
@@ -3247,14 +5180,20 @@ class GameController {
     clearTimeout(this.statusMessageFadeTimer);
     clearTimeout(this.dialogTimer);
     clearTimeout(this.dialogFadeTimer);
+    clearTimeout(this.merchantInitTimer);
     this.dialogCallback = null;
 
     this.player = null;
     this.initDungeonFloor(false);
+    this.startNewGameIntro();
   }
 
   openShop() {
-    if (!this.shopModal) return;
+    if (!this.shopModal || this.isShopOpen()) return;
+    clearTimeout(this.merchantInitTimer);
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+    this.touchController?.cancelAllGestures();
+
     this.setShopView("supplies");
     this.updateShopHUD();
     this.shopModal.classList.remove("hidden");
@@ -3278,7 +5217,13 @@ class GameController {
 
   closeShop() {
     if (!this.shopModal) return;
+    const wasOpen = !this.shopModal.classList.contains("hidden");
     this.shopModal.classList.add("hidden");
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+    this.touchController?.cancelAllGestures();
+    if (wasOpen) {
+      this.shopClosingCooldown = performance.now() + 250;
+    }
   }
 
   updateShopSelection() {
@@ -3369,7 +5314,7 @@ class GameController {
   }
 
   purchaseWeaponUpgrade(weaponId) {
-    if (!this.inMerchantFloor || !this.shopModal || this.shopModal.classList.contains("hidden")) return false;
+    if (!this.inMerchantFloor || !this.isShopOpen()) return false;
     if (!Object.values(WEAPONS).some(weapon => weapon.id === weaponId)) return false;
 
     const level = this.player.weaponUpgrades[weaponId];
@@ -3430,8 +5375,10 @@ class GameController {
     });
 
     if (this.dialogModal) {
-      this.dialogModal.addEventListener("click", () => this.dismissMerchantDialog());
-      this.dialogModal.addEventListener("touchstart", () => this.dismissMerchantDialog(), { passive: true });
+      this.dialogModal.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.dismissMerchantDialog();
+      });
     }
 
     this.shopModal?.querySelectorAll(".shop-item").forEach((item, index) => {
@@ -3551,6 +5498,8 @@ class GameController {
     const elWeapon = document.getElementById("hud-weapon");
     const elWeaponIcon = document.getElementById("hud-weapon-icon");
     const elMisty = document.getElementById("misty-charges");
+    const elBlastBadge = document.getElementById("hud-blast-badge");
+    const elMistyBadge = document.getElementById("hud-misty-badge");
 
     this.player.ensureEquippedWeaponAvailable();
     this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
@@ -3576,6 +5525,8 @@ class GameController {
       elWeaponIcon.textContent = "";
     }
     if (elMisty) elMisty.textContent = this.player.mistyStepCharges;
+    if (elMistyBadge) elMistyBadge.classList.toggle("is-ready", this.player.mistyStepCharges > 0);
+    if (elBlastBadge) elBlastBadge.classList.toggle("is-ready", this.player.isBlastReady());
 
     const doorEl = document.getElementById("hud-door");
     const exitIcon = document.querySelector(".exit-icon");
@@ -3592,42 +5543,12 @@ class GameController {
       }
     }
 
-    const attackBtn = document.getElementById("btn-a");
-    if (attackBtn) {
-      attackBtn.disabled = this.player.hp <= 0 || (this.inMerchantFloor && !this.player.stunned);
-    }
-
-    const mistyBtn = document.getElementById("btn-b");
-    if (mistyBtn) mistyBtn.disabled = this.player.hp <= 0
-      || (this.player.mistyStepCharges <= 0 && !this.player.stunned);
-
-    const blastBtn = document.getElementById("btn-c");
     const blastCounter = document.getElementById("blast-counter");
-    if (blastBtn) {
-      const chargePct = Math.min(100, Math.floor((this.player.blastCurrentCharges / this.player.blastMaxCharges) * 100));
-      blastBtn.style.setProperty("--charge-pct", chargePct);
-
-      if (this.player.isBlastReady()) {
-        blastBtn.classList.remove("btn-charging");
-        blastBtn.classList.add("btn-ready");
-        blastBtn.disabled = this.player.hp <= 0 || (this.inMerchantFloor && !this.player.stunned);
-      } else {
-        blastBtn.classList.remove("btn-ready");
-        blastBtn.classList.add("btn-charging");
-        blastBtn.disabled = !this.player.stunned || this.player.hp <= 0;
-      }
-    }
-
     if (blastCounter) {
       blastCounter.textContent = `${this.player.blastCurrentCharges}/${this.player.blastMaxCharges}`;
     }
-
-    const weaponBtn = document.getElementById("btn-d");
-    if (weaponBtn) weaponBtn.disabled = this.player.hp <= 0
-      || (this.player.getAvailableWeapons().length <= 1 && !this.player.stunned);
   }
 
-  // Arena de mega jefe: invoca 1 esbirro en una celda libre distante si hay menos del límite vivos.
   summonBossRoomMinion() {
     const limit = getBossRoomMinionLimit(this.tier);
     const alive = this.dungeon.enemies.filter(e => !e.isBoss).length;
@@ -3672,7 +5593,6 @@ class GameController {
 
   startVictorySequence() {
     this.isVictory = true;
-    document.getElementById("control-dock").style.display = "none";
     document.getElementById("hud").style.display = "none";
 
     this.renderer.isVictorySequence = true;
@@ -3723,14 +5643,27 @@ class GameController {
     return true;
   }
 
-  castMistyStep() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+  castMistyStep(maxSteps = 8, directionOverride = null) {
+    if (this.isGameplayBlocked()) return;
+
+    // En el Paso 4 del tutorial (Misty Step), demuestra el salto sin consumir cargas reales
+    if (this.tutorial?.isActive && this.tutorial.step === 4) {
+      sounds.playMisty();
+      this.player.direction = ((this.player.direction % 4) + 4) % 4;
+      this.renderer.commitCameraFacing();
+      this.renderer.playMistyStep();
+      this.tutorial.onPlayerAction("misty_step");
+      this.updateHUD();
+      this.renderer.draw();
+      return;
+    }
+
     if (this.consumeStunnedTurn()) return;
     this.showWeaponRange = false;
     if (this.player.mistyStepCharges <= 0) return;
 
-    const destination = this.getMistyStepDestination();
-    if (destination.blocked) return;
+    const destination = this.getMistyStepDestination(directionOverride, maxSteps);
+    if (destination.blocked || destination.canceled) return;
     const confirmation = this.mistyStepConfirmation;
     const isConfirmed = confirmation
       && confirmation.floor === this.floor
@@ -3747,6 +5680,13 @@ class GameController {
     this.player.advanceAction();
     sounds.playMisty();
     this.player.mistyStepCharges--;
+
+    // Asegurar que la orientación visual de Lior se mantenga en una de las 4 direcciones cardinales (0..3)
+    if (destination.cardinal !== undefined) {
+      this.player.direction = ((destination.cardinal % 4) + 4) % 4;
+    } else {
+      this.player.direction = ((this.player.direction % 4) + 4) % 4;
+    }
 
     if (destination.dangerous) {
       this.player.x = destination.x;
@@ -3766,16 +5706,43 @@ class GameController {
     this.updateHUD();
   }
 
-  getMistyStepDestination() {
-    const dirVec = DIR_VECTORS[this.player.direction];
+  /**
+   * Calcula el destino de Misty Step en cualquiera de las 8 direcciones (incluidas las diagonales)
+   * con un rango de 1 a 8 casillas, manteniendo la regla de que si hay un muro se queda detrás del muro,
+   * y conservando siempre una orientación visual cardinal (0..3) para Lior.
+   */
+  getMistyStepDestination(directionOverride = null, maxSteps = 8) {
+    let dirVec;
+    let cardinal = ((this.player.direction % 4) + 4) % 4;
+
+    if (directionOverride && typeof directionOverride === "object" && ("dx" in directionOverride || "x" in directionOverride)) {
+      const dx = Math.sign(directionOverride.dx ?? directionOverride.x ?? 0);
+      const dy = Math.sign(directionOverride.dy ?? directionOverride.y ?? 0);
+      dirVec = { x: dx, y: dy };
+      cardinal = directionOverride.cardinal !== undefined
+        ? (((directionOverride.cardinal % 4) + 4) % 4)
+        : TouchGestureController.vectorToCardinal(dx, dy);
+    } else {
+      const dir = directionOverride !== null && directionOverride !== undefined
+        ? (((directionOverride % 4) + 4) % 4)
+        : cardinal;
+      dirVec = DIR_VECTORS[dir];
+      cardinal = dir;
+    }
+
+    const clampedMax = Math.max(1, Math.min(8, Math.round(maxSteps || 8)));
     let encounteredObstacle = false;
+    let lastValidBeforeWall = null;
 
     for (let step = 1; step <= 8; step++) {
       const cx = this.player.x + dirVec.x * step;
       const cy = this.player.y + dirVec.y * step;
 
       if (!this.dungeon.isInsideBounds(cx, cy)) {
-        return { x: cx, y: cy, dangerous: true, blocked: false };
+        if (lastValidBeforeWall) {
+          return { ...lastValidBeforeWall, dangerous: false, blocked: false, steps: clampedMax, dirVec, cardinal };
+        }
+        return { x: cx, y: cy, dangerous: true, blocked: false, steps: clampedMax, dirVec, cardinal };
       }
 
       const tile = this.dungeon.getTile(cx, cy);
@@ -3784,16 +5751,36 @@ class GameController {
       );
       if (tile === TILE_WALL || enemy) {
         encounteredObstacle = true;
-      } else if (encounteredObstacle || step === 8) {
-        return { x: cx, y: cy, dangerous: false, blocked: false };
+      } else {
+        if (!encounteredObstacle) {
+          lastValidBeforeWall = { x: cx, y: cy };
+        }
+        if (encounteredObstacle || step === clampedMax) {
+          return { x: cx, y: cy, dangerous: false, blocked: false, steps: step, dirVec, cardinal };
+        }
       }
     }
 
-    return { x: this.player.x, y: this.player.y, dangerous: false, blocked: true };
+    if (lastValidBeforeWall) {
+      return { ...lastValidBeforeWall, dangerous: false, blocked: false, steps: clampedMax, dirVec, cardinal };
+    }
+    return { x: this.player.x, y: this.player.y, dangerous: false, blocked: true, steps: clampedMax, dirVec, cardinal };
   }
 
   castEldritchBlast() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.isGameplayBlocked()) return;
+
+    // En el Paso 3 del tutorial (Eldritch Blast), demuestra el disparo sin consumir cargas
+    if (this.tutorial?.isActive && this.tutorial.step === 3) {
+      sounds.playEldritchBlast();
+      this.renderer.commitCameraFacing();
+      this.renderer.playEldritchBlastAnimation(5);
+      this.tutorial.onPlayerAction("eldritch_blast");
+      this.updateHUD();
+      this.renderer.draw();
+      return;
+    }
+
     if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
@@ -3855,40 +5842,66 @@ class GameController {
     this.renderer.draw();
   }
 
-  cycleWeapon() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+  cycleWeapon(showToast = true) {
+    if (this.isGameplayBlocked()) return;
     if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
-    if (this.player.unlockedWeapons.size < 2) return;
+    if (this.player.getAvailableWeapons().length < 2) return;
+
     this.player.cycleWeapon();
     this.showWeaponRange = true;
-    // Preparar un arma de fuego adelanta el ancla hacia donde apunta Lior.
     if (!this.player.equippedWeapon.isMelee) this.renderer.commitCameraFacing();
     sounds.playStep();
+
+    const w = this.player.equippedWeapon;
+    const ammoInfo = w.ammoProperty ? ` (${this.player[w.ammoProperty]} balas)` : " (∞)";
+    if (showToast) {
+      this.showWeaponToast(`⚔ ARMA: ${w.name.toUpperCase()}${ammoInfo}`);
+    }
+
+    this.tutorial?.onPlayerAction("weapon_switch");
     this.updateHUD();
     this.renderer.draw();
   }
 
   turnLeft() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.isGameplayBlocked()) return;
     if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.player.turnLeft();
     this.showWeaponRange = true;
     this.renderer.commitCameraFacing();
     sounds.playStep();
+
+    const facingPos = this.player.getNextForwardPos(1);
+    if (this.isMerchantAt(facingPos.x, facingPos.y)) {
+      this.updateHUD();
+      this.renderer.draw();
+      this.triggerMerchantInteraction();
+      return;
+    }
+
     this.updateHUD();
     this.renderer.draw();
   }
 
   turnRight() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
+    if (this.isGameplayBlocked()) return;
     if (this.consumeStunnedTurn()) return;
     this.clearMistyStepConfirmation();
     this.player.turnRight();
     this.showWeaponRange = true;
     this.renderer.commitCameraFacing();
     sounds.playStep();
+
+    const facingPos = this.player.getNextForwardPos(1);
+    if (this.isMerchantAt(facingPos.x, facingPos.y)) {
+      this.updateHUD();
+      this.renderer.draw();
+      this.triggerMerchantInteraction();
+      return;
+    }
+
     this.updateHUD();
     this.renderer.draw();
   }
@@ -3955,7 +5968,6 @@ class GameController {
       const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
 
       let canAttack = hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0;
-      // Mega jefe: ataca un turno sí y uno no; en el turno de pausa solo se reposiciona en X.
       if (canAttack && enemy.isMegaBoss) {
         if (enemy.bossAttackReady) enemy.bossAttackReady = false;
         else { enemy.bossAttackReady = true; canAttack = false; }
@@ -4008,13 +6020,11 @@ class GameController {
           return;
         }
 
-        if (attack.hit) {
-          if (!isRanged) {
-            sounds.playHurt();
-            CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
-            tookDamage = true;
-            this.log(hitMessage);
-          }
+        if (attack.hit && !isRanged) {
+          sounds.playHurt();
+          CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
+          tookDamage = true;
+          this.log(hitMessage);
         }
         return;
       }
@@ -4034,7 +6044,6 @@ class GameController {
         }
       }
 
-      // Arenas de mega jefe: persecución directa en cada turno, sin patrullas ni huidas.
       if (this.dungeon.isBossRoom) mode = "chase";
 
       let directions = [
@@ -4045,7 +6054,6 @@ class GameController {
       ];
 
       if (enemy.isMegaBoss) {
-        // Patrulla superior: solo eje X, alineado con la columna de Lior; nunca baja en Y.
         const lastCol = Math.max(...enemy.cells.map(c => c.x));
         if (this.player.x < enemy.x) directions = [{ dx: -1, dy: 0 }];
         else if (this.player.x > lastCol) directions = [{ dx: 1, dy: 0 }];
@@ -4093,7 +6101,6 @@ class GameController {
 
     if (tookDamage) this.renderer.playHurt(this.player.hp <= 0);
 
-    // Cada 4 turnos el mega jefe invoca exactamente 1 esbirro.
     if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.turnCount % 4 === 0
       && this.dungeon.enemies.some(e => e.isMegaBoss)) {
       this.summonBossRoomMinion();
@@ -4107,87 +6114,145 @@ class GameController {
     if (this.player.hp <= 0) this.triggerGameOver();
   }
 
-  moveForward() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
-    if (this.consumeStunnedTurn()) return;
+  moveStep(dx, dy, facingCardinal = null) {
+    if (this.isGameplayBlocked()) return false;
+    if (this.consumeStunnedTurn()) return false;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
 
-    const next = this.player.getNextForwardPos(1);
-    if (!this.dungeon.isInsideBounds(next.x, next.y)) {
+    if (facingCardinal !== null && facingCardinal !== undefined) {
+      this.player.direction = ((facingCardinal % 4) + 4) % 4;
+    } else if (dx !== 0 || dy !== 0) {
+      this.player.direction = TouchGestureController.vectorToCardinal(dx, dy);
+    }
+
+    let nextX = this.player.x + dx;
+    let nextY = this.player.y + dy;
+
+    const isWalkableCell = (cx, cy) => {
+      if (!this.dungeon.isInsideBounds(cx, cy)) return false;
+      if (this.dungeon.getTile(cx, cy) === TILE_WALL) return false;
+      if (this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === cx && c.y === cy))) return false;
+      if (this.isMerchantAt(cx, cy)) return false;
+      return true;
+    };
+
+    if (dx !== 0 && dy !== 0 && !isWalkableCell(nextX, nextY)) {
+      if (isWalkableCell(this.player.x, this.player.y + dy)) {
+        dx = 0;
+        nextX = this.player.x;
+        nextY = this.player.y + dy;
+        this.player.direction = dy < 0 ? 0 : 2;
+      } else if (isWalkableCell(this.player.x + dx, this.player.y)) {
+        dy = 0;
+        nextX = this.player.x + dx;
+        nextY = this.player.y;
+        this.player.direction = dx > 0 ? 1 : 3;
+      }
+    }
+
+    if (!this.dungeon.isInsideBounds(nextX, nextY)) {
+      this.renderer.commitCameraFacing();
+      this.updateHUD();
+      this.renderer.draw();
       this.log(TEXT.logs.outOfBounds);
-      return;
+      return false;
     }
-    if (this.dungeon.getTile(next.x, next.y) === TILE_WALL) {
+
+    if (this.dungeon.getTile(nextX, nextY) === TILE_WALL) {
+      this.renderer.commitCameraFacing();
+      this.updateHUD();
+      this.renderer.draw();
       this.log(TEXT.logs.wallFront);
-      return;
+      return false;
     }
 
-    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === next.x && c.y === next.y));
+    if (dx !== 0 && dy !== 0) {
+      const wallHoriz = this.dungeon.getTile(this.player.x + dx, this.player.y) === TILE_WALL;
+      const wallVert = this.dungeon.getTile(this.player.x, this.player.y + dy) === TILE_WALL;
+      if (wallHoriz && wallVert) {
+        this.renderer.commitCameraFacing();
+        this.updateHUD();
+        this.renderer.draw();
+        this.log(TEXT.logs.wallCorner);
+        return false;
+      }
+    }
+
+    const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === nextX && c.y === nextY));
     if (enemyBlocking) {
+      this.renderer.commitCameraFacing();
+      this.updateHUD();
+      this.renderer.draw();
       this.log(TEXT.logs.enemyBlock);
-      return;
+      return false;
     }
 
-    const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === next.x && npc.y === next.y);
-    if (merchant) {
-      this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
-        this.openShop();
-      });
-      return;
+    if (this.isMerchantAt(nextX, nextY)) {
+      this.renderer.commitCameraFacing();
+      this.updateHUD();
+      this.renderer.draw();
+      this.triggerMerchantInteraction();
+      return false;
     }
 
-    this.player.advanceAction();
-    this.player.moveForward();
+    const isTutorialMovePractice = this.tutorial?.isActive && this.tutorial.step === 1;
+    if (!isTutorialMovePractice) {
+      this.player.advanceAction();
+    }
+    this.player.x = nextX;
+    this.player.y = nextY;
     sounds.playStep();
     this.renderer.commitCameraFacing();
     this.renderer.playWalk();
 
+    this.tutorial?.onPlayerAction("move");
     this.checkGoldenBunnyCapture();
-    this.processEnemiesTurn();
+    if (!isTutorialMovePractice) {
+      this.processEnemiesTurn();
+    }
     this.handleTileInteractions();
+    this.updateHUD();
     this.renderer.draw();
+    return true;
+  }
+
+  moveForward() {
+    const v = DIR_VECTORS[this.player.direction];
+    return this.moveStep(v.x, v.y, this.player.direction);
   }
 
   moveCardinal(direction) {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
-    if (this.consumeStunnedTurn()) return;
-    this.player.direction = direction;
-    this.moveForward();
-    // Si el paso fue bloqueado, igualmente se refleja el nuevo encaramiento.
-    this.renderer.commitCameraFacing();
-    this.updateHUD();
-    this.renderer.draw();
+    const dir = ((direction % 4) + 4) % 4;
+    const v = DIR_VECTORS[dir];
+    return this.moveStep(v.x, v.y, dir);
   }
 
   moveBackward() {
-    if (this.isAnimatingTurn || this.isVictory || this.isPausedForDialog || this.player.hp <= 0) return;
-    if (this.consumeStunnedTurn()) return;
+    if (this.isGameplayBlocked()) return false;
+    if (this.consumeStunnedTurn()) return false;
     this.clearMistyStepConfirmation();
     this.showWeaponRange = false;
 
     const prev = this.player.getNextBackwardPos();
     if (!this.dungeon.isInsideBounds(prev.x, prev.y)) {
       this.log(TEXT.logs.backOutOfBounds);
-      return;
+      return false;
     }
     if (this.dungeon.getTile(prev.x, prev.y) === TILE_WALL) {
       this.log(TEXT.logs.wallBack);
-      return;
+      return false;
     }
 
     const enemyBlocking = this.dungeon.enemies.some(e => e.cells && e.cells.some(c => c.x === prev.x && c.y === prev.y));
     if (enemyBlocking) {
       this.log(TEXT.logs.enemyBlockBack);
-      return;
+      return false;
     }
 
-    const merchant = this.dungeon.npcs.find(npc => npc.isMerchant && npc.x === prev.x && npc.y === prev.y);
-    if (merchant) {
-      this.showMerchantDialog(`«${TEXT.logs.merchantPeace}»`, () => {
-        this.openShop();
-      });
-      return;
+    if (this.isMerchantAt(prev.x, prev.y)) {
+      this.triggerMerchantInteraction();
+      return false;
     }
 
     this.player.advanceAction();
@@ -4195,10 +6260,12 @@ class GameController {
     sounds.playStep();
     this.renderer.commitCameraFacing();
     this.renderer.playWalk();
+    this.tutorial?.onPlayerAction("move");
     this.checkGoldenBunnyCapture();
     this.processEnemiesTurn();
     this.handleTileInteractions();
     this.renderer.draw();
+    return true;
   }
 
   openChest() {
@@ -4317,7 +6384,7 @@ class GameController {
       "btn-left": () => isFixed() ? this.moveCardinal(3) : this.turnLeft()
     };
     const HOLD_DELAY_MS = 250;
-    const HOLD_REPEAT_MS = 130;
+    const HOLD_REPEAT_MS = 180;
     let holdDelayTimer = null;
     let holdRepeatTimer = null;
     const stopHold = () => {
@@ -4326,20 +6393,28 @@ class GameController {
       holdDelayTimer = null;
       holdRepeatTimer = null;
     };
+    this.stopDpadHold = stopHold;
+
     for (const [id, action] of Object.entries(dpadActions)) {
       const btn = document.getElementById(id);
+      if (!btn) continue;
       btn.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         stopHold();
         action();
         holdDelayTimer = setTimeout(() => {
-          holdRepeatTimer = setInterval(action, HOLD_REPEAT_MS);
+          holdRepeatTimer = setInterval(() => {
+            if (this.isGameplayBlocked()) {
+              stopHold();
+              return;
+            }
+            action();
+          }, HOLD_REPEAT_MS);
         }, HOLD_DELAY_MS);
       });
       for (const type of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel", "mouseleave"]) {
         btn.addEventListener(type, stopHold);
       }
-      // Activación por teclado (Enter/Espacio sobre el botón enfocado).
       btn.addEventListener("click", (e) => { if (e.detail === 0) action(); });
     }
     window.addEventListener("blur", stopHold);
@@ -4347,10 +6422,10 @@ class GameController {
     window.addEventListener("pointerup", stopHold);
     window.addEventListener("pointercancel", stopHold);
 
-    document.getElementById("btn-d").addEventListener("click", () => this.cycleWeapon());
-    document.getElementById("btn-c").addEventListener("click", () => this.castEldritchBlast());
-    document.getElementById("btn-b").addEventListener("click", () => this.castMistyStep());
-    document.getElementById("btn-a").addEventListener("click", () => {
+    document.getElementById("btn-d")?.addEventListener("click", () => this.cycleWeapon());
+    document.getElementById("btn-c")?.addEventListener("click", () => this.castEldritchBlast());
+    document.getElementById("btn-b")?.addEventListener("click", () => this.castMistyStep());
+    document.getElementById("btn-a")?.addEventListener("click", () => {
       CombatSystem.executeAttack(this);
     });
 
@@ -4360,7 +6435,32 @@ class GameController {
     window.addEventListener("keydown", (e) => {
       if (this.isVictory) return;
 
-      if (this.shopModal && !this.shopModal.classList.contains("hidden")) {
+      if (this.isIntroActive()) {
+        if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen();
+          e.preventDefault();
+        } else if (e.key === "Escape") {
+          this.narrativeIntro.finish(true);
+          e.preventDefault();
+        } else if (["Enter", " ", "ArrowRight"].includes(e.key)) {
+          this.narrativeIntro.advanceOrReveal();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (this.tutorial?.isHelpModalOpen()) {
+        if (["Escape", "Enter", " ", "m", "M"].includes(e.key)) {
+          this.tutorial.closeHelpModal();
+          e.preventDefault();
+        } else if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen(true);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (this.isShopOpen()) {
         switch (e.key) {
           case "ArrowUp":
           case "w":
@@ -4402,6 +6502,7 @@ class GameController {
       if (this.isPausedForDialog) {
         if (["Enter", " ", "Escape"].includes(e.key)) {
           this.dismissMerchantDialog();
+          e.preventDefault();
         }
         return;
       }
@@ -4432,6 +6533,22 @@ class GameController {
           if (fixedCamera) this.moveCardinal(2);
           else this.moveBackward();
           break;
+        case "q":
+        case "Q":
+          this.moveStep(-1, -1, 0);
+          break;
+        case "e":
+        case "E":
+          this.moveStep(1, -1, 0);
+          break;
+        case "z":
+        case "Z":
+          this.moveStep(-1, 1, 2);
+          break;
+        case "c":
+        case "C":
+          this.moveStep(1, 1, 2);
+          break;
         case "k":
         case "K":
           if (!e.repeat) CombatSystem.executeAttack(this);
@@ -4443,7 +6560,7 @@ class GameController {
           break;
         case "l":
         case "L":
-          if (!e.repeat) this.castMistyStep();
+          if (!e.repeat) this.castMistyStep(8);
           break;
         case "j":
         case "J":
@@ -4453,8 +6570,17 @@ class GameController {
         case "I":
           if (!e.repeat) this.cycleWeapon();
           break;
+        case "f":
+        case "F":
+          if (!e.repeat) this.toggleFullscreen(true);
+          break;
+        case "m":
+        case "M":
+          if (!e.repeat) this.tutorial?.openHelpModal();
+          break;
         case "Escape":
-          this.closeShop();
+          if (this.isShopOpen()) this.closeShop();
+          else this.tutorial?.openHelpModal();
           break;
       }
     });
@@ -4496,9 +6622,12 @@ class GameController {
         const movedX = inputX !== 0 && inputX !== this.lastGamepadAxes.x;
         const movedY = inputY !== 0 && inputY !== this.lastGamepadAxes.y;
         const gamepadActions = ACTION_BINDINGS.gamepad;
-        const shopOpen = this.shopModal && !this.shopModal.classList.contains("hidden");
+        const shopOpen = this.isShopOpen();
 
-        if (shopOpen) {
+        if (this.isIntroActive()) {
+          if (pressedThisFrame(gamepadActions.attack.index)) this.narrativeIntro.advanceOrReveal();
+          if (pressedThisFrame(gamepadActions.mist.index) || pressedThisFrame(9)) this.narrativeIntro.finish(true);
+        } else if (shopOpen) {
           if (movedY) this.moveShopSelection(inputY < 0 ? -1 : 1);
           if (movedX) this.setShopView(this.activeShopView === "supplies" ? "upgrades" : "supplies");
           if (pressedThisFrame(gamepadActions.attack.index)) this.purchaseSelectedShopItem();
@@ -4508,7 +6637,7 @@ class GameController {
             || pressedThisFrame(gamepadActions.mist.index)
             || pressedThisFrame(9)) this.dismissMerchantDialog();
         } else if (this.isAnimatingTurn) {
-          // Ignore gameplay input until every enemy projectile resolves.
+          // Espera a que terminen los proyectiles en vuelo
         } else if (this.player.stunned && (movedY || movedX
           || pressedThisFrame(gamepadActions.attack.index)
           || pressedThisFrame(gamepadActions.mist.index)
@@ -4518,21 +6647,17 @@ class GameController {
           this.consumeStunnedTurn();
         } else {
           if (movedY || movedX) {
-            if (this.renderer.cameraMode === "fixed") {
-              if (movedY) this.moveCardinal(inputY < 0 ? 0 : 2);
-              else this.moveCardinal(inputX < 0 ? 3 : 1);
+            if (movedX && movedY) {
+              this.moveStep(inputX, inputY);
             } else if (movedY) {
-              if (inputY < 0) this.moveForward();
-              else this.moveBackward();
-            } else if (inputX < 0) {
-              this.turnLeft();
-            } else {
-              this.turnRight();
+              this.moveCardinal(inputY < 0 ? 0 : 2);
+            } else if (movedX) {
+              this.moveCardinal(inputX < 0 ? 3 : 1);
             }
           }
 
           if (pressedThisFrame(gamepadActions.attack.index)) CombatSystem.executeAttack(this);
-          if (pressedThisFrame(gamepadActions.mist.index)) this.castMistyStep();
+          if (pressedThisFrame(gamepadActions.mist.index)) this.castMistyStep(8);
           if (pressedThisFrame(gamepadActions.blast.index)) this.castEldritchBlast();
           if (pressedThisFrame(gamepadActions.weapon.index)
             || gamepadActions.weaponAlt.some(pressedThisFrame)) this.cycleWeapon();
@@ -4551,28 +6676,40 @@ class GameController {
   }
 }
 
-// Pantalla de inicio: fade in del logo, 1 s visible, fade out y arranque de la partida.
 window.addEventListener("DOMContentLoaded", () => {
-  const SPLASH_FADE_MS = 700;
-  const SPLASH_STAY_MS = 1000;
+  const SPLASH_FADE_MS = 650;
+  const SPLASH_STAY_MS = 950;
   const splashScreen = document.getElementById("splash-screen");
   const splashLogo = splashScreen?.querySelector(".splash-logo");
   let gameStarted = false;
   let stayTimer;
 
-  if (!splashScreen || sessionStorage.getItem("lior_intro_played")) {
+  const introAlreadyPlayed = sessionStorage.getItem("lior_intro_played") === "true";
+
+  if (!splashScreen || introAlreadyPlayed) {
     if (splashScreen) splashScreen.style.display = "none";
-    new GameController();
+    new GameController({ playNarrativeIntro: !introAlreadyPlayed });
     return;
   }
 
-  function startGame() {
+  function startGame(fromUserGesture = false) {
     if (gameStarted) return;
     gameStarted = true;
     clearTimeout(stayTimer);
     sessionStorage.setItem("lior_intro_played", "true");
 
-    new GameController();
+    if (fromUserGesture) {
+      const docEl = document.documentElement;
+      const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+      if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        req.call(docEl, { navigationUI: "hide" }).catch(() => {});
+      }
+      if (screen.orientation && typeof screen.orientation.lock === "function") {
+        screen.orientation.lock("landscape").catch(() => {});
+      }
+    }
+
+    new GameController({ playNarrativeIntro: true });
     splashScreen.classList.remove("show");
     splashScreen.classList.add("fade-out");
     setTimeout(() => { splashScreen.style.display = "none"; }, SPLASH_FADE_MS);
@@ -4582,6 +6719,6 @@ window.addEventListener("DOMContentLoaded", () => {
   requestAnimationFrame(() => splashLogo?.classList.add("show"));
   stayTimer = setTimeout(startGame, SPLASH_FADE_MS + SPLASH_STAY_MS);
 
-  splashScreen.addEventListener("click", startGame);
-  splashScreen.addEventListener("touchstart", startGame, { passive: true });
+  splashScreen.addEventListener("click", () => startGame(true));
+  splashScreen.addEventListener("touchstart", () => startGame(true), { passive: true });
 });

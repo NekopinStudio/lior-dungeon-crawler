@@ -1,11 +1,12 @@
 const CACHE_PREFIX = "lior-dungeon-crawler-";
-const CACHE_NAME = `${CACHE_PREFIX}v3`;
+const CACHE_NAME = `${CACHE_PREFIX}v4`;
 const SHELL_PATHS = [
   "./",
   "./index.html",
   "./styles.css",
   "./game.js",
   "./manifest.webmanifest",
+  "./Descenso de Lior al Abismo.png",
   "./Assets/Video/nekopinGames.png",
   "./pwa-icon-192.png",
   "./pwa-icon-512.png"

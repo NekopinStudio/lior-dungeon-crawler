@@ -9,17 +9,45 @@
   <link rel="apple-touch-icon" href="./pwa-icon-192.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body class="mode-landscape">
 
-  <!-- INTRO -->
+  <!-- SPLASH LOGO (EL PRIMER TOQUE ACTIVA PANTALLA COMPLETA AUTOMÁTICAMENTE) -->
   <div id="splash-screen">
     <img class="splash-logo" src="Assets/Video/nekopinGames.png" alt="Nekopin Games">
+    <div class="splash-fs-prompt">⛶ Toca para comenzar en Pantalla Completa</div>
   </div>
 
-  <!-- ENVOLTORIO PRINCIPAL -->
+  <!-- INTRODUCCIÓN NARRATIVA CINEMATOGRÁFICA (PANELES 1 AL 12 COMPLETOS SIN RECORTAR NI DISTORSIONAR) -->
+  <section id="narrative-intro" class="narrative-intro hidden" aria-label="Introducción narrativa">
+    <canvas id="intro-canvas" width="960" height="540"></canvas>
+    <div class="intro-top-bar">
+      <div id="intro-progress" class="intro-progress" aria-hidden="true"></div>
+      <div class="intro-top-actions">
+        <button id="btn-intro-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
+        <button id="btn-skip-intro" class="intro-skip-btn" type="button">OMITIR INTRO ⏭</button>
+      </div>
+    </div>
+    <div id="intro-caption-bar" class="intro-caption-bar">
+      <span id="intro-text" class="intro-caption-text">Escena 1 / 12 — Toca o pulsa Espacio para avanzar ▶</span>
+    </div>
+  </section>
+
+  <!-- AVISO DE ORIENTACIÓN VERTICAL (BLOQUEANTE EN MÓVIL VERTICAL) -->
+  <section id="rotate-device-overlay" class="rotate-device-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rotate-device-title">
+    <div class="rotate-device-card gothic-dialog-box">
+      <div class="rotate-phone-graphic" aria-hidden="true">
+        <span class="rotate-phone-icon"></span>
+        <span class="rotate-phone-arrow">↻</span>
+      </div>
+      <h2 id="rotate-device-title">GIRA TU DISPOSITIVO</h2>
+      <p>Lior Dungeon Crawler funciona exclusivamente en <strong>orientación horizontal</strong> para aprovechar toda la pantalla y los controles táctiles divididos.</p>
+    </div>
+  </section>
+
+  <!-- ENVOLTORIO PRINCIPAL A PANTALLA COMPLETA -->
   <div id="app-wrapper">
 
-    <!-- PANEL DE ESTADO -->
+    <!-- PANEL DE ESTADO (HUD INTEGRADO ESTILO REFERENCIA PANEL 13 + RECURSOS UI) -->
     <header id="hud">
       <div class="hud-floor">PISO <span id="hud-floor">01</span></div>
       <div class="health-panel">
@@ -29,41 +57,157 @@
             <span id="hud-hp-fill" class="health-fill"></span>
             <span id="hud-extra-fill" class="extra-health-fill"></span>
           </div>
-          <div id="hud-vitals" class="health-label">16 / 16 (+0)</div>
+          <div id="hud-vitals" class="health-label">30 / 30 (+0)</div>
         </div>
       </div>
-      <div class="weapon-panel">
+      <div class="weapon-panel" id="hud-weapon-panel">
         <div class="weapon-identity">
           <span id="hud-weapon-icon" class="weapon-icon weapon-icon-sword" aria-hidden="true"></span>
-          <span id="hud-ammo-display" class="weapon-ammo">
+          <span id="hud-ammo-display" class="weapon-ammo weapon-ammo-infinite">
             <span class="bullet-icon" aria-hidden="true"></span>
             <span id="hud-ammo">∞</span>
           </span>
         </div>
         <span id="hud-weapon" class="weapon-name">Espada</span>
       </div>
+      <div class="hud-abilities" aria-label="Habilidades arcanas">
+        <div id="hud-blast-badge" class="hud-ability-pill is-ready" title="Eldritch Blast">
+          <span class="ability-gem ability-gem-blast" aria-hidden="true">✦</span>
+          <span class="ability-text">EB <strong id="blast-counter">10/10</strong></span>
+        </div>
+        <div id="hud-misty-badge" class="hud-ability-pill is-ready" title="Misty Step (Paso Brumoso)">
+          <span class="ability-gem ability-gem-mist" aria-hidden="true">◈</span>
+          <span class="ability-text">BRUMA <strong id="misty-charges">2</strong></span>
+        </div>
+      </div>
       <div class="hud-resource" aria-label="Monedas de oro">
         <span class="gold-coin-icon" aria-hidden="true"></span>
         <span id="hud-gold">0</span>
       </div>
-      <div class="hud-exit"><span class="exit-icon" aria-hidden="true">▣</span><span id="hud-door" class="door-locked">BLOQUEADA</span></div>
+      <div class="hud-exit">
+        <span class="exit-icon" aria-hidden="true">▣</span>
+        <span id="hud-door" class="door-locked">BLOQUEADA</span>
+      </div>
       <div class="hud-direction" aria-label="Dirección actual">
         <span id="hud-dir-arrow" class="direction-arrow" aria-hidden="true">↑</span>
         <span id="hud-dir">Norte</span>
       </div>
+      <button id="btn-fullscreen" class="hud-help-btn hud-fullscreen-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶</button>
+      <button id="btn-tutorial-help" class="hud-menu-btn" type="button" title="Abrir Menú del Juego (M)" aria-label="Abrir Menú del Juego"><span class="hud-menu-icon" aria-hidden="true">☰</span><span>MENÚ</span></button>
     </header>
 
-    <!-- ÁREA CENTRAL DE JUEGO Y MODALES -->
+    <!-- ÁREA CENTRAL DE JUEGO A PANTALLA COMPLETA Y MODALES -->
     <main id="game-container">
-      <canvas id="viewport" width="294" height="504"></canvas>
+      <canvas id="viewport" width="600" height="360"></canvas>
+
+      <!-- ZONAS DE DESTAQUE TÁCTIL TEMPORAL (MITAD IZQUIERDA / MITAD DERECHA) -->
+      <div id="touch-zone-left" class="touch-zone-highlight left hidden" aria-hidden="true">
+        <span class="touch-zone-label">LADO IZQUIERDO<br><small>Deslizar: Mover (8 dir.)<br>Mantener presionado: Apuntar Misty Step</small></span>
+      </div>
+      <div id="touch-zone-right" class="touch-zone-highlight right hidden" aria-hidden="true">
+        <span class="touch-zone-label">LADO DERECHO<br><small>Un toque (Tap): Ataque básico<br>Mantener y soltar: Apuntar Eldritch Blast</small></span>
+      </div>
+
+      <!-- MINIMAPA DE REFERENCIA (PANEL 13 ESQUINA SUPERIOR DERECHA) -->
+      <aside id="minimap-panel" class="minimap-panel" aria-label="Minimapa de la mazmorra">
+        <canvas id="minimap-canvas" width="136" height="106"></canvas>
+      </aside>
+
+      <!-- PANEL LATERAL DE TECLAS PARA LA VERSIÓN DE TECLADO / PC -->
+      <aside id="pc-legend" class="pc-side-legend" aria-label="Controles de teclado">
+        <div class="pc-legend-title">CONTROLES TECLADO</div>
+        <div class="pc-legend-row"><kbd>W A S D</kbd><span>Mover / Mirar</span></div>
+        <div class="pc-legend-row"><kbd>↑ ← ↓ →</kbd><span>Mover / Mirar</span></div>
+        <div class="pc-legend-row"><kbd>Q E Z C</kbd><span>Diagonal</span></div>
+        <div class="pc-legend-row"><kbd>K</kbd> / <kbd>Espacio</kbd><span>Atacar</span></div>
+        <div class="pc-legend-row"><kbd>J</kbd><span>Eldritch Blast</span></div>
+        <div class="pc-legend-row"><kbd>L</kbd><span>Bruma (Misty)</span></div>
+        <div class="pc-legend-row"><kbd>I</kbd><span>Cambiar Arma</span></div>
+        <div class="pc-legend-row"><kbd>F</kbd><span>Pantalla Completa</span></div>
+        <div class="pc-legend-row"><kbd>M</kbd><span>Menú del Juego</span></div>
+      </aside>
+
+      <!-- INDICADOR TEMPORAL DE CAMBIO DE ARMA / ACCIÓN -->
+      <div id="weapon-toast" class="weapon-toast hidden" role="status" aria-live="polite"></div>
+
+      <!-- MENSAJE DE ESTADO COMPACTO -->
       <div id="hud-status" class="hud-status" role="status" aria-live="polite"></div>
+
+      <!-- CARTEL NARRATIVO DE PISO (DISEÑO EXACTAMENTE IGUAL AL PANEL 13) -->
+      <div id="floor-banner" class="gothic-dialog-box floor-banner hidden" role="status" aria-live="polite">
+        <div id="floor-banner-title" class="floor-banner-title">Nivel 1</div>
+        <div id="floor-banner-subtitle" class="floor-banner-subtitle">El descenso.</div>
+        <span class="gothic-dialog-next" aria-hidden="true">▶</span>
+      </div>
+
+      <!-- TUTORIAL INTERACTIVO INTEGRADO EN EL NIVEL 1 (VERSIÓN MÓVIL) -->
+      <section id="tutorial-overlay" class="tutorial-overlay hidden" aria-live="polite">
+        <div class="tutorial-bar gothic-dialog-box">
+          <div class="tutorial-header">
+            <span id="tutorial-step-badge" class="tutorial-step-badge">TUTORIAL · PASO 1/5</span>
+            <strong id="tutorial-step-title" class="tutorial-step-title">Movimiento continuo</strong>
+            <div class="tutorial-actions">
+              <button id="btn-tutorial-pause" class="tutorial-btn" type="button">☰ Menú</button>
+              <button id="btn-tutorial-skip" class="tutorial-btn tutorial-btn-skip" type="button">Omitir ⏭</button>
+            </div>
+          </div>
+          <div class="tutorial-body">
+            <div id="tutorial-gesture-diagram" class="tutorial-gesture-diagram" aria-hidden="true"></div>
+            <div class="tutorial-copy">
+              <p id="tutorial-step-desc" class="tutorial-step-desc"></p>
+              <div id="tutorial-step-progress" class="tutorial-step-progress"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MENÚ PRINCIPAL DEL JUEGO Y GUÍA DE CONTROLES -->
+      <div id="tutorial-help-modal" class="tutorial-help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-help-title">
+        <div class="tutorial-help-card gothic-dialog-box">
+          <div class="game-menu-header">
+            <h3 id="tutorial-help-title">✦ MENÚ DEL JUEGO ✦</h3>
+            <div class="game-menu-quick-actions">
+              <button id="btn-tutorial-resume" class="tutorial-btn tutorial-btn-primary" type="button">▶ Continuar Partida</button>
+              <button id="btn-menu-fullscreen" class="tutorial-btn" type="button">⛶ Pantalla Completa</button>
+              <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial Táctil</button>
+              <button id="btn-menu-restart-game" class="tutorial-btn tutorial-btn-danger" type="button">↻ Reiniciar Partida</button>
+            </div>
+          </div>
+          <div class="tutorial-help-grid">
+            <div class="tutorial-help-item">
+              <strong>1. Lado Izquierdo — Moverse (Deslizar)</strong>
+              <p>Desliza el dedo hacia cualquier dirección en la <em>mitad izquierda</em> para mover a Lior en los 8 puntos cardinales.</p>
+            </div>
+            <div class="tutorial-help-item">
+              <strong>2. Lado Izquierdo — Misty Step (Mantener presionado)</strong>
+              <p>Mantén presionado en el <em>lado izquierdo</em> para apuntar en las 8 direcciones (incluidas diagonales) y suelta. Coloca el marcador sobre Lior para cancelar.</p>
+            </div>
+            <div class="tutorial-help-item">
+              <strong>3. Lado Derecho — Ataque Básico (Un toque / Tap)</strong>
+              <p>Toca una vez (tap) el <em>lado derecho</em> para disparar o atacar de inmediato con el arma equipada hacia el punto cardinal al que mira Lior.</p>
+            </div>
+            <div class="tutorial-help-item">
+              <strong>4. Lado Derecho — Eldritch Blast (Mantener presionado)</strong>
+              <p>Mantén presionado el <em>lado derecho</em> para apuntar el Eldritch Blast y suelta para disparar una vez. Coloca el marcador sobre Lior para cancelar.</p>
+            </div>
+            <div class="tutorial-help-item">
+              <strong>5. Cambio de Arma (Ambas zonas a la vez)</strong>
+              <p>Presiona el <em>lado izquierdo y el lado derecho</em> de la pantalla al mismo tiempo para cambiar entre tus armas disponibles.</p>
+            </div>
+            <div class="tutorial-help-item">
+              <strong>6. Teclado (PC) y Pantalla Completa</strong>
+              <p><em>WASD / Flechas</em>: Mover · <em>QEZC</em>: Diagonal · <em>K / Espacio</em>: Atacar · <em>J</em>: E. Blast · <em>L</em>: Bruma · <em>I</em>: Arma · <em>F</em>: Pantalla completa · <em>M</em>: Menú.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- CUADRO DE DIÁLOGO DEL MERCADER -->
       <div id="merchant-dialog-modal" class="hidden">
-        <div class="dialog-box">
+        <div class="dialog-box gothic-dialog-box">
           <div class="dialog-speaker">✦ MERCADER DE SOMBRAS ✦</div>
           <div id="dialog-text" class="dialog-text">«Baja tu arma, viajero... Tengo mercancías selectas para tu travesía.»</div>
-          <div class="dialog-prompt">▼ Se cerrará automáticamente</div>
+          <div class="dialog-prompt">▼ Toca para continuar</div>
         </div>
       </div>
 
@@ -85,7 +229,7 @@
 
       <!-- MODAL DE LA TIENDA -->
       <div id="shop-modal" class="hidden">
-        <div class="shop-content">
+        <div class="shop-content gothic-dialog-box">
           <h3>✦ MERCADER DE SOMBRAS ✦</h3>
           <p class="shop-desc">Tu oro: <span id="shop-gold-display">0</span> PO</p>
           <div class="shop-tabs" role="tablist" aria-label="Secciones de la tienda">
@@ -137,45 +281,23 @@
       </div>
     </main>
 
-    <aside id="pc-legend" aria-label="Atajos de teclado y mando">
-      [WASD] Mover/Girar | [K] Atacar | [J] Blast | [L] Bruma | [I] Cambiar Arma
-    </aside>
-
-    <!-- CONTROLES INFERIORES -->
-    <footer id="control-dock">
-      <!-- CRUCETA DPAD -->
+    <!-- CONTROLES DOM OCULTOS (CONSERVADOS PARA RETROCOMPATIBILIDAD SIN OCUPAR PANTALLA) -->
+    <footer id="control-dock" class="hidden" aria-hidden="true">
       <div class="dpad">
-        <div class="dpad-slot"></div>
         <button id="btn-forward" class="dpad-btn up" aria-label="Avanzar">▲</button>
-        <div class="dpad-slot"></div>
         <button id="btn-left" class="dpad-btn left" aria-label="Girar izquierda">◀</button>
-        <div class="dpad-center"></div>
         <button id="btn-right" class="dpad-btn right" aria-label="Girar derecha">▶</button>
-        <div class="dpad-slot"></div>
         <button id="btn-backward" class="dpad-btn down" aria-label="Retroceder">▼</button>
-        <div class="dpad-slot"></div>
       </div>
-
-      <!-- ROMBOIDE DE ACCIONES -->
       <div class="diamond-pad">
-        <div class="btn-slot top">
-          <button id="btn-d" class="arcade-btn btn-xbox-y">Y</button>
-          <span id="caption-d" class="btn-caption">ARMA</span>
-        </div>
-        <div class="btn-slot left">
-          <button id="btn-c" class="arcade-btn btn-eldritch btn-ready" style="--charge-pct: 100;">
-            <span class="arcade-btn-inner">X</span>
-          </button>
-          <span id="caption-c" class="btn-caption">E. BLAST (<span id="blast-counter">10/10</span>)</span>
-        </div>
-        <div class="btn-slot right">
-          <button id="btn-b" class="arcade-btn btn-xbox-b">B</button>
-          <span id="caption-b" class="btn-caption">BRUMA (<span id="misty-charges">2</span>)</span>
-        </div>
-        <div class="btn-slot bottom">
-          <button id="btn-a" class="arcade-btn btn-xbox-a">A</button>
-          <span id="caption-a" class="btn-caption">ATACAR</span>
-        </div>
+        <button id="btn-d" class="arcade-btn btn-xbox-y">Y</button>
+        <span id="caption-d" class="btn-caption">ARMA</span>
+        <button id="btn-c" class="arcade-btn btn-eldritch btn-ready"><span class="arcade-btn-inner">X</span></button>
+        <span id="caption-c" class="btn-caption">E. BLAST</span>
+        <button id="btn-b" class="arcade-btn btn-xbox-b">B</button>
+        <span id="caption-b" class="btn-caption">BRUMA</span>
+        <button id="btn-a" class="arcade-btn btn-xbox-a">A</button>
+        <span id="caption-a" class="btn-caption">ATACAR</span>
       </div>
     </footer>
 
@@ -184,16 +306,6 @@
   <section id="orientation-notice" class="orientation-notice hidden" role="dialog" aria-modal="true" aria-labelledby="orientation-title">
     <div class="orientation-panel">
       <h2 id="orientation-title">ORIENTACIÓN</h2>
-      <div class="orientation-examples">
-        <div class="orientation-example">
-          <span class="orientation-phone orientation-phone-portrait" aria-hidden="true"><span class="orientation-screen"></span></span>
-          <p><strong>MODALIDAD CLÁSICA</strong><span>Teléfono en posición vertical</span></p>
-        </div>
-        <div class="orientation-example">
-          <span class="orientation-phone orientation-phone-landscape" aria-hidden="true"><span class="orientation-screen"></span></span>
-          <p><strong>MODALIDAD MODERNA</strong><span>Teléfono en posición horizontal</span></p>
-        </div>
-      </div>
       <button id="orientation-notice-dismiss" class="orientation-dismiss" type="button">ENTENDIDO</button>
     </div>
   </section>
