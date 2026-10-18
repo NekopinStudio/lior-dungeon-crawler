@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "lior-dungeon-crawler-";
-const CACHE_NAME = `${CACHE_PREFIX}v4`;
+const CACHE_NAME = `${CACHE_PREFIX}v8`;
 const SHELL_PATHS = [
   "./",
   "./index.html",
@@ -7,16 +7,40 @@ const SHELL_PATHS = [
   "./game.js",
   "./manifest.webmanifest",
   "./Descenso de Lior al Abismo.png",
+  "./Ruinas góticas y diálogo de Lior.png",
+  "./Assets/Audio/game-over-efect.mp3",
+  "./Assets/Audio/game-over-song.wav",
+  "./Assets/Audio/Actions/coinpick.mp3",
+  "./Assets/Audio/Actions/eldritchblast.mp3",
+  "./Assets/Audio/Actions/heal.mp3",
+  "./Assets/Audio/Actions/liorhurt.mp3",
+  "./Assets/Audio/Actions/mistystep.mp3",
+  "./Assets/Audio/Actions/mosquete.mp3",
+  "./Assets/Audio/Actions/pickupsomething.mp3",
+  "./Assets/Audio/Actions/pistol.mp3",
+  "./Assets/Audio/Actions/trabuco.mp3",
+  "./Assets/Audio/bgm/01. Slay The Evil Midi.mid",
+  "./Assets/Audio/bgm/02. Perilous Dungeon Midi.mid",
+  "./Assets/Audio/bgm/03. Boss Battle Midi.mid",
+  "./Assets/Audio/bgm/05. Last Mission Midi.mid",
+  "./Assets/Audio/bgm/06. Unknown Planet Midi.mid",
+  "./Assets/Audio/bgm/09. Crisis Midi.mid",
+  "./Assets/Audio/bgm/12. Strong Boss Midi.mid",
+  "./Assets/Audio/bgm/16. Truth Midi.mid",
+  "./Assets/Audio/bgm/18. Infinite Darkness Midi.mid",
+  "./Assets/Audio/monster/1-4monster.mp3",
+  "./Assets/Audio/monster/5-9monster.mp3",
+  "./Assets/Audio/monster/Dragon.mp3",
   "./Assets/Video/nekopinGames.png",
   "./pwa-icon-192.png",
-  "./pwa-icon-512.png"
+  "./pwa-icon-512.jpg"
 ];
 const SHELL_URLS = new Set(SHELL_PATHS.map(path => new URL(path, self.registration.scope).href));
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    await cache.addAll([...SHELL_URLS]);
+    await Promise.allSettled([...SHELL_URLS].map(url => cache.add(url)));
     await self.skipWaiting();
   })());
 });

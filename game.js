@@ -87,36 +87,121 @@ const TEXT = {
   }
 };
 
-const LIOR_ROWS = {
-  IDLE:           { y0: 14,   y1: 128,  xs: [[194, 267], [301, 374], [408, 483]] },
-  WALK:           { y0: 135,  y1: 274,  xs: [[302, 380], [408, 490], [519, 598], [640, 725], [760, 844], [873, 964], [995, 1086], [1117, 1207]] },
-  SWORD_SPIN:     { y0: 278,  y1: 414,  xs: [[208, 328], [375, 549], [599, 759], [867, 968]] },
-  ELDRITCH_BLAST: { y0: 418,  y1: 574,  xs: [[256, 386], [463, 625], [736, 864], [921, 1011]] },
-  HEAL:           { y0: 576,  y1: 708,  xs: [[271, 349], [439, 516], [599, 678], [761, 843]] },
-  MISTY_STEP:     { y0: 712,  y1: 842,  xs: [[263, 365], [442, 538], [608, 703], [762, 844]] },
-  GUN_RECOIL:     { y0: 846,  y1: 974,  xs: [[243, 356], [419, 512], [600, 683], [749, 842], [918, 1020], [1078, 1179]] },
-  HURT:           { y0: 976,  y1: 1090, xs: [[230, 324], [419, 508], [590, 683]] },
-  DEFEAT:         { y0: 1092, y1: 1186, xs: [[216, 322], [402, 528], [544, 753], [771, 833], [863, 1060]] }
+const LIOR_SPRITES = {
+  IDLE: [
+    { x: 193, y: 5,   w: 76,  h: 124 },
+    { x: 300, y: 4,   w: 76,  h: 125 },
+    { x: 407, y: 4,   w: 77,  h: 125 }
+  ],
+  WALK: [
+    { x: 302, y: 136, w: 79,  h: 132 },
+    { x: 408, y: 136, w: 83,  h: 132 },
+    { x: 518, y: 138, w: 82,  h: 133 },
+    { x: 639, y: 135, w: 87,  h: 136 },
+    { x: 760, y: 137, w: 85,  h: 131 },
+    { x: 873, y: 136, w: 92,  h: 136 },
+    { x: 994, y: 136, w: 93,  h: 133 },
+    { x: 1117, y: 139, w: 91, h: 132 }
+  ],
+  SWORD_SPIN: [
+    { x: 208, y: 271, w: 121, h: 138 },
+    { x: 375, y: 274, w: 176, h: 134 },
+    { x: 599, y: 297, w: 161, h: 116 },
+    { x: 867, y: 281, w: 103, h: 128 }
+  ],
+  ELDRITCH_BLAST: [
+    { x: 256, y: 425, w: 132, h: 144 },
+    { x: 463, y: 413, w: 163, h: 154 },
+    { x: 736, y: 412, w: 130, h: 167 },
+    { x: 920, y: 440, w: 93,  h: 133 }
+  ],
+  HEAL: [
+    { x: 270, y: 576, w: 81,  h: 128 },
+    { x: 438, y: 575, w: 80,  h: 128 },
+    { x: 599, y: 580, w: 80,  h: 123 },
+    { x: 760, y: 584, w: 85,  h: 121 }
+  ],
+  MISTY_STEP: [
+    { x: 262, y: 710, w: 104, h: 124 },
+    { x: 441, y: 708, w: 99,  h: 122 },
+    { x: 608, y: 711, w: 96,  h: 122 },
+    { x: 761, y: 713, w: 84,  h: 123 }
+  ],
+  GUN_RECOIL: [
+    { x: 243, y: 844, w: 117, h: 117 },
+    { x: 419, y: 850, w: 94,  h: 116 },
+    { x: 599, y: 850, w: 86,  h: 119 },
+    { x: 749, y: 857, w: 94,  h: 113 },
+    { x: 917, y: 868, w: 105, h: 106 },
+    { x: 1078, y: 866, w: 102, h: 108 }
+  ],
+  HURT: [
+    { x: 230, y: 966, w: 95,  h: 108 },
+    { x: 418, y: 976, w: 92,  h: 97  },
+    { x: 590, y: 988, w: 94,  h: 93  }
+  ],
+  DEFEAT: [
+    { x: 216, y: 1079, w: 107, h: 105 },
+    { x: 402, y: 1096, w: 194, h: 87  },
+    { x: 619, y: 1115, w: 215, h: 69  },
+    { x: 863, y: 1128, w: 198, h: 57  }
+  ]
 };
 
-const LIOR_SPRITES = Object.fromEntries(Object.entries(LIOR_ROWS).map(([name, row]) => [
+const LIOR_ROWS = Object.fromEntries(Object.entries(LIOR_SPRITES).map(([name, frames]) => [
   name,
-  row.xs.map(([x0, x1]) => ({ x: x0, y: row.y0, w: x1 - x0 + 1, h: row.y1 - row.y0 + 1 }))
+  {
+    y0: Math.min(...frames.map(f => f.y)),
+    y1: Math.max(...frames.map(f => f.y + f.h - 1)),
+    xs: frames.map(f => [f.x, f.x + f.w - 1])
+  }
 ]));
 
-const LIOR2_ROWS = {
-  FRONT_IDLE: { view: "front", y0: 0,    y1: 319,  xs: [[316, 478], [538, 699], [758, 920], [978, 1139], [1199, 1357], [1419, 1577], [1637, 1796]] },
-  FRONT_WALK: { view: "front", y0: 337,  y1: 657,  xs: [[328, 472], [550, 695], [774, 918], [998, 1142], [1208, 1368], [1446, 1591]] },
-  FRONT_GUN:  { view: "front", y0: 673,  y1: 991,  xs: [[397, 612], [924, 1117], [1308, 1530]] },
-  SIDE_IDLE:  { view: "side",  y0: 1012, y1: 1324, xs: [[358, 509], [574, 723], [787, 937], [1001, 1151], [1214, 1365], [1429, 1579], [1646, 1795], [1858, 2009]] },
-  SIDE_WALK:  { view: "side",  y0: 1334, y1: 1628, xs: [[407, 556], [697, 848], [983, 1134], [1251, 1400], [1521, 1669]] },
-  SIDE_GUN:   { view: "side",  y0: 1647, y1: 1949, xs: [[732, 933], [1013, 1233]] }
+const LIOR2_SPRITES = {
+  FRONT_IDLE: [
+    { sheet: "lior2", view: "front", x: 316,  y: 1,   w: 163, h: 319 },
+    { sheet: "lior2", view: "front", x: 538,  y: 1,   w: 162, h: 319 },
+    { sheet: "lior2", view: "front", x: 758,  y: 1,   w: 163, h: 319 },
+    { sheet: "lior2", view: "front", x: 978,  y: 0,   w: 162, h: 320 },
+    { sheet: "lior2", view: "front", x: 1199, y: 8,   w: 159, h: 312 },
+    { sheet: "lior2", view: "front", x: 1419, y: 8,   w: 159, h: 312 },
+    { sheet: "lior2", view: "front", x: 1637, y: 8,   w: 160, h: 312 }
+  ],
+  FRONT_WALK: [
+    { sheet: "lior2", view: "front", x: 328,  y: 338, w: 145, h: 320 },
+    { sheet: "lior2", view: "front", x: 550,  y: 338, w: 146, h: 320 },
+    { sheet: "lior2", view: "front", x: 774,  y: 338, w: 145, h: 320 },
+    { sheet: "lior2", view: "front", x: 998,  y: 338, w: 144, h: 320 },
+    { sheet: "lior2", view: "front", x: 1209, y: 340, w: 160, h: 314 },
+    { sheet: "lior2", view: "front", x: 1447, y: 339, w: 144, h: 319 }
+  ],
+  FRONT_GUN: [
+    { sheet: "lior2", view: "front", x: 397,  y: 673, w: 215, h: 319 },
+    { sheet: "lior2", view: "front", x: 926,  y: 677, w: 190, h: 315 },
+    { sheet: "lior2", view: "front", x: 1315, y: 681, w: 216, h: 311 }
+  ],
+  SIDE_IDLE: [
+    { sheet: "lior2", view: "side",  x: 359,  y: 1012, w: 151, h: 312 },
+    { sheet: "lior2", view: "side",  x: 574,  y: 1012, w: 150, h: 312 },
+    { sheet: "lior2", view: "side",  x: 787,  y: 1012, w: 151, h: 313 },
+    { sheet: "lior2", view: "side",  x: 1002, y: 1012, w: 149, h: 312 },
+    { sheet: "lior2", view: "side",  x: 1215, y: 1012, w: 150, h: 312 },
+    { sheet: "lior2", view: "side",  x: 1429, y: 1012, w: 151, h: 313 },
+    { sheet: "lior2", view: "side",  x: 1646, y: 1012, w: 149, h: 313 },
+    { sheet: "lior2", view: "side",  x: 1858, y: 1012, w: 152, h: 313 }
+  ],
+  SIDE_WALK: [
+    { sheet: "lior2", view: "side",  x: 407,  y: 1334, w: 150, h: 294 },
+    { sheet: "lior2", view: "side",  x: 697,  y: 1334, w: 152, h: 294 },
+    { sheet: "lior2", view: "side",  x: 983,  y: 1334, w: 152, h: 294 },
+    { sheet: "lior2", view: "side",  x: 1251, y: 1334, w: 150, h: 294 },
+    { sheet: "lior2", view: "side",  x: 1521, y: 1334, w: 149, h: 294 }
+  ],
+  SIDE_GUN: [
+    { sheet: "lior2", view: "side",  x: 440,  y: 1658, w: 234, h: 291 },
+    { sheet: "lior2", view: "side",  x: 733,  y: 1658, w: 281, h: 291 }
+  ]
 };
-
-const LIOR2_SPRITES = Object.fromEntries(Object.entries(LIOR2_ROWS).map(([name, row]) => [
-  name,
-  row.xs.map(([x0, x1]) => ({ sheet: "lior2", view: row.view, x: x0, y: row.y0, w: x1 - x0 + 1, h: row.y1 - row.y0 + 1 }))
-]));
 
 const flipFrames = frames => frames.map(frame => ({ ...frame, flip: true }));
 
@@ -134,9 +219,36 @@ const LIOR_FACING_FRAMES = {
 const LIOR2_REFERENCE = { front: LIOR2_SPRITES.FRONT_IDLE[0], side: LIOR2_SPRITES.SIDE_IDLE[0] };
 
 const EFFECT_SHEETS = {
-  eblast:      { src: "Assets/Lior/EBlast.jpg",        cols: 3, trim: false },
-  pistol:      { src: "Assets/Lior/PistolShot.jpg",    cols: 3, trim: true },
-  musket:      { src: "Assets/Lior/MosqueteShot.jpg",  cols: 3, trim: true },
+  eblast: {
+    src: "Assets/Lior/EBlast.jpg",
+    cols: 3,
+    trim: false,
+    panels: [
+      { x: 23,   y: 2055, w: 433, h: 782  },
+      { x: 503,  y: 918,  w: 433, h: 1919 },
+      { x: 1013, y: 0,    w: 376, h: 2912 }
+    ]
+  },
+  pistol: {
+    src: "Assets/Lior/PistolShot.jpg",
+    cols: 3,
+    trim: true,
+    panels: [
+      { x: 356,  y: 350, w: 468, h: 470 },
+      { x: 1492, y: 456, w: 495, h: 258 },
+      { x: 2745, y: 350, w: 484, h: 470 }
+    ]
+  },
+  musket: {
+    src: "Assets/Lior/MosqueteShot.jpg",
+    cols: 3,
+    trim: true,
+    panels: [
+      { x: 161,  y: 157, w: 873,  h: 840 },
+      { x: 1268, y: 352, w: 1004, h: 481 },
+      { x: 2523, y: 170, w: 912,  h: 827 }
+    ]
+  },
   blunderbuss: {
     src: "Assets/Lior/trabucoShot.jpg",
     trim: false,
@@ -148,40 +260,1627 @@ const EFFECT_SHEETS = {
   }
 };
 
+const CHIPTUNE_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const CHIPTUNE_FLAT_MAP = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
+
+function chiptuneNoteToFreq(noteStr) {
+  if (!noteStr || noteStr === "-" || noteStr === ".") return 0;
+  const nameRaw = noteStr.slice(0, -1);
+  const octave = parseInt(noteStr.slice(-1), 10);
+  const name = CHIPTUNE_FLAT_MAP[nameRaw] || nameRaw;
+  const semitone = CHIPTUNE_NOTE_NAMES.indexOf(name);
+  if (semitone < 0 || Number.isNaN(octave)) return 0;
+  const midi = (octave + 1) * 12 + semitone;
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+/**
+ * CUATRO COMPOSICIONES ORIGINALES EN ESTILO CHIPTUNE DE 8 BITS (128 pasos / bucle continuo sin cortes):
+ * Diseñadas con progresión narrativa oscura, solemne y opresiva en torno al Motivo de Lior (semitono frigio + caída al tritono/quinta):
+ * - "intro":  La Imposición de la Dama del Dolor (Re frigio/armónico oscuro, 56 BPM) — Solemne, austera, con silencios tensos, clímax sobrenatural y retorno sombrío.
+ * - "biome1": El Comienzo del Descenso (Mi frigio/locrio, 64 BPM) — Inquietud, aislamiento, frases cortas con silencios, graves electrónicos, notas agudas aisladas y disonancias graduales.
+ * - "biome2": La Opresión de las Profundidades (Do locrio/disminuido, 70 BPM) — Pulso contenido pero más insistente, motivos descendentes repetitivos e irresolutos y bajos electrónicos densos.
+ * - "biome3": Las Profundidades Extremas (La abisal/locrio en registro grave, 52 BPM) — Lento, pesado e implacable, timbres 8-bit ásperos, sub-bajos profundos y resoluciones incompletas.
+ */
+/**
+ * RUTAS EXACTAS DE LOS ARCHIVOS DE AUDIO DEL PROYECTO (Verificadas en Assets/Audio/):
+ * 1. Raíz (Assets/Audio/):
+ *    - "Assets/Audio/game-over-efect.mp3"
+ *    - "Assets/Audio/game-over-song.wav"
+ * 2. Efectos de acciones (Assets/Audio/Actions/*.mp3):
+ *    - "Assets/Audio/Actions/coinpick.mp3"
+ *    - "Assets/Audio/Actions/eldritchblast.mp3"
+ *    - "Assets/Audio/Actions/heal.mp3"
+ *    - "Assets/Audio/Actions/liorhurt.mp3"
+ *    - "Assets/Audio/Actions/mistystep.mp3"
+ *    - "Assets/Audio/Actions/mosquete.mp3"
+ *    - "Assets/Audio/Actions/pickupsomething.mp3"
+ *    - "Assets/Audio/Actions/pistol.mp3"
+ *    - "Assets/Audio/Actions/trabuco.mp3"
+ * 3. Música de fondo MIDI (Assets/Audio/bgm/*.mid):
+ *    - "Assets/Audio/bgm/18. Infinite Darkness Midi.mid" (Introducción narrativa)
+ *    - "Assets/Audio/bgm/01. Slay The Evil Midi.mid"     (Encuentros especiales pisos 10, 20, 30, 40, 50)
+ *    - "Assets/Audio/bgm/03. Boss Battle Midi.mid"       (Encuentros especiales pisos 60, 70, 80, 90)
+ *    - "Assets/Audio/bgm/12. Strong Boss Midi.mid"       (Combate exclusivo contra el Dragón Final - piso 100)
+ *    - "Assets/Audio/bgm/09. Crisis Midi.mid"            (Condición de vida crítica: HP <= 10)
+ *    - "Assets/Audio/bgm/16. Truth Midi.mid"             (Tienda)
+ *    - "Assets/Audio/bgm/02. Perilous Dungeon Midi.mid"  (Pisos normales - Bioma 1)
+ *    - "Assets/Audio/bgm/06. Unknown Planet Midi.mid"    (Pisos normales - Bioma 2)
+ *    - "Assets/Audio/bgm/05. Last Mission Midi.mid"      (Pisos normales - Bioma 3)
+ * 4. Rugidos de monstruos (Assets/Audio/monster/*.mp3):
+ *    - "Assets/Audio/monster/1-4monster.mp3"             (Pisos 1 al 4 de cada ciclo de 10 pisos)
+ *    - "Assets/Audio/monster/5-9monster.mp3"             (Pisos 5 al 9 de cada ciclo de 10 pisos)
+ *    - "Assets/Audio/monster/Dragon.mp3"                 (Rugido exclusivo del Dragón Final)
+ */
+const AUDIO_FILES = {
+  gameOverEffect: "Assets/Audio/game-over-efect.mp3",
+  gameOverSong:   "Assets/Audio/game-over-song.wav",
+  actions: {
+    coinPick:      "Assets/Audio/Actions/coinpick.mp3",
+    eldritchBlast: "Assets/Audio/Actions/eldritchblast.mp3",
+    heal:          "Assets/Audio/Actions/heal.mp3",
+    liorHurt:      "Assets/Audio/Actions/liorhurt.mp3",
+    mistyStep:     "Assets/Audio/Actions/mistystep.mp3",
+    musket:        "Assets/Audio/Actions/mosquete.mp3",
+    pickup:        "Assets/Audio/Actions/pickupsomething.mp3",
+    pistol:        "Assets/Audio/Actions/pistol.mp3",
+    blunderbuss:   "Assets/Audio/Actions/trabuco.mp3"
+  },
+  monster: {
+    floors1to4: "Assets/Audio/monster/1-4monster.mp3",
+    floors5to9: "Assets/Audio/monster/5-9monster.mp3",
+    dragon:     "Assets/Audio/monster/Dragon.mp3"
+  },
+  bgm: {
+    intro:         "Assets/Audio/bgm/18. Infinite Darkness Midi.mid",
+    special_10_50: "Assets/Audio/bgm/01. Slay The Evil Midi.mid",
+    special_60_90: "Assets/Audio/bgm/03. Boss Battle Midi.mid",
+    final_dragon:  "Assets/Audio/bgm/12. Strong Boss Midi.mid",
+    crisis:        "Assets/Audio/bgm/09. Crisis Midi.mid",
+    shop:          "Assets/Audio/bgm/16. Truth Midi.mid",
+    biome1:        "Assets/Audio/bgm/02. Perilous Dungeon Midi.mid",
+    biome2:        "Assets/Audio/bgm/06. Unknown Planet Midi.mid",
+    biome3:        "Assets/Audio/bgm/05. Last Mission Midi.mid"
+  }
+};
+
+/**
+ * Decodificador autónomo de archivos Standard MIDI File (SMF Formato 0 y 1) sin dependencias externas.
+ * Convierte cualquier archivo .mid/.midi de Assets/Audio/bgm/ en una lista temporal de eventos de nota
+ * lista para ser reproducida con precisión por Web Audio API en bucle continuo.
+ */
+function parseStandardMidiFile(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const view = new DataView(arrayBuffer);
+  if (bytes.length < 14) return null;
+
+  // Verificar cabecera "MThd"
+  if (
+    bytes[0] !== 0x4D || bytes[1] !== 0x54 ||
+    bytes[2] !== 0x68 || bytes[3] !== 0x64
+  ) {
+    return null;
+  }
+
+  const headerLen = view.getUint32(4, false);
+  const numTracks = view.getUint16(10, false);
+  const division = view.getUint16(12, false);
+  const ticksPerBeat = (division & 0x8000) ? 480 : Math.max(1, division);
+
+  let pos = 8 + headerLen;
+  const tempoEvents = [{ tick: 0, usPerBeat: 500000 }]; // 120 BPM por defecto
+  const rawNotes = [];
+
+  const readVarLen = ( idxRef ) => {
+    let value = 0;
+    let count = 0;
+    while (idxRef.p < bytes.length && count < 4) {
+      const b = bytes[idxRef.p++];
+      value = (value << 7) | (b & 0x7F);
+      count++;
+      if ((b & 0x80) === 0) break;
+    }
+    return value;
+  };
+
+  for (let t = 0; t < numTracks && pos + 8 <= bytes.length; t++) {
+    // Buscar bloque "MTrk"
+    if (
+      bytes[pos] !== 0x4D || bytes[pos + 1] !== 0x54 ||
+      bytes[pos + 2] !== 0x72 || bytes[pos + 3] !== 0x6B
+    ) {
+      break;
+    }
+    const trackLen = view.getUint32(pos + 4, false);
+    const trackEnd = Math.min(bytes.length, pos + 8 + trackLen);
+    const idxRef = { p: pos + 8 };
+
+    let absTick = 0;
+    let runningStatus = 0;
+    const channelProgram = new Uint8Array(16);
+    const channelVolume = new Uint8Array(16).fill(100);
+    const channelExpression = new Uint8Array(16).fill(127);
+    const activeNotes = new Map();
+
+    while (idxRef.p < trackEnd) {
+      const delta = readVarLen(idxRef);
+      absTick += delta;
+      if (idxRef.p >= trackEnd) break;
+
+      let status = bytes[idxRef.p];
+      if (status < 0x80) {
+        status = runningStatus;
+      } else {
+        idxRef.p++;
+        if (status < 0xF0) runningStatus = status;
+      }
+
+      if (status === 0xFF) {
+        // Meta evento
+        if (idxRef.p >= trackEnd) break;
+        const metaType = bytes[idxRef.p++];
+        const len = readVarLen(idxRef);
+        if (metaType === 0x51 && len === 3 && idxRef.p + 3 <= trackEnd) {
+          const usPerBeat = (bytes[idxRef.p] << 16) | (bytes[idxRef.p + 1] << 8) | bytes[idxRef.p + 2];
+          if (usPerBeat > 0) {
+            tempoEvents.push({ tick: absTick, usPerBeat });
+          }
+        }
+        idxRef.p += len;
+      } else if (status === 0xF0 || status === 0xF7) {
+        // Evento SysEx
+        const len = readVarLen(idxRef);
+        idxRef.p += len;
+      } else {
+        const type = status & 0xF0;
+        const ch = status & 0x0F;
+
+        if (type === 0x90) {
+          const pitch = bytes[idxRef.p++] & 0x7F;
+          const vel = bytes[idxRef.p++] & 0x7F;
+          const key = (ch << 8) | pitch;
+          if (vel > 0) {
+            if (activeNotes.has(key)) {
+              const prev = activeNotes.get(key);
+              if (absTick > prev.startTick) {
+                rawNotes.push({ ...prev, endTick: absTick });
+              }
+            }
+            const effVel = Math.max(1, Math.min(127, Math.round(
+              vel * (channelVolume[ch] / 100) * (channelExpression[ch] / 127)
+            )));
+            activeNotes.set(key, {
+              startTick: absTick,
+              channel: ch,
+              pitch,
+              velocity: effVel,
+              program: channelProgram[ch]
+            });
+          } else if (activeNotes.has(key)) {
+            const prev = activeNotes.get(key);
+            activeNotes.delete(key);
+            if (absTick > prev.startTick) {
+              rawNotes.push({ ...prev, endTick: absTick });
+            }
+          }
+        } else if (type === 0x80) {
+          const pitch = bytes[idxRef.p++] & 0x7F;
+          idxRef.p++; // velocity de Note Off
+          const key = (ch << 8) | pitch;
+          if (activeNotes.has(key)) {
+            const prev = activeNotes.get(key);
+            activeNotes.delete(key);
+            if (absTick > prev.startTick) {
+              rawNotes.push({ ...prev, endTick: absTick });
+            }
+          }
+        } else if (type === 0xB0) {
+          const cc = bytes[idxRef.p++] & 0x7F;
+          const val = bytes[idxRef.p++] & 0x7F;
+          if (cc === 7) channelVolume[ch] = Math.max(16, val);
+          else if (cc === 11) channelExpression[ch] = Math.max(24, val);
+        } else if (type === 0xC0) {
+          channelProgram[ch] = bytes[idxRef.p++] & 0x7F;
+        } else if (type === 0xD0) {
+          idxRef.p += 1;
+        } else if (type === 0xA0 || type === 0xE0) {
+          idxRef.p += 2;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Cerrar notas que hayan quedado abiertas al final de la pista
+    activeNotes.forEach(prev => {
+      if (absTick > prev.startTick) {
+        rawNotes.push({ ...prev, endTick: absTick });
+      }
+    });
+
+    pos = trackEnd;
+  }
+
+  if (rawNotes.length === 0) return null;
+
+  // Ordenar eventos de tempo y construir conversor de ticks a segundos
+  tempoEvents.sort((a, b) => a.tick - b.tick);
+  const tempoSegments = [];
+  let accSeconds = 0;
+  let lastTick = 0;
+  let currentUsPerBeat = 500000;
+
+  for (const te of tempoEvents) {
+    if (te.tick > lastTick) {
+      accSeconds += ((te.tick - lastTick) / ticksPerBeat) * (currentUsPerBeat / 1000000);
+      lastTick = te.tick;
+    }
+    currentUsPerBeat = te.usPerBeat;
+    tempoSegments.push({ tick: te.tick, timeSec: accSeconds, usPerBeat: currentUsPerBeat });
+  }
+
+  const tickToSeconds = (tick) => {
+    let seg = tempoSegments[0];
+    for (let i = 1; i < tempoSegments.length; i++) {
+      if (tempoSegments[i].tick <= tick) seg = tempoSegments[i];
+      else break;
+    }
+    return seg.timeSec + ((tick - seg.tick) / ticksPerBeat) * (seg.usPerBeat / 1000000);
+  };
+
+  let minStartSec = Infinity;
+  let maxEndSec = 0;
+  const notes = rawNotes.map(n => {
+    const startSec = tickToSeconds(n.startTick);
+    const endSec = tickToSeconds(n.endTick);
+    const duration = Math.max(0.035, Math.min(6.0, endSec - startSec));
+    if (startSec < minStartSec) minStartSec = startSec;
+    if (startSec + duration > maxEndSec) maxEndSec = startSec + duration;
+    return {
+      startTime: startSec,
+      duration,
+      channel: n.channel,
+      pitch: n.pitch,
+      velocity: n.velocity,
+      program: n.program
+    };
+  });
+
+  // Eliminar silencio muerto inicial si existe para que la pista entre sin retraso
+  const offsetSec = Number.isFinite(minStartSec) && minStartSec > 0.05 ? minStartSec - 0.02 : 0;
+  if (offsetSec > 0) {
+    notes.forEach(n => { n.startTime = Math.max(0, n.startTime - offsetSec); });
+    maxEndSec = Math.max(0.5, maxEndSec - offsetSec);
+  }
+
+  notes.sort((a, b) => a.startTime - b.startTime);
+  return {
+    notes,
+    totalDuration: Math.max(1.0, maxEndSec + 0.05)
+  };
+}
+
+// Respaldo para sintaxis heredada si algún test consulta CHIPTUNE_TRACKS
+const CHIPTUNE_TRACKS = {
+  intro:         { id: "intro",         audioSrc: AUDIO_FILES.bgm.intro,          fallbackId: "intro" },
+  special_10_50: { id: "special_10_50", audioSrc: AUDIO_FILES.bgm.special_10_50, fallbackId: "biome2" },
+  special_60_90: { id: "special_60_90", audioSrc: AUDIO_FILES.bgm.special_60_90, fallbackId: "biome3" },
+  final_dragon:  { id: "final_dragon",  audioSrc: AUDIO_FILES.bgm.final_dragon,  fallbackId: "biome3" },
+  crisis:        { id: "crisis",        audioSrc: AUDIO_FILES.bgm.crisis,        fallbackId: "biome2" },
+  shop:          { id: "shop",          audioSrc: AUDIO_FILES.bgm.shop,          fallbackId: "biome1" },
+  biome1:        { id: "biome1",        audioSrc: AUDIO_FILES.bgm.biome1,        fallbackId: "biome1" },
+  biome2:        { id: "biome2",        audioSrc: AUDIO_FILES.bgm.biome2,        fallbackId: "biome2" },
+  biome3:        { id: "biome3",        audioSrc: AUDIO_FILES.bgm.biome3,        fallbackId: "biome3" }
+};
+
+const FALLBACK_SYNTH_PATTERNS = {
+  intro: {
+    id: "intro",
+    title: "La Imposición de la Dama del Dolor",
+    audioSrc: "Assets/Audio/intro_8bit.wav",
+    bpm: 56,
+    leadWave: "square",
+    harmWave: "triangle",
+    bassSubWave: "sawtooth",
+    droneWave: "sawtooth",
+    leadGain: 0.048,
+    harmGain: 0.03,
+    bassGain: 0.072,
+    droneGain: 0.024,
+    leadFilterFreq: 1550,
+    harmFilterFreq: 1200,
+    bassFilterFreq: 340,
+    droneFilterFreq: 280,
+    leadAttack: 0.035,
+    leadVibratoHz: 4.2,
+    leadVibratoDepth: 2.2,
+    harmDetune: -5,
+    droneDetune: 6,
+    lead: [
+      "-", "-", "D4", ".", ".", ".", "-", "-", "Eb4", ".", "D4", ".", ".", "-", "-", "-",
+      "-", "-", "F4", ".", "Eb4", ".", "D4", ".", "C#4", ".", ".", ".", "-", "-", "-", "-",
+      "D4", ".", ".", "-", "F4", ".", "G4", ".", "Ab4", ".", ".", ".", "G4", ".", "F4", "-",
+      "Eb4", ".", ".", "-", "F4", ".", "Eb4", ".", "D4", ".", "C#4", ".", "D4", ".", "-", "-",
+      "A4", ".", ".", ".", "Bb4", ".", "A4", ".", "Ab4", ".", ".", ".", "G4", ".", "F4", ".",
+      "Eb4", ".", ".", "D4", "C#4", ".", "D4", ".", "F4", ".", "Eb4", ".", "D4", ".", ".", "-",
+      "-", "-", "Eb4", ".", "D4", ".", "-", "-", "Ab3", ".", "G3", ".", "F3", ".", "-", "-",
+      "Eb3", ".", ".", "-", "D3", ".", "C#3", ".", "D3", ".", ".", "-", "-", "-", "-", "-"
+    ],
+    harm: [
+      "-", "-", "-", "-", "-", "-", "-", "-", "A3", ".", ".", ".", "-", "-", "-", "-",
+      "-", "-", "Bb3", ".", ".", ".", "A3", ".", "E3", ".", "G3", ".", "-", "-", "-", "-",
+      "A3", ".", "F3", ".", "-", "-", "B3", ".", "C4", ".", "B3", ".", ".", "-", "-", "-",
+      "Bb3", ".", "G3", ".", "-", "-", "Bb3", ".", "A3", ".", "G3", ".", "F3", ".", "-", "-",
+      "D4", ".", "F4", ".", "G4", ".", "F4", ".", "C4", ".", "Eb4", ".", "B3", ".", "D4", ".",
+      "Bb3", ".", "G3", ".", "A3", ".", "Bb3", ".", "A3", ".", "G3", ".", "F#3", ".", "F3", "-",
+      "-", "-", "Bb3", ".", "A3", ".", "-", "-", "Eb3", ".", ".", "-", "D3", ".", "-", "-",
+      "Bb2", ".", ".", "-", "A2", ".", "G2", ".", "F2", ".", "E2", ".", "Eb2", ".", "-", "-"
+    ],
+    bass: [
+      "D2", ".", ".", ".", ".", ".", "-", "-", "D2", ".", ".", ".", "A1", ".", "-", "-",
+      "Bb1", ".", ".", ".", ".", ".", "-", "-", "A1", ".", ".", ".", ".", "-", "-", "-",
+      "D2", ".", ".", "-", "C2", ".", ".", "-", "B1", ".", ".", ".", "Bb1", ".", ".", "-",
+      "Eb2", ".", ".", "-", "C2", ".", ".", "-", "A1", ".", ".", ".", "D2", ".", "A1", "-",
+      "D2", ".", "A1", ".", "G1", ".", "A1", ".", "Ab1", ".", "Eb2", ".", "G1", ".", "D2", ".",
+      "Bb1", ".", "F1", ".", "A1", ".", "E1", ".", "Bb1", ".", "Eb1", ".", "D1", ".", "A1", ".",
+      "Bb1", ".", ".", "-", "A1", ".", ".", "-", "Ab1", ".", ".", "-", "G1", ".", ".", "-",
+      "Eb1", ".", ".", ".", "A1", ".", ".", ".", "D1", ".", ".", "-", "A1", ".", "Eb1", "."
+    ],
+    drone: [
+      "D1", ".", ".", ".", ".", ".", ".", ".", "D1", ".", ".", ".", "-", "-", "-", "-",
+      "Bb0", ".", ".", ".", ".", ".", ".", ".", "A0", ".", ".", ".", "-", "-", "-", "-",
+      "D1", ".", ".", ".", "C1", ".", ".", ".", "Ab0", ".", ".", ".", "G0", ".", ".", "-",
+      "Eb1", ".", ".", ".", "A0", ".", ".", ".", "D1", ".", ".", ".", "-", "-", "-", "-",
+      "D1", ".", ".", ".", "Bb0", ".", ".", ".", "Ab0", ".", ".", ".", "G0", ".", ".", ".",
+      "Bb0", ".", ".", ".", "A0", ".", ".", ".", "Eb1", ".", ".", ".", "D1", ".", ".", "-",
+      "Bb0", ".", ".", ".", "A0", ".", ".", "-", "Ab0", ".", ".", ".", "G0", ".", "-", "-",
+      "Eb1", ".", ".", ".", "A0", ".", ".", ".", "D1", ".", ".", ".", "A0", ".", ".", "."
+    ],
+    drums: [
+      "T", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", ".",
+      "T", ".", ".", ".", ".", ".", ".", ".", "G", ".", ".", ".", ".", ".", ".", ".",
+      "T", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", "G", ".", ".", ".",
+      "T", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "M", ".", ".", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "G", ".", ".", ".",
+      "T", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", ".",
+      "P", ".", ".", ".", "G", ".", ".", ".", "T", ".", ".", ".", ".", ".", ".", "."
+    ]
+  },
+  biome1: {
+    id: "biome1",
+    title: "El Comienzo del Descenso",
+    audioSrc: "Assets/Audio/bioma1_8bit.wav",
+    bpm: 64,
+    leadWave: "square",
+    harmWave: "triangle",
+    bassSubWave: "square",
+    droneWave: "triangle",
+    leadGain: 0.044,
+    harmGain: 0.028,
+    bassGain: 0.074,
+    droneGain: 0.02,
+    leadFilterFreq: 1400,
+    harmFilterFreq: 2200,
+    bassFilterFreq: 310,
+    droneFilterFreq: 260,
+    leadAttack: 0.025,
+    leadVibratoHz: 3.8,
+    leadVibratoDepth: 1.6,
+    harmDetune: 4,
+    droneDetune: -4,
+    lead: [
+      "E4", ".", ".", "-", "F4", ".", "B3", ".", ".", "-", "-", "-", "-", "-", "-", "-",
+      "-", "-", "G4", ".", "F4", ".", "E4", ".", ".", "-", "-", "-", "-", "-", "-", "-",
+      "E4", ".", "F4", ".", "A4", ".", "G4", ".", "F4", ".", "-", "-", "-", "-", "-", "-",
+      "-", "-", "B3", ".", "C4", ".", "B3", ".", "A3", ".", ".", "-", "-", "-", "-", "-",
+      "E4", ".", ".", "-", "Bb4", ".", "A4", ".", "F4", ".", "E4", ".", "-", "-", "-", "-",
+      "-", "-", "F4", ".", "E4", ".", "Bb3", ".", "B3", ".", ".", ".", "-", "-", "-", "-",
+      "G4", ".", "F4", ".", "-", "-", "E4", ".", "Eb4", ".", "-", "-", "C4", ".", "B3", ".",
+      "-", "-", "F4", ".", "E4", ".", "D#4", ".", "B3", ".", ".", "-", "-", "-", "-", "-"
+    ],
+    harm: [
+      "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "B5", "-", "-", "-", "C6", "-",
+      "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "F5", "-", "-", "-", "E5", "-",
+      "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "C6", "-", "B5", "-", "-", "-",
+      "-", "-", "G3", ".", "F3", ".", "-", "-", "-", "-", "E5", "-", "D#5", "-", "-", "-",
+      "-", "-", "B3", ".", "C4", ".", ".", "-", "Bb3", ".", "A3", ".", "-", "-", "Bb5", "-",
+      "G3", ".", "F3", ".", "-", "-", "E3", ".", "F3", ".", ".", "-", "-", "-", "F5", "-",
+      "Bb3", ".", "A3", ".", "-", "-", "G3", ".", "F#3", ".", "-", "-", "F3", ".", "E3", ".",
+      "-", "-", "A3", ".", "G3", ".", "F#3", ".", "F3", ".", "-", "-", "B5", "-", "-", "-"
+    ],
+    bass: [
+      "E2", ".", ".", "-", "B1", ".", ".", "-", "E2", ".", ".", "-", "B1", ".", ".", "-",
+      "C2", ".", ".", "-", "B1", ".", ".", "-", "A1", ".", ".", "-", "B1", ".", ".", "-",
+      "E2", ".", ".", "-", "B1", ".", ".", "-", "F2", ".", ".", "-", "C2", ".", ".", "-",
+      "G1", ".", ".", "-", "A1", ".", ".", "-", "B1", ".", ".", "-", "F1", ".", "B1", "-",
+      "E2", ".", ".", "-", "Bb1", ".", ".", "-", "A1", ".", ".", "-", "F1", ".", ".", "-",
+      "C2", ".", ".", "-", "G1", ".", ".", "-", "Bb1", ".", ".", "-", "B1", ".", ".", "-",
+      "C2", ".", ".", "-", "B1", ".", ".", "-", "Bb1", ".", ".", "-", "A1", ".", ".", "-",
+      "F1", ".", ".", "-", "E1", ".", ".", "-", "B1", ".", ".", "-", "F1", ".", "B1", "."
+    ],
+    drone: [
+      "E1", ".", ".", ".", ".", ".", ".", ".", "-", "-", "-", "-", "-", "-", "-", "-",
+      "C1", ".", ".", ".", ".", ".", "-", "-", "B0", ".", ".", ".", "-", "-", "-", "-",
+      "E1", ".", ".", ".", ".", ".", "-", "-", "F1", ".", ".", ".", "-", "-", "-", "-",
+      "A0", ".", ".", ".", "B0", ".", ".", ".", "-", "-", "-", "-", "-", "-", "-", "-",
+      "E1", ".", ".", ".", "Bb0", ".", ".", ".", "A0", ".", ".", ".", "F0", ".", ".", "-",
+      "C1", ".", ".", ".", "Bb0", ".", ".", ".", "B0", ".", ".", ".", "-", "-", "-", "-",
+      "C1", ".", ".", "-", "Bb0", ".", ".", "-", "A0", ".", ".", "-", "F0", ".", ".", "-",
+      "F0", ".", ".", ".", "B0", ".", ".", ".", ".", ".", ".", "-", "-", "-", "-", "-"
+    ],
+    drums: [
+      "P", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", ".",
+      "P", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", "G", ".", ".", ".",
+      "P", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", ".",
+      "P", ".", ".", ".", ".", ".", ".", ".", "P", ".", ".", ".", "G", ".", ".", ".",
+      "P", ".", ".", ".", "P", ".", ".", ".", "P", ".", ".", ".", "G", ".", ".", ".",
+      "P", ".", ".", ".", "P", ".", ".", ".", "P", ".", ".", ".", "M", ".", ".", ".",
+      "P", ".", ".", ".", "P", ".", ".", ".", "P", ".", ".", ".", "G", ".", ".", ".",
+      "P", ".", ".", ".", "G", ".", ".", ".", "P", ".", ".", ".", ".", ".", ".", "."
+    ]
+  },
+  biome2: {
+    id: "biome2",
+    title: "La Opresión de las Profundidades",
+    audioSrc: "Assets/Audio/bioma2_8bit.wav",
+    bpm: 70,
+    leadWave: "sawtooth",
+    harmWave: "square",
+    bassSubWave: "sawtooth",
+    droneWave: "sawtooth",
+    leadGain: 0.046,
+    harmGain: 0.03,
+    bassGain: 0.082,
+    droneGain: 0.028,
+    leadFilterFreq: 1250,
+    harmFilterFreq: 1050,
+    bassFilterFreq: 380,
+    droneFilterFreq: 290,
+    leadAttack: 0.018,
+    leadVibratoHz: 4.8,
+    leadVibratoDepth: 2.5,
+    harmDetune: -7,
+    droneDetune: 8,
+    lead: [
+      "G4", ".", "Gb4", ".", "F4", ".", "C4", ".", "-", "-", "Gb4", ".", "F4", ".", "Db4", ".",
+      "C4", ".", "B3", ".", "C4", ".", "Db4", ".", "C4", ".", "-", "-", "B3", ".", "Bb3", ".",
+      "Ab4", ".", "G4", ".", "Gb4", ".", "F4", ".", "Eb4", ".", "Db4", ".", "C4", ".", "B3", ".",
+      "F4", ".", "E4", ".", "Eb4", ".", "Db4", ".", "C4", ".", "B3", ".", "Bb3", ".", "-", "-",
+      "C4", ".", "Db4", ".", "Gb4", ".", "F4", ".", "E4", ".", "Eb4", ".", "Db4", ".", "C4", ".",
+      "Db4", ".", "C4", ".", "B3", ".", "Bb3", ".", "A3", ".", "Ab3", ".", "G3", ".", "Gb3", ".",
+      "G4", ".", "Gb4", ".", "F4", ".", "Db4", ".", "Eb4", ".", "Db4", ".", "C4", ".", "G3", ".",
+      "Ab3", ".", "G3", ".", "Gb3", ".", "F3", ".", "E3", ".", "Eb3", ".", "Db3", ".", "B3", "."
+    ],
+    harm: [
+      "C4", ".", ".", "-", "Db4", ".", "G3", ".", "Ab3", ".", "A3", ".", "Ab3", ".", "G3", ".",
+      "Gb3", ".", "F3", ".", "E3", ".", "F3", ".", "Gb3", ".", "F3", ".", "E3", ".", "Db3", ".",
+      "C4", ".", "B3", ".", "Bb3", ".", "A3", ".", "Ab3", ".", "G3", ".", "Gb3", ".", "F3", ".",
+      "B3", ".", "Bb3", ".", "A3", ".", "Ab3", ".", "G3", ".", "Gb3", ".", "F3", ".", "E3", ".",
+      "Gb3", ".", "G3", ".", "C4", ".", "B3", ".", "Bb3", ".", "A3", ".", "Ab3", ".", "Gb3", ".",
+      "G3", ".", "Gb3", ".", "F3", ".", "E3", ".", "Eb3", ".", "D3", ".", "Db3", ".", "C3", ".",
+      "C4", ".", "B3", ".", "Bb3", ".", "G3", ".", "Ab3", ".", "G3", ".", "Gb3", ".", "Db3", ".",
+      "D3", ".", "Db3", ".", "C3", ".", "B2", ".", "Bb2", ".", "A2", ".", "Ab2", ".", "Gb3", "."
+    ],
+    bass: [
+      "C2", ".", "G1", ".", "Gb1", ".", "F1", ".", "C2", ".", "Gb1", ".", "F1", ".", "Db1", ".",
+      "C2", ".", "G1", ".", "Ab1", ".", "G1", ".", "Gb1", ".", "F1", ".", "E1", ".", "Db1", ".",
+      "F1", ".", "C2", ".", "B1", ".", "Bb1", ".", "Ab1", ".", "G1", ".", "Gb1", ".", "F1", ".",
+      "Db2", ".", "Ab1", ".", "G1", ".", "Gb1", ".", "F1", ".", "E1", ".", "Eb1", ".", "Db1", ".",
+      "C2", ".", "Db2", ".", "Gb1", ".", "G1", ".", "Ab1", ".", "Gb1", ".", "F1", ".", "E1", ".",
+      "Eb1", ".", "D1", ".", "Db1", ".", "C1", ".", "B0", ".", "Bb0", ".", "A0", ".", "Ab0", ".",
+      "C2", ".", "Gb1", ".", "F1", ".", "Db1", ".", "C1", ".", "Gb1", ".", "F1", ".", "E1", ".",
+      "Eb1", ".", "Db1", ".", "C1", ".", "B0", ".", "Bb0", ".", "A0", ".", "Ab0", ".", "G1", "."
+    ],
+    drone: [
+      "C1", ".", ".", ".", "Gb1", ".", ".", ".", "C1", ".", ".", ".", "Db1", ".", ".", ".",
+      "C1", ".", ".", ".", "Ab0", ".", ".", ".", "Gb0", ".", ".", ".", "G0", ".", ".", ".",
+      "F0", ".", ".", ".", "Gb0", ".", ".", ".", "Ab0", ".", ".", ".", "A0", ".", ".", ".",
+      "Db1", ".", ".", ".", "C1", ".", ".", ".", "B0", ".", ".", ".", "Bb0", ".", ".", ".",
+      "C1", ".", ".", ".", "Gb0", ".", ".", ".", "Ab0", ".", ".", ".", "F0", ".", ".", ".",
+      "Eb0", ".", ".", ".", "Db1", ".", ".", ".", "B0", ".", ".", ".", "Ab0", ".", ".", ".",
+      "C1", ".", ".", ".", "Gb0", ".", ".", ".", "F0", ".", ".", ".", "E0", ".", ".", ".",
+      "Eb0", ".", ".", ".", "Db1", ".", ".", ".", "G0", ".", ".", ".", "Gb0", ".", ".", "."
+    ],
+    drums: [
+      "P", ".", ".", ".", "P", ".", "G", ".", "P", ".", ".", ".", "M", ".", ".", ".",
+      "P", ".", ".", ".", "P", ".", "G", ".", "P", ".", "P", ".", "M", ".", "G", ".",
+      "P", ".", ".", ".", "P", ".", "G", ".", "P", ".", ".", ".", "M", ".", ".", ".",
+      "P", ".", "P", ".", "M", ".", "G", ".", "P", ".", "P", ".", "T", ".", "G", ".",
+      "T", ".", "P", ".", "P", ".", "G", ".", "P", ".", "P", ".", "M", ".", "G", ".",
+      "T", ".", "P", ".", "P", ".", "M", ".", "P", ".", "P", ".", "T", ".", "M", ".",
+      "P", ".", ".", ".", "P", ".", "G", ".", "P", ".", "P", ".", "M", ".", ".", ".",
+      "T", ".", "P", ".", "M", ".", "P", ".", "T", ".", "P", ".", "M", ".", "G", "."
+    ]
+  },
+  biome3: {
+    id: "biome3",
+    title: "Las Profundidades Extremas",
+    audioSrc: "Assets/Audio/bioma3_8bit.wav",
+    bpm: 52,
+    leadWave: "sawtooth",
+    harmWave: "sawtooth",
+    bassSubWave: "sawtooth",
+    droneWave: "square",
+    leadGain: 0.048,
+    harmGain: 0.032,
+    bassGain: 0.088,
+    droneGain: 0.034,
+    leadFilterFreq: 980,
+    harmFilterFreq: 860,
+    bassFilterFreq: 290,
+    droneFilterFreq: 240,
+    leadAttack: 0.04,
+    leadVibratoHz: 3.2,
+    leadVibratoDepth: 3.4,
+    harmDetune: -11,
+    droneDetune: 12,
+    lead: [
+      "A3", ".", ".", ".", "Bb3", ".", "-", "-", "E3", ".", ".", ".", "Eb3", ".", ".", "-",
+      "-", "-", "F3", ".", "E3", ".", "Bb2", ".", "A2", ".", "Ab2", ".", ".", "-", "-", "-",
+      "Eb5", ".", ".", "-", "E5", ".", "Bb4", ".", "A4", ".", "Ab4", ".", ".", "-", "-", "-",
+      "C4", ".", "B3", ".", "Bb3", ".", "-", "-", "F3", ".", "E3", ".", "Eb3", ".", "-", "-",
+      "A3", ".", "Bb3", ".", "C4", ".", "B3", ".", "Bb3", ".", "E3", ".", "Eb3", ".", "D3", ".",
+      "Db3", ".", ".", "-", "G3", ".", "Gb3", ".", "F3", ".", "E3", ".", "Eb3", ".", ".", "-",
+      "C4", ".", ".", "-", "B3", ".", "Bb3", ".", "-", "-", "E3", ".", "Eb3", ".", "-", "-",
+      "F3", ".", "E3", ".", "Eb3", ".", "D3", ".", "Bb2", ".", "Eb3", ".", "E3", ".", "-", "-"
+    ],
+    harm: [
+      "Eb3", ".", ".", ".", "E3", ".", "-", "-", "Bb2", ".", ".", ".", "A2", ".", ".", "-",
+      "-", "-", "B2", ".", "Bb2", ".", "E2", ".", "Eb2", ".", "D2", ".", ".", "-", "-", "-",
+      "A4", ".", ".", "-", "Bb4", ".", "E4", ".", "Eb4", ".", "D4", ".", ".", "-", "-", "-",
+      "Gb3", ".", "F3", ".", "E3", ".", "-", "-", "B2", ".", "Bb2", ".", "A2", ".", "-", "-",
+      "Eb3", ".", "E3", ".", "Gb3", ".", "F3", ".", "E3", ".", "Bb2", ".", "A2", ".", "Ab2", ".",
+      "G2", ".", ".", "-", "Db3", ".", "C3", ".", "B2", ".", "Bb2", ".", "A2", ".", ".", "-",
+      "Gb3", ".", ".", "-", "F3", ".", "E3", ".", "-", "-", "Bb2", ".", "A2", ".", "-", "-",
+      "B2", ".", "Bb2", ".", "A2", ".", "Ab2", ".", "E2", ".", "A2", ".", "Bb2", ".", ".", "-"
+    ],
+    bass: [
+      "A1", ".", ".", ".", "Eb1", ".", ".", ".", "E1", ".", ".", ".", "Bb0", ".", ".", ".",
+      "A0", ".", ".", ".", "Bb0", ".", ".", ".", "E1", ".", ".", ".", "Eb1", ".", ".", ".",
+      "A1", ".", ".", ".", "Bb1", ".", ".", ".", "E1", ".", ".", ".", "Eb1", ".", ".", ".",
+      "Gb1", ".", ".", ".", "F1", ".", ".", ".", "B0", ".", ".", ".", "Bb0", ".", ".", ".",
+      "A1", ".", "G1", ".", "Gb1", ".", "F1", ".", "E1", ".", "Eb1", ".", "D1", ".", "Db1", ".",
+      "C1", ".", "B0", ".", "Bb0", ".", "A0", ".", "Ab0", ".", "G0", ".", "Gb0", ".", "F0", ".",
+      "A1", ".", ".", ".", "Eb1", ".", ".", ".", "Bb0", ".", ".", ".", "A0", ".", ".", ".",
+      "B0", ".", ".", ".", "Bb0", ".", ".", ".", "E1", ".", ".", ".", "Eb1", ".", "Bb0", "."
+    ],
+    drone: [
+      "A0", ".", ".", ".", ".", ".", ".", ".", "Eb1", ".", ".", ".", ".", ".", ".", ".",
+      "A0", ".", ".", ".", "Bb0", ".", ".", ".", "E0", ".", ".", ".", "Eb0", ".", ".", ".",
+      "A0", ".", ".", ".", "Bb0", ".", ".", ".", "E0", ".", ".", ".", "Eb0", ".", ".", ".",
+      "Gb0", ".", ".", ".", "F0", ".", ".", ".", "B0", ".", ".", ".", "Bb0", ".", ".", ".",
+      "A0", ".", ".", ".", "Gb0", ".", ".", ".", "E0", ".", ".", ".", "Eb0", ".", ".", ".",
+      "C1", ".", ".", ".", "Bb0", ".", ".", ".", "Ab0", ".", ".", ".", "F0", ".", ".", ".",
+      "A0", ".", ".", ".", "Eb0", ".", ".", ".", "Bb0", ".", ".", ".", "A0", ".", ".", ".",
+      "B0", ".", ".", ".", "Bb0", ".", ".", ".", "E0", ".", ".", ".", "Bb0", ".", ".", "."
+    ],
+    drums: [
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "M", ".", ".", ".",
+      "T", ".", ".", ".", "G", ".", ".", ".", "T", ".", ".", ".", "P", ".", ".", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "M", ".", ".", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "G", ".", ".", ".",
+      "T", ".", ".", ".", "M", ".", ".", ".", "T", ".", ".", ".", "P", ".", ".", ".",
+      "T", ".", ".", ".", "M", ".", ".", ".", "T", ".", ".", ".", "M", ".", "G", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "M", ".", ".", ".",
+      "T", ".", ".", ".", "P", ".", ".", ".", "T", ".", ".", ".", "M", ".", ".", "."
+    ]
+  }
+};
+
+
 class SoundEngine {
   constructor() {
     this.ctx = null;
+    this.masterCompressor = null;
+    this.masterMusicGain = null;
+    this.masterSfxGain = null;
+    this.noiseBuffer = null;
+    this.musicMuted = false;
+    this.baseMusicGainValue = 0.62;
+    this.musicDuckTimer = null;
+
+    this.currentTrackId = null;
+    this.desiredTrackId = "intro";
+
+    // Estado del secuenciador MIDI
+    this.midiCache = new Map();
+    this.midiLoadPromises = new Map();
+    this.activeMidiData = null;
+    this.midiNoteIndex = 0;
+    this.midiLoopStartTime = 0;
+    this.activeOscillators = new Set();
+
+    // Estado del secuenciador de respaldo (cuando un entorno file:// bloquea fetch)
+    this.musicStep = 0;
+    this.nextNoteTime = 0;
+    this.schedulerTimer = null;
+
+    // Caché de buffers Web Audio, elementos Audio y control de rugidos de jefe
+    this.sfxCache = new Map();
+    this.sfxBufferCache = new Map();
+    this.sfxRawBufferCache = new Map();
+    this.sfxTrimMeta = new Map();
+    this.sfxLoadPromises = new Map();
+    this.lastSfxTime = new Map();
+    this.activeSfxNodes = new Set();
+    this.sfxHistory = [];
+    this.playedBossRoars = new Set();
+
+    this.isGameOverActive = false;
+    this.gameOverEffectAudio = null;
+    this.gameOverSongAudio = null;
+    this.gameOverFallbackTimer = null;
+
+    this._unlockBound = false;
+    this.bindAutoUnlock();
+  }
+
+  bindAutoUnlock() {
+    if (this._unlockBound || typeof window === "undefined") return;
+    this._unlockBound = true;
+    const unlock = () => {
+      this.init();
+      if (this.isGameOverActive) {
+        if (this.gameOverSongAudio && this.gameOverSongAudio.paused && (!this.gameOverEffectAudio || this.gameOverEffectAudio.ended)) {
+          if (typeof this.gameOverSongAudio.play === "function") {
+            this.gameOverSongAudio.play().catch(() => {});
+          }
+        }
+        return;
+      }
+      if (this.desiredTrackId && !this.schedulerTimer) {
+        this.playMusic(this.desiredTrackId);
+      } else if (this.ctx && this.ctx.state === "running" && this.currentTrackId) {
+        if (this.nextNoteTime < this.ctx.currentTime) {
+          this.nextNoteTime = this.ctx.currentTime + 0.02;
+        }
+      }
+    };
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("touchstart", unlock, { passive: true });
+    window.addEventListener("click", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
   }
 
   init() {
-    if (!this.ctx) {
+    if (!this.ctx && typeof window !== "undefined") {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        let outputNode = this.ctx.destination;
+        if (typeof this.ctx.createDynamicsCompressor === "function") {
+          try {
+            this.masterCompressor = this.ctx.createDynamicsCompressor();
+            this.masterCompressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
+            this.masterCompressor.knee.setValueAtTime(12, this.ctx.currentTime);
+            this.masterCompressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+            this.masterCompressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+            this.masterCompressor.release.setValueAtTime(0.15, this.ctx.currentTime);
+            this.masterCompressor.connect(this.ctx.destination);
+            outputNode = this.masterCompressor;
+          } catch {
+            outputNode = this.ctx.destination;
+          }
+        }
+        this.masterMusicGain = this.ctx.createGain();
+        this.masterMusicGain.gain.value = this.musicMuted ? 0 : this.baseMusicGainValue;
+        this.masterMusicGain.connect(outputNode);
+
+        this.masterSfxGain = this.ctx.createGain();
+        this.masterSfxGain.gain.value = 0.92;
+        this.masterSfxGain.connect(outputNode);
+
+        this.buildNoiseBuffer();
+      }
     }
     if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
+    }
+    if (this.ctx && this.sfxRawBufferCache.size > 0) {
+      this.decodePendingSfxBuffers();
+    }
+  }
+
+  /**
+   * Analiza el AudioBuffer decodificado para detectar y recortar silencios muertos al inicio y al final,
+   * y calcular un factor de normalización suave que equilibre la mezcla sin alterar el archivo original.
+   */
+  prepareDecodedBuffer(audioBuffer, encodedSrc = "") {
+    if (!audioBuffer || typeof audioBuffer.getChannelData !== "function") return audioBuffer;
+    try {
+      const sr = audioBuffer.sampleRate || 44100;
+      const len = audioBuffer.length || 0;
+      const channels = Math.max(1, audioBuffer.numberOfChannels || 1);
+      if (len < 64) return audioBuffer;
+
+      const ch0 = audioBuffer.getChannelData(0);
+      const ch1 = channels > 1 ? audioBuffer.getChannelData(1) : null;
+      const startThreshold = 0.0075;
+      const endThreshold = 0.0035;
+
+      let firstActive = 0;
+      while (firstActive < len) {
+        const s = ch1 ? Math.max(Math.abs(ch0[firstActive]), Math.abs(ch1[firstActive])) : Math.abs(ch0[firstActive]);
+        if (s >= startThreshold) break;
+        firstActive++;
+      }
+      if (firstActive >= len) firstActive = 0;
+
+      let lastActive = len - 1;
+      while (lastActive > firstActive) {
+        const s = ch1 ? Math.max(Math.abs(ch0[lastActive]), Math.abs(ch1[lastActive])) : Math.abs(ch0[lastActive]);
+        if (s >= endThreshold) break;
+        lastActive--;
+      }
+
+      let peak = 0;
+      const step = Math.max(1, Math.floor((lastActive - firstActive + 1) / 4000));
+      for (let i = firstActive; i <= lastActive; i += step) {
+        const s = ch1 ? Math.max(Math.abs(ch0[i]), Math.abs(ch1[i])) : Math.abs(ch0[i]);
+        if (s > peak) peak = s;
+      }
+
+      const preMargin = Math.floor(sr * 0.002);
+      const postMargin = Math.floor(sr * 0.025);
+      const startSample = Math.max(0, firstActive - preMargin);
+      const endSample = Math.min(len, lastActive + postMargin);
+      const trimStartSec = startSample / sr;
+      const rawTrimDurationSec = Math.max(0.04, (endSample - startSample) / sr);
+      const isRoarOrDeath = encodedSrc.includes("/monster/") || encodedSrc.includes("game-over");
+      const maxAllowedDur = isRoarOrDeath ? 4.5 : 2.2;
+      const trimDurationSec = Math.min(maxAllowedDur, rawTrimDurationSec);
+      const normGain = peak > 0.05 ? Math.min(1.25, Math.max(0.72, 0.88 / peak)) : 1.0;
+
+      audioBuffer._trimStartSec = trimStartSec;
+      audioBuffer._trimDurationSec = trimDurationSec;
+      audioBuffer._normGain = normGain;
+      this.sfxTrimMeta.set(encodedSrc, { trimStartSec, trimDurationSec, normGain });
+    } catch {}
+    return audioBuffer;
+  }
+
+  decodePendingSfxBuffers() {
+    if (!this.ctx || typeof this.ctx.decodeAudioData !== "function") return;
+    this.sfxRawBufferCache.forEach((rawBuf, encodedSrc) => {
+      if (this.sfxBufferCache.has(encodedSrc)) return;
+      this.sfxRawBufferCache.delete(encodedSrc);
+      try {
+        const copy = rawBuf.slice(0);
+        const decodeRes = this.ctx.decodeAudioData(
+          copy,
+          decoded => {
+            if (decoded) {
+              this.prepareDecodedBuffer(decoded, encodedSrc);
+              this.sfxBufferCache.set(encodedSrc, decoded);
+            }
+          },
+          () => {}
+        );
+        if (decodeRes && typeof decodeRes.then === "function") {
+          decodeRes.then(decoded => {
+            if (decoded) {
+              this.prepareDecodedBuffer(decoded, encodedSrc);
+              this.sfxBufferCache.set(encodedSrc, decoded);
+            }
+          }).catch(() => {});
+        }
+      } catch {}
+    });
+  }
+
+  /**
+   * Precarga en memoria un archivo de efecto de sonido o música MP3/WAV sin reproducirlo.
+   */
+  async preloadAudioFile(src, { decodeBuffer = true } = {}) {
+    if (!src) return null;
+    const encodedSrc = encodeURI(src);
+    if (typeof Audio !== "undefined" && !this.sfxCache.has(encodedSrc)) {
+      try {
+        const audioEl = new Audio();
+        audioEl.preload = "auto";
+        audioEl.src = encodedSrc;
+        this.sfxCache.set(encodedSrc, audioEl);
+      } catch {}
+    }
+    if (!decodeBuffer || typeof fetch !== "function") {
+      return this.sfxCache.get(encodedSrc) || null;
+    }
+    if (this.sfxBufferCache.has(encodedSrc)) {
+      return this.sfxBufferCache.get(encodedSrc);
+    }
+    if (this.sfxLoadPromises.has(encodedSrc)) {
+      return this.sfxLoadPromises.get(encodedSrc);
+    }
+    const promise = (async () => {
+      try {
+        const resp = await fetch(encodedSrc);
+        if (!resp.ok) return null;
+        const rawBuf = await resp.arrayBuffer();
+        if (!rawBuf || rawBuf.byteLength === 0) return null;
+        if (this.ctx && typeof this.ctx.decodeAudioData === "function") {
+          const decoded = await new Promise(resolve => {
+            try {
+              const copy = rawBuf.slice(0);
+              const res = this.ctx.decodeAudioData(copy, buf => resolve(buf), () => resolve(null));
+              if (res && typeof res.then === "function") {
+                res.then(resolve).catch(() => resolve(null));
+              }
+            } catch {
+              resolve(null);
+            }
+          });
+          if (decoded) {
+            this.prepareDecodedBuffer(decoded, encodedSrc);
+            this.sfxBufferCache.set(encodedSrc, decoded);
+            return decoded;
+          }
+        } else {
+          this.sfxRawBufferCache.set(encodedSrc, rawBuf);
+        }
+        return rawBuf;
+      } catch {
+        return null;
+      }
+    })();
+    this.sfxLoadPromises.set(encodedSrc, promise);
+    const result = await promise;
+    this.sfxLoadPromises.delete(encodedSrc);
+    return result;
+  }
+
+  /**
+   * Precarga y parsea una pista MIDI en memoria sin iniciar su reproducción.
+   */
+  async preloadMidiTrack(trackId) {
+    return this.loadMidiTrack(trackId);
+  }
+
+  canTriggerSfx(sfxKey, dedupeMs = 45) {
+    if (!sfxKey || dedupeMs <= 0) return true;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const prev = this.lastSfxTime.get(sfxKey);
+    if (prev !== undefined && (now - prev) < dedupeMs) {
+      return false;
+    }
+    this.lastSfxTime.set(sfxKey, now);
+    return true;
+  }
+
+  recordSfxHistory(sfxKey, src) {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.sfxHistory.push({ key: sfxKey, src, time: now });
+    if (this.sfxHistory.length > 120) {
+      this.sfxHistory.shift();
+    }
+  }
+
+  /**
+   * Atenúa temporalmente el bus de música cuando ocurre un evento sonoro prioritario (como el rugido de un jefe).
+   */
+  duckMusicTemporarily(duckedGain = 0.34, durationMs = 1100) {
+    if (this.musicMuted || !this.ctx || !this.masterMusicGain) return;
+    clearTimeout(this.musicDuckTimer);
+    const now = this.ctx.currentTime;
+    try {
+      this.masterMusicGain.gain.cancelScheduledValues(now);
+      this.masterMusicGain.gain.setTargetAtTime(duckedGain, now, 0.035);
+    } catch {}
+    this.musicDuckTimer = setTimeout(() => {
+      this.musicDuckTimer = null;
+      if (!this.musicMuted && this.ctx && this.masterMusicGain) {
+        try {
+          this.masterMusicGain.gain.setTargetAtTime(this.baseMusicGainValue, this.ctx.currentTime, 0.18);
+        } catch {}
+      }
+    }, durationMs);
+  }
+
+  buildNoiseBuffer() {
+    if (!this.ctx || this.noiseBuffer) return;
+    const sr = this.ctx.sampleRate;
+    const len = Math.floor(sr * 0.35);
+    const buffer = this.ctx.createBuffer(1, len, sr);
+    const data = buffer.getChannelData(0);
+    let lfsr = 0x4000;
+    for (let i = 0; i < len; i++) {
+      if (i % 3 === 0) {
+        const bit = ((lfsr >> 0) ^ (lfsr >> 1)) & 1;
+        lfsr = (lfsr >> 1) | (bit << 14);
+      }
+      data[i] = (lfsr & 1) ? 1.0 : -1.0;
+    }
+    this.noiseBuffer = buffer;
+  }
+
+  /**
+   * Comprueba si los efectos normales de acciones del juego deben silenciarse
+   * porque se está mostrando la introducción narrativa.
+   */
+  areGameplaySfxSuppressed() {
+    const gc = typeof window !== "undefined" ? (window.__lior || window.gameController) : null;
+    return !!(gc && typeof gc.isIntroActive === "function" && gc.isIntroActive());
+  }
+
+  /**
+   * Reproduce un archivo de audio MP3/WAV desde su ruta exacta en Assets/Audio/.
+   * Utiliza AudioBuffer decodificado con recorte automático de silencio muerto y envolvente suave
+   * cuando está disponible, e instancias aisladas de HTMLAudioElement como respaldo.
+   */
+  playAudioFile(src, { volume = 0.85, loop = false, onEnded = null, fallbackFn = null, sfxKey = null, dedupeMs = 45, forceHtmlAudio = false } = {}) {
+    if (!src) {
+      if (typeof fallbackFn === "function") fallbackFn();
+      return null;
+    }
+    const key = sfxKey || src;
+    if (!loop && !this.canTriggerSfx(key, dedupeMs)) {
+      return null;
+    }
+    this.recordSfxHistory(key, src);
+
+    const encodedSrc = encodeURI(src);
+    this.init();
+
+    const isNativeAudioElement = typeof Audio === "function" && /\[native code\]/.test(Function.prototype.toString.call(Audio));
+    if (
+      !forceHtmlAudio &&
+      !loop &&
+      isNativeAudioElement &&
+      this.ctx &&
+      this.ctx.state === "running" &&
+      this.sfxBufferCache.has(encodedSrc) &&
+      typeof this.ctx.createBufferSource === "function"
+    ) {
+      try {
+        const buffer = this.sfxBufferCache.get(encodedSrc);
+        const source = this.ctx.createBufferSource();
+        const gainNode = this.ctx.createGain();
+        source.buffer = buffer;
+        source.loop = false;
+
+        const now = this.ctx.currentTime;
+        const offsetSec = buffer._trimStartSec || 0;
+        const playDurSec = buffer._trimDurationSec || Math.max(0.04, buffer.duration - offsetSec);
+        const effVol = Math.max(0.001, Math.min(1.15, volume * (buffer._normGain || 1.0)));
+        const fadeOutStart = now + Math.max(0.015, playDurSec - 0.018);
+
+        gainNode.gain.setValueAtTime(effVol, now);
+        gainNode.gain.setValueAtTime(effVol, fadeOutStart);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + playDurSec);
+
+        source.connect(gainNode);
+        gainNode.connect(this.masterSfxGain || this.ctx.destination);
+
+        let endedHandled = false;
+        const handleObj = {
+          source,
+          gainNode,
+          src: encodedSrc,
+          loop: false,
+          paused: false,
+          ended: false,
+          currentTime: 0,
+          onended: null,
+          pause: () => {
+            if (handleObj.ended) return;
+            handleObj.paused = true;
+            handleObj.ended = true;
+            try { source.stop(); } catch {}
+            try { source.disconnect(); } catch {}
+            this.activeSfxNodes.delete(source);
+          }
+        };
+
+        this.activeSfxNodes.add(source);
+        source.onended = () => {
+          this.activeSfxNodes.delete(source);
+          handleObj.ended = true;
+          handleObj.paused = true;
+          if (endedHandled) return;
+          endedHandled = true;
+          if (typeof handleObj.onended === "function") handleObj.onended();
+          if (typeof onEnded === "function") onEnded();
+        };
+        source.start(now, offsetSec, playDurSec);
+        return handleObj;
+      } catch {
+        // Continúa con el respaldo HTMLAudioElement
+      }
+    }
+
+    if (!loop && !this.sfxBufferCache.has(encodedSrc) && !this.sfxLoadPromises.has(encodedSrc)) {
+      this.preloadAudioFile(src, { decodeBuffer: true }).catch(() => {});
+    }
+
+    if (typeof Audio === "undefined") {
+      if (typeof fallbackFn === "function") fallbackFn();
+      if (typeof onEnded === "function") setTimeout(onEnded, 650);
+      return null;
+    }
+
+    try {
+      let baseAudio = this.sfxCache.get(encodedSrc);
+      if (!baseAudio) {
+        baseAudio = new Audio(encodedSrc);
+        baseAudio.preload = "auto";
+        this.sfxCache.set(encodedSrc, baseAudio);
+      }
+
+      const instance = (typeof baseAudio.cloneNode === "function" && baseAudio.readyState >= 2)
+        ? baseAudio.cloneNode()
+        : new Audio(encodedSrc);
+      instance.preload = "auto";
+      instance.loop = !!loop;
+      const trimMeta = this.sfxTrimMeta.get(encodedSrc);
+      const normGain = trimMeta?.normGain || 1.0;
+      instance.volume = Math.max(0, Math.min(1, volume * Math.min(1.08, normGain)));
+      try {
+        instance.currentTime = (!loop && trimMeta?.trimStartSec) ? trimMeta.trimStartSec : 0;
+      } catch {}
+
+      let endedHandled = false;
+      const triggerEnded = () => {
+        if (endedHandled) return;
+        endedHandled = true;
+        if (typeof onEnded === "function") onEnded();
+      };
+
+      if (typeof onEnded === "function") {
+        instance.addEventListener("ended", triggerEnded, { once: true });
+      }
+
+      const playPromise = instance.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          if (typeof fallbackFn === "function") fallbackFn();
+          if (typeof onEnded === "function") {
+            setTimeout(triggerEnded, 650);
+          }
+        });
+      }
+      return instance;
+    } catch {
+      if (typeof fallbackFn === "function") fallbackFn();
+      if (typeof onEnded === "function") setTimeout(onEnded, 650);
+      return null;
+    }
+  }
+
+  /**
+   * Carga y parsea un archivo MIDI (.mid / .midi) desde Assets/Audio/bgm/.
+   */
+  async loadMidiTrack(trackId) {
+    if (this.midiCache.has(trackId)) return this.midiCache.get(trackId);
+    if (this.midiLoadPromises.has(trackId)) return this.midiLoadPromises.get(trackId);
+
+    const trackMeta = CHIPTUNE_TRACKS[trackId];
+    if (!trackMeta || !trackMeta.audioSrc || typeof fetch !== "function") return null;
+
+    const promise = (async () => {
+      const baseSrc = trackMeta.audioSrc;
+      const candidates = [baseSrc];
+      if (baseSrc.endsWith(".mid")) {
+        candidates.push(baseSrc.slice(0, -4) + ".midi");
+      } else if (baseSrc.endsWith(".midi")) {
+        candidates.push(baseSrc.slice(0, -5) + ".mid");
+      }
+
+      for (const candidate of candidates) {
+        try {
+          const resp = await fetch(encodeURI(candidate));
+          if (!resp.ok) continue;
+          const buf = await resp.arrayBuffer();
+          const parsed = parseStandardMidiFile(buf);
+          if (parsed && parsed.notes.length > 0) {
+            this.midiCache.set(trackId, parsed);
+            return parsed;
+          }
+        } catch {
+          // Continúa con el siguiente candidato o usa el sintetizador de respaldo
+        }
+      }
+      return null;
+    })();
+
+    this.midiLoadPromises.set(trackId, promise);
+    const result = await promise;
+    this.midiLoadPromises.delete(trackId);
+    return result;
+  }
+
+  stopAllScheduledVoices() {
+    this.activeOscillators.forEach(node => {
+      try { node.stop(); } catch {}
+      try { node.disconnect(); } catch {}
+    });
+    this.activeOscillators.clear();
+  }
+
+  /**
+   * Inicia o cambia la pista de música de fondo en bucle continuo sin reiniciarla si ya está activa.
+   */
+  playMusic(trackId) {
+    if (!trackId || !CHIPTUNE_TRACKS[trackId]) return;
+    if (this.isGameOverActive) return;
+
+    this.desiredTrackId = trackId;
+    this.init();
+    if (!this.ctx) return;
+
+    if (this.currentTrackId === trackId && this.schedulerTimer !== null) {
+      return;
+    }
+
+    this.stopAllScheduledVoices();
+    this.currentTrackId = trackId;
+    this.activeMidiData = this.midiCache.get(trackId) || null;
+    this.midiNoteIndex = 0;
+    this.midiLoopStartTime = this.ctx.currentTime + 0.03;
+    this.musicStep = 0;
+    this.nextNoteTime = this.ctx.currentTime + 0.03;
+
+    if (!this.activeMidiData) {
+      this.loadMidiTrack(trackId).then(parsed => {
+        if (parsed && this.currentTrackId === trackId && !this.isGameOverActive && this.ctx) {
+          this.stopAllScheduledVoices();
+          this.activeMidiData = parsed;
+          this.midiNoteIndex = 0;
+          this.midiLoopStartTime = this.ctx.currentTime + 0.02;
+        }
+      });
+    }
+
+    if (this.schedulerTimer === null) {
+      this.schedulerTimer = setInterval(() => this.scheduleMusicSteps(), 25);
+    }
+    this.updateMusicButtonsUI();
+  }
+
+  stopMusic() {
+    this.desiredTrackId = null;
+    this.currentTrackId = null;
+    this.activeMidiData = null;
+    if (this.schedulerTimer !== null) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+    this.stopAllScheduledVoices();
+  }
+
+  /**
+   * Detiene inmediatamente el efecto de muerte y la canción en bucle de Game Over.
+   */
+  stopGameOverAudio() {
+    this.isGameOverActive = false;
+    if (this.gameOverFallbackTimer !== null) {
+      clearTimeout(this.gameOverFallbackTimer);
+      this.gameOverFallbackTimer = null;
+    }
+    if (this.gameOverEffectAudio) {
+      try {
+        this.gameOverEffectAudio.onended = null;
+        this.gameOverEffectAudio.pause();
+        this.gameOverEffectAudio.currentTime = 0;
+      } catch {}
+      this.gameOverEffectAudio = null;
+    }
+    if (this.gameOverSongAudio) {
+      try {
+        this.gameOverSongAudio.pause();
+        this.gameOverSongAudio.currentTime = 0;
+      } catch {}
+      this.gameOverSongAudio = null;
+    }
+  }
+
+  toggleMusicMute() {
+    this.musicMuted = !this.musicMuted;
+    this.init();
+    if (this.masterMusicGain && this.ctx) {
+      clearTimeout(this.musicDuckTimer);
+      this.musicDuckTimer = null;
+      this.masterMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.masterMusicGain.gain.setValueAtTime(this.musicMuted ? 0 : this.baseMusicGainValue, this.ctx.currentTime);
+    }
+    if (this.gameOverSongAudio) {
+      this.gameOverSongAudio.volume = this.musicMuted ? 0 : 0.76;
+    }
+    if (!this.musicMuted && !this.isGameOverActive && this.desiredTrackId && !this.schedulerTimer) {
+      this.playMusic(this.desiredTrackId);
+    }
+    this.updateMusicButtonsUI();
+    return !this.musicMuted;
+  }
+
+  updateMusicButtonsUI() {
+    const label = this.musicMuted ? "🔇" : "♪";
+    const hudBtn = document.getElementById("btn-music-toggle");
+    if (hudBtn) {
+      hudBtn.textContent = label;
+      hudBtn.title = this.musicMuted ? "Activar música (B)" : "Silenciar música (B)";
+      hudBtn.classList.toggle("is-muted", this.musicMuted);
+    }
+    const introBtn = document.getElementById("btn-intro-music");
+    if (introBtn) {
+      introBtn.textContent = this.musicMuted ? "🔇 MÚSICA OFF" : "♪ MÚSICA";
+    }
+    const menuBtn = document.getElementById("btn-menu-music");
+    if (menuBtn) {
+      menuBtn.textContent = this.musicMuted ? "🔇 Activar Música" : "♪ Silenciar Música";
+    }
+  }
+
+  scheduleMusicSteps() {
+    if (!this.ctx || !this.currentTrackId || this.isGameOverActive) return;
+    if (this.ctx.state === "suspended") return;
+
+    if (this.activeMidiData && this.activeMidiData.notes.length > 0) {
+      this.scheduleMidiTrackSteps(this.activeMidiData);
+      return;
+    }
+
+    const meta = CHIPTUNE_TRACKS[this.currentTrackId];
+    const fallbackKey = meta?.fallbackId || "biome1";
+    const track = FALLBACK_SYNTH_PATTERNS[fallbackKey] || FALLBACK_SYNTH_PATTERNS.biome1;
+    if (!track) return;
+
+    const totalSteps = track.lead.length || 128;
+    const stepDuration = 60.0 / track.bpm / 4.0;
+    const now = this.ctx.currentTime;
+
+    if (this.nextNoteTime < now - 0.15) {
+      this.nextNoteTime = now + 0.02;
+    }
+
+    while (this.nextNoteTime < now + 0.12) {
+      this.scheduleSingleStep(track, this.musicStep, this.nextNoteTime, stepDuration, totalSteps);
+      this.nextNoteTime += stepDuration;
+      this.musicStep = (this.musicStep + 1) % totalSteps;
+    }
+  }
+
+  /**
+   * Secuenciador en tiempo real de eventos MIDI con bucle continuo sin cortes y resincronización suave.
+   */
+  scheduleMidiTrackSteps(midiData) {
+    const now = this.ctx.currentTime;
+    const lookahead = 0.14;
+    const { notes, totalDuration } = midiData;
+
+    if (this.midiNoteIndex >= notes.length) {
+      this.midiLoopStartTime += totalDuration;
+      this.midiNoteIndex = 0;
+    }
+
+    const expectedTime = this.midiLoopStartTime + (notes[this.midiNoteIndex]?.startTime || 0);
+    if (now - expectedTime > 0.25) {
+      this.midiLoopStartTime = now - (notes[this.midiNoteIndex]?.startTime || 0);
+    }
+
+    let safety = 0;
+    while (safety++ < 64) {
+      if (this.midiNoteIndex >= notes.length) {
+        this.midiLoopStartTime += totalDuration;
+        this.midiNoteIndex = 0;
+      }
+      const ev = notes[this.midiNoteIndex];
+      const absNoteTime = this.midiLoopStartTime + ev.startTime;
+      if (absNoteTime > now + lookahead) {
+        break;
+      }
+      if (absNoteTime >= now - 0.05) {
+        this.triggerMidiNoteEvent(ev, Math.max(now, absNoteTime));
+      }
+      this.midiNoteIndex++;
+    }
+  }
+
+  triggerMidiNoteEvent(ev, time) {
+    if (this.musicMuted || !this.masterMusicGain || !this.ctx) return;
+
+    if (ev.channel === 9) {
+      const p = ev.pitch;
+      const velScale = Math.max(0.2, Math.min(1.0, ev.velocity / 127));
+      if (p === 35 || p === 36 || p === 41 || p === 43 || p === 45) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(p <= 36 ? 95 : 115, time);
+        osc.frequency.exponentialRampToValueAtTime(28, time + 0.18);
+        gain.gain.setValueAtTime(0.062 * velScale, time);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
+        osc.connect(gain);
+        gain.connect(this.masterMusicGain);
+        this.activeOscillators.add(osc);
+        osc.onended = () => this.activeOscillators.delete(osc);
+        osc.start(time);
+        osc.stop(time + 0.21);
+      } else if (this.noiseBuffer) {
+        const isSnare = (p === 38 || p === 40 || p === 37 || p === 39);
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = isSnare ? "bandpass" : "highpass";
+        filter.frequency.setValueAtTime(isSnare ? 950 : 3600, time);
+        const gain = this.ctx.createGain();
+        const dur = isSnare ? 0.12 : 0.05;
+        gain.gain.setValueAtTime((isSnare ? 0.034 : 0.017) * velScale, time);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterMusicGain);
+        this.activeOscillators.add(noise);
+        noise.onended = () => this.activeOscillators.delete(noise);
+        noise.start(time);
+        noise.stop(time + dur + 0.01);
+      }
+      return;
+    }
+
+    const freq = 440 * Math.pow(2, (ev.pitch - 69) / 12);
+    if (!Number.isFinite(freq) || freq < 20 || freq > 12000) return;
+
+    const prog = ev.program || 0;
+    const isBass = (prog >= 32 && prog <= 39) || ev.pitch < 46;
+    const isStringsOrPad = (prog >= 16 && prog <= 23) || (prog >= 40 && prog <= 55) || (prog >= 88 && prog <= 95);
+    const waveType = isBass ? "triangle" : (isStringsOrPad ? "sawtooth" : "square");
+    const filterFreq = isBass ? 420 : (isStringsOrPad ? 1350 : 1850);
+    const velNorm = Math.max(0.15, Math.min(1.0, ev.velocity / 127));
+    const baseGain = isBass ? 0.064 : (isStringsOrPad ? 0.032 : 0.039);
+    const gainVal = baseGain * velNorm;
+    const dur = Math.max(0.04, Math.min(4.5, ev.duration));
+    const atk = isStringsOrPad ? Math.min(0.04, dur * 0.3) : 0.012;
+
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = waveType;
+    osc.frequency.setValueAtTime(freq, time);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(filterFreq, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(gainVal, time + atk);
+    gain.gain.setValueAtTime(gainVal * 0.78, time + dur * 0.75);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterMusicGain);
+
+    this.activeOscillators.add(osc);
+    osc.onended = () => this.activeOscillators.delete(osc);
+    osc.start(time);
+    osc.stop(time + dur + 0.01);
+  }
+
+  scheduleTonalVoice({
+    seq,
+    step,
+    totalSteps,
+    time,
+    stepDuration,
+    waveType = "square",
+    gainValue = 0.045,
+    filterFreq = 1400,
+    attackTime = 0.02,
+    detuneCents = 0,
+    vibratoHz = 0,
+    vibratoDepth = 0,
+    subWave = null
+  }) {
+    if (!seq) return;
+    const note = seq[step];
+    if (!note || note === "." || note === "-") return;
+
+    const freq = chiptuneNoteToFreq(note);
+    if (freq <= 0) return;
+
+    let holdSteps = 1;
+    while (step + holdSteps < totalSteps && seq[step + holdSteps] === ".") {
+      holdSteps++;
+    }
+
+    const dur = stepDuration * holdSteps * 0.96;
+    const atk = Math.min(attackTime, dur * 0.35);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(filterFreq, time);
+    filter.Q.setValueAtTime(1.2, time);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(gainValue, time + atk);
+    gain.gain.setValueAtTime(gainValue * 0.82, time + dur * 0.72);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+    const osc = this.ctx.createOscillator();
+    osc.type = waveType;
+    osc.frequency.setValueAtTime(freq, time);
+    if (detuneCents) {
+      osc.detune.setValueAtTime(detuneCents, time);
+    }
+
+    if (vibratoHz > 0 && vibratoDepth > 0 && dur > 0.25) {
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(vibratoHz, time);
+      lfoGain.gain.setValueAtTime(vibratoDepth, time);
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.detune);
+      lfo.start(time + 0.1);
+      lfo.stop(time + dur);
+    }
+
+    osc.connect(filter);
+
+    if (subWave) {
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = subWave;
+      subOsc.frequency.setValueAtTime(freq * 0.5, time);
+      subGain.gain.setValueAtTime(0.45, time);
+      subOsc.connect(subGain);
+      subGain.connect(filter);
+      this.activeOscillators.add(subOsc);
+      subOsc.onended = () => this.activeOscillators.delete(subOsc);
+      subOsc.start(time);
+      subOsc.stop(time + dur + 0.008);
+    }
+
+    filter.connect(gain);
+    gain.connect(this.masterMusicGain);
+    this.activeOscillators.add(osc);
+    osc.onended = () => this.activeOscillators.delete(osc);
+    osc.start(time);
+    osc.stop(time + dur + 0.008);
+  }
+
+  scheduleSingleStep(track, step, time, stepDuration, totalSteps = 128) {
+    if (this.musicMuted || !this.masterMusicGain) return;
+
+    this.scheduleTonalVoice({
+      seq: track.lead,
+      step,
+      totalSteps,
+      time,
+      stepDuration,
+      waveType: track.leadWave || "square",
+      gainValue: track.leadGain || 0.046,
+      filterFreq: track.leadFilterFreq || 1400,
+      attackTime: track.leadAttack || 0.025,
+      vibratoHz: track.leadVibratoHz || 0,
+      vibratoDepth: track.leadVibratoDepth || 0
+    });
+
+    this.scheduleTonalVoice({
+      seq: track.harm,
+      step,
+      totalSteps,
+      time,
+      stepDuration,
+      waveType: track.harmWave || "triangle",
+      gainValue: track.harmGain || 0.03,
+      filterFreq: track.harmFilterFreq || 1200,
+      attackTime: 0.02,
+      detuneCents: track.harmDetune || 0
+    });
+
+    this.scheduleTonalVoice({
+      seq: track.bass,
+      step,
+      totalSteps,
+      time,
+      stepDuration,
+      waveType: "triangle",
+      gainValue: track.bassGain || 0.075,
+      filterFreq: track.bassFilterFreq || 340,
+      attackTime: 0.014,
+      subWave: track.bassSubWave || null
+    });
+
+    if (track.drone) {
+      this.scheduleTonalVoice({
+        seq: track.drone,
+        step,
+        totalSteps,
+        time,
+        stepDuration,
+        waveType: track.droneWave || "sawtooth",
+        gainValue: track.droneGain || 0.024,
+        filterFreq: track.droneFilterFreq || 260,
+        attackTime: 0.045,
+        detuneCents: track.droneDetune || 0
+      });
+    }
+
+    const drum = track.drums ? track.drums[step] : ".";
+    if (drum === "T") {
+      const oscT = this.ctx.createOscillator();
+      const filterT = this.ctx.createBiquadFilter();
+      const gainT = this.ctx.createGain();
+      oscT.type = "triangle";
+      oscT.frequency.setValueAtTime(92, time);
+      oscT.frequency.exponentialRampToValueAtTime(28, time + 0.26);
+      filterT.type = "lowpass";
+      filterT.frequency.setValueAtTime(240, time);
+      gainT.gain.setValueAtTime(0.068, time);
+      gainT.gain.exponentialRampToValueAtTime(0.0001, time + 0.28);
+      oscT.connect(filterT);
+      filterT.connect(gainT);
+      gainT.connect(this.masterMusicGain);
+      oscT.start(time);
+      oscT.stop(time + 0.29);
+    } else if (drum === "P") {
+      const oscP = this.ctx.createOscillator();
+      const gainP = this.ctx.createGain();
+      oscP.type = "triangle";
+      oscP.frequency.setValueAtTime(68, time);
+      oscP.frequency.exponentialRampToValueAtTime(26, time + 0.15);
+      gainP.gain.setValueAtTime(0.05, time);
+      gainP.gain.exponentialRampToValueAtTime(0.0001, time + 0.16);
+      oscP.connect(gainP);
+      gainP.connect(this.masterMusicGain);
+      oscP.start(time);
+      oscP.stop(time + 0.17);
+    } else if (drum === "M" && this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(620, time);
+      filter.Q.setValueAtTime(4.5, time);
+      const gainN = this.ctx.createGain();
+      gainN.gain.setValueAtTime(0.026, time);
+      gainN.gain.exponentialRampToValueAtTime(0.0001, time + 0.14);
+      noise.connect(filter);
+      filter.connect(gainN);
+      gainN.connect(this.masterMusicGain);
+      noise.start(time);
+      noise.stop(time + 0.15);
+    } else if (drum === "G" && this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(360, time);
+      const gainN = this.ctx.createGain();
+      gainN.gain.setValueAtTime(0.0001, time);
+      gainN.gain.linearRampToValueAtTime(0.018, time + 0.04);
+      gainN.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+      noise.connect(filter);
+      filter.connect(gainN);
+      gainN.connect(this.masterMusicGain);
+      noise.start(time);
+      noise.stop(time + 0.13);
     }
   }
 
   playLogoJingle() {
     this.init();
     if (!this.ctx) return;
+    const out = this.masterSfxGain || this.ctx.destination;
     const chordNotes = [261.63, 329.63, 392.00, 523.25];
     chordNotes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime + idx * 0.08);
+      gain.gain.setValueAtTime(0.075, this.ctx.currentTime + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.6);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(out);
       osc.start(this.ctx.currentTime + idx * 0.08);
       osc.stop(this.ctx.currentTime + idx * 0.08 + 0.6);
     });
   }
 
   playStep() {
+    if (this.areGameplaySfxSuppressed()) return;
+    if (!this.canTriggerSfx("step", 45)) return;
+    this.recordSfxHistory("step", "synth:step");
     this.init();
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -189,15 +1888,18 @@ class SoundEngine {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(90, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.075, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterSfxGain || this.ctx.destination);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.05);
   }
 
   playSword() {
+    if (this.areGameplaySfxSuppressed()) return;
+    if (!this.canTriggerSfx("sword", 70)) return;
+    this.recordSfxHistory("sword", "synth:sword");
     this.init();
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -205,136 +1907,176 @@ class SoundEngine {
     osc.type = "sine";
     osc.frequency.setValueAtTime(750, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(this.masterSfxGain || this.ctx.destination);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.12);
   }
 
-  playShot(isMusket = false) {
-    this.init();
-    if (!this.ctx) return;
-    const bufferSize = Math.floor(this.ctx.sampleRate * (isMusket ? 0.25 : 0.16));
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(isMusket ? 650 : 950, this.ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(isMusket ? 0.35 : 0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (isMusket ? 0.25 : 0.16));
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
-    noise.start();
+  playShot(weaponIdOrIsMusket = "pistol") {
+    if (this.areGameplaySfxSuppressed()) return;
+    let weaponId = weaponIdOrIsMusket;
+    if (typeof weaponIdOrIsMusket === "boolean") {
+      weaponId = weaponIdOrIsMusket ? "musket" : "pistol";
+    }
+    const srcMap = {
+      pistol: AUDIO_FILES.actions.pistol,
+      musket: AUDIO_FILES.actions.musket,
+      blunderbuss: AUDIO_FILES.actions.blunderbuss
+    };
+    const src = srcMap[weaponId] || AUDIO_FILES.actions.pistol;
+    this.playAudioFile(src, { volume: 0.84, sfxKey: `shot:${weaponId}`, dedupeMs: 70 });
   }
 
   playHurt() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.2);
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.liorHurt, { volume: 0.85, sfxKey: "liorHurt", dedupeMs: 90 });
   }
 
   playHeal() {
-    this.init();
-    if (!this.ctx) return;
-    const notes = [330, 440, 554, 659];
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.05);
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime + idx * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.25);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + idx * 0.05);
-      osc.stop(this.ctx.currentTime + idx * 0.05 + 0.25);
-    });
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.heal, { volume: 0.82, sfxKey: "heal", dedupeMs: 80 });
   }
 
   playEldritchBlast() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(640, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(90, this.ctx.currentTime + 0.35);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.35);
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.eldritchBlast, { volume: 0.88, sfxKey: "eldritchBlast", dedupeMs: 80 });
   }
 
   playMisty() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(260, this.ctx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.3);
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.mistyStep, { volume: 0.82, sfxKey: "mistyStep", dedupeMs: 80 });
   }
 
   playCoin() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
-    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.07);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.25);
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.coinPick, { volume: 0.78, sfxKey: "coinPick", dedupeMs: 55 });
   }
 
+  playPickup() {
+    if (this.areGameplaySfxSuppressed()) return;
+    this.playAudioFile(AUDIO_FILES.actions.pickup, { volume: 0.78, sfxKey: "pickup", dedupeMs: 65 });
+  }
+
+  /**
+   * Restablece el registro de rugidos de jefe reproducidos (al iniciar nueva partida) o para un piso concreto.
+   */
+  resetBossRoarTracking(floorNumber = null) {
+    if (floorNumber === null || floorNumber === undefined) {
+      this.playedBossRoars.clear();
+      return;
+    }
+    const prefix = `${Math.floor(Number(floorNumber) || 0)}:`;
+    for (const key of [...this.playedBossRoars]) {
+      if (key.startsWith(prefix)) this.playedBossRoars.delete(key);
+    }
+  }
+
+  /**
+   * Centraliza la decisión de si se permite reproducir un rugido de jefe:
+   * - Exclusivamente en los niveles múltiplos de 10 (10, 20, 30, 40, 50, 60, 70, 80, 90 y 100).
+   * - Nunca en los niveles intermedios (1–9, 11–19, 21–29, ..., 91–99).
+   * - Exclusivamente para la criatura jefe principal del encuentro (isMegaBoss / tamaño 4x4).
+   * - Una única vez por aparición legítima del jefe.
+   */
+  isBossRoarEligible(enemy = null, floorNumber = 1, { ignorePlayed = false } = {}) {
+    const floor = Math.floor(Number(floorNumber) || 0);
+    if (floor < 10 || floor > 100 || floor % 10 !== 0) {
+      return false;
+    }
+    if (!enemy || !enemy.isMegaBoss || (enemy.size || 0) < 4 || (enemy.hp !== undefined && enemy.hp <= 0)) {
+      return false;
+    }
+    if (!ignorePlayed) {
+      if (enemy.roarPlayed) return false;
+      const roarId = `${floor}:${enemy.id || enemy.name || "boss"}`;
+      if (this.playedBossRoars.has(roarId)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Devuelve el archivo de rugido exacto correspondiente a la criatura jefe del nivel múltiplo de diez,
+   * o null si el nivel es intermedio (1–9 de cada ciclo) o la criatura no es un jefe de nivel múltiplo de diez:
+   * - Niveles 10, 20, 30 y 40 (Jefes 1–4): Assets/Audio/monster/1-4monster.mp3
+   * - Niveles 50, 60, 70, 80 y 90 (Jefes 5–9): Assets/Audio/monster/5-9monster.mp3
+   * - Nivel 100 (Dragón Final, Jefe 10): Assets/Audio/monster/Dragon.mp3
+   */
+  getMonsterRoarSrc(enemy = null, floorNumber = 1) {
+    const floor = Math.floor(Number(floorNumber) || 0);
+    if (!this.isBossRoarEligible(enemy, floor, { ignorePlayed: true })) {
+      return null;
+    }
+    if (floor === 100 || enemy?.originTier === 10) {
+      return AUDIO_FILES.monster.dragon;
+    }
+    const bossTier = enemy?.originTier || Math.min(10, Math.floor(floor / 10));
+    return bossTier <= 4 ? AUDIO_FILES.monster.floors1to4 : AUDIO_FILES.monster.floors5to9;
+  }
+
+  /**
+   * Reproduce el rugido de la criatura jefe exclusivamente cuando aparece en su nivel múltiplo de diez (10..100).
+   */
+  playMonsterRoar(enemy = null, floorNumber = 1) {
+    if (this.areGameplaySfxSuppressed() || this.isGameOverActive) return null;
+    const floor = Math.floor(Number(floorNumber) || 0);
+    if (!this.isBossRoarEligible(enemy, floor, { ignorePlayed: false })) {
+      return null;
+    }
+    const src = this.getMonsterRoarSrc(enemy, floor);
+    if (!src) return null;
+
+    enemy.roarPlayed = true;
+    const roarId = `${floor}:${enemy.id || enemy.name || "boss"}`;
+    this.playedBossRoars.add(roarId);
+    this.duckMusicTemporarily(0.34, 1150);
+
+    return this.playAudioFile(src, {
+      volume: 0.94,
+      sfxKey: `roar:${floor}:${src}`,
+      dedupeMs: 500
+    });
+  }
+
+  /**
+   * Secuencia de muerte y Game Over:
+   * 1. Detiene la música actual.
+   * 2. Reproduce inmediatamente Assets/Audio/game-over-efect.mp3.
+   * 3. Al terminar el efecto, si la pantalla de Game Over continúa activa, inicia
+   *    Assets/Audio/game-over-song.wav en bucle continuo.
+   */
   playDeath() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.7);
-    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.7);
+    if (this.isGameOverActive) return;
+    this.stopMusic();
+    this.stopGameOverAudio();
+    this.isGameOverActive = true;
+
+    const startLoopingGameOverSong = () => {
+      if (!this.isGameOverActive) return;
+      if (this.gameOverFallbackTimer !== null) {
+        clearTimeout(this.gameOverFallbackTimer);
+        this.gameOverFallbackTimer = null;
+      }
+      if (this.gameOverSongAudio) return;
+      this.gameOverSongAudio = this.playAudioFile(AUDIO_FILES.gameOverSong, {
+        volume: this.musicMuted ? 0 : 0.76,
+        loop: true,
+        sfxKey: "gameOverSong",
+        dedupeMs: 0,
+        forceHtmlAudio: true
+      });
+    };
+
+    this.gameOverEffectAudio = this.playAudioFile(AUDIO_FILES.gameOverEffect, {
+      volume: 0.90,
+      loop: false,
+      sfxKey: "gameOverEffect",
+      dedupeMs: 0,
+      forceHtmlAudio: true,
+      onEnded: startLoopingGameOverSong
+    });
   }
 }
 
@@ -353,6 +2095,7 @@ const TILE_WALL = 1;
 const TILE_ENTRANCE = 2;
 const TILE_EXIT = 3;
 const TILE_CHEST = 4;
+const TILE_BLUE_CHEST = 5;
 
 const ACTION_BINDINGS = {
   keyboard: { attack: "K", mist: "L", blast: "J", weapon: "I" },
@@ -430,21 +2173,44 @@ const ENEMY_ANIM_MS = { idle: 175, attack: 110, hurt: 100, death: 130 };
 const PROJECTILE_SHEET = {
   src: "Assets/Enemy/disparos.jpg",
   rows: { small: 0, medium: 1, large: 2 },
-  sizes: { small: 0.9, medium: 1.3, large: 2.2 }
+  sizes: { small: 0.9, medium: 1.3, large: 2.2 },
+  panels: {
+    small: [
+      { x: 263,  y: 108, w: 162, h: 163 },
+      { x: 1272, y: 160, w: 242, h: 152 },
+      { x: 2258, y: 108, w: 232, h: 230 }
+    ],
+    medium: [
+      { x: 181,  y: 498, w: 292, h: 358 },
+      { x: 1145, y: 550, w: 416, h: 244 },
+      { x: 2177, y: 484, w: 405, h: 372 }
+    ],
+    large: [
+      { x: 112,  y: 998, w: 464, h: 469 },
+      { x: 1007, y: 954, w: 715, h: 532 },
+      { x: 2108, y: 944, w: 578, h: 542 }
+    ]
+  }
 };
 const PROJECTILE_LAUNCH_DELAY_MS = 220;
 const PROJECTILE_IMPACT_MS = 180;
 
 const BUNNY_SPRITES = {
-  bunnyIdle: { x: 0, y: 64, w: 256, h: 256 },
+  bunnyIdle: { x: 78, y: 84, w: 132, h: 214 },
   bunnyFlee: [
-    { x: 1672, y: 940, w: 288, h: 224 },
-    { x: 2120, y: 940, w: 272, h: 224 },
-    { x: 2548, y: 940, w: 248, h: 224 }
+    { x: 1678, y: 946, w: 276, h: 216 },
+    { x: 2003, y: 946, w: 382, h: 220 },
+    { x: 2554, y: 946, w: 226, h: 220 }
   ]
 };
 
+const MERCHANT_SPRITES = [
+  { x: 13, y: 10, w: 35, h: 45 },
+  { x: 61, y: 10, w: 35, h: 45 }
+];
+
 const CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 0, w: 16, h: 16 }));
+const BLUE_CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 48, w: 16, h: 16 }));
 const PICKUP_SPRITES = {
   potion: [{ x: 0, y: 0, w: 16, h: 16 }, { x: 16, y: 0, w: 16, h: 16 }],
   coins: [
@@ -605,7 +2371,9 @@ function calculateEldritchBlastLevel(floor) {
 }
 
 function calculateEldritchBlastDamage(floor) {
-  return MINI_BOSS_HP_BY_TIER[getTierForFloor(floor)];
+  // Daño fijo fijado en 22: permite eliminar de 1 solo impacto a los enemigos 2x2 hasta nivel 20
+  // (Trol tier 2 tiene 22 HP), pero desde nivel 21 (Minotauro tier 3 tiene 32 HP) ya no los elimina de un solo golpe.
+  return 22;
 }
 
 function calculateMinionMaxHP(originTier) {
@@ -670,7 +2438,12 @@ function createMinion(floor, x, y, visionRange = 2) {
     size: 1,
     cells: [{ x, y }],
     fearCooldown: 0,
-    stunned: false
+    stunned: false,
+    facingLeft: false,
+    flipX: false,
+    facing: "right",
+    lastRelativeX: 0,
+    lastMoveDx: 0
   };
 }
 
@@ -693,6 +2466,43 @@ function getRandomDungeonDimensions(min = 10, max = 30, floorNumber = 1) {
   }
 
   return { width: w, height: h };
+}
+
+class RunStats {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.floorsCleared = 0;
+    this.totalSteps = 0;
+    this.goldCollected = 0;
+    this.finalGold = 0;
+
+    this.killsTotal = 0;
+    this.killsMinions = 0;
+    this.killsMiniBosses = 0;
+    this.killsMegaBosses = 0;
+    this.solarDragonDefeated = false;
+    this.killsByName = {};
+
+    this.swordSwings = 0;
+    this.swordHits = 0;
+    this.pistolShots = 0;
+    this.pistolHits = 0;
+    this.musketShots = 0;
+    this.musketHits = 0;
+    this.blunderbussShots = 0;
+    this.blunderbussHits = 0;
+    this.eldritchBlastCasts = 0;
+    this.eldritchBlastHits = 0;
+    this.mistyStepUses = 0;
+
+    this.potionsDrunk = 0;
+    this.totalHealing = 0;
+    this.damageTakenInstances = 0;
+    this.totalDamageTaken = 0;
+  }
 }
 
 class Dungeon {
@@ -768,6 +2578,7 @@ class Player {
     this.mistyStepCharges = 2;
     this.blastMaxCharges = 10;
     this.blastCurrentCharges = 10;
+    this.hasRetrievedQuestItem = false;
   }
 
   turnLeft() {
@@ -957,7 +2768,12 @@ class DungeonGenerator {
       size: 4,
       cells: bossCells,
       fearCooldown: 0,
-      stunned: false
+      stunned: false,
+      facingLeft: false,
+      flipX: false,
+      facing: "right",
+      lastRelativeX: 0,
+      lastMoveDx: 0
     });
   }
 
@@ -1011,7 +2827,12 @@ class DungeonGenerator {
             size: 2,
             cells: candidateCells,
             fearCooldown: 0,
-            stunned: false
+            stunned: false,
+            facingLeft: false,
+            flipX: false,
+            facing: "right",
+            lastRelativeX: 0,
+            lastMoveDx: 0
           });
           sequenceCounter = 0;
         } else {
@@ -1268,6 +3089,56 @@ function cellHash(x, y, salt = 0) {
   return ((h ^ (h >> 16)) >>> 0);
 }
 
+let _lastSyncedViewport = { w: 0, h: 0, top: 0, left: 0 };
+let _viewportSyncRaf = null;
+
+function getViewportMetrics() {
+  if (typeof window === "undefined") {
+    return { width: 800, height: 450, offsetTop: 0, offsetLeft: 0, scale: 1 };
+  }
+  const vv = window.visualViewport;
+  const docEl = typeof document !== "undefined" ? document.documentElement : null;
+  const useVisual = vv && (!vv.scale || vv.scale <= 1.02);
+  const rawW = useVisual
+    ? vv.width
+    : (window.innerWidth || docEl?.clientWidth || 800);
+  const rawH = useVisual
+    ? vv.height
+    : (window.innerHeight || docEl?.clientHeight || 450);
+  const offsetTop = useVisual ? Math.max(0, Math.round(vv.offsetTop || 0)) : 0;
+  const offsetLeft = useVisual ? Math.max(0, Math.round(vv.offsetLeft || 0)) : 0;
+  return {
+    width: Math.max(240, Math.round(rawW)),
+    height: Math.max(180, Math.round(rawH)),
+    offsetTop,
+    offsetLeft,
+    scale: vv?.scale || 1
+  };
+}
+
+function syncViewportCssVars() {
+  if (typeof document === "undefined" || !document.documentElement) return false;
+  const { width, height, offsetTop, offsetLeft, scale } = getViewportMetrics();
+  if (scale > 1.02) return false;
+  const changed = (
+    Math.abs(width - _lastSyncedViewport.w) >= 1 ||
+    Math.abs(height - _lastSyncedViewport.h) >= 1 ||
+    Math.abs(offsetTop - _lastSyncedViewport.top) >= 1 ||
+    Math.abs(offsetLeft - _lastSyncedViewport.left) >= 1
+  );
+  if (!changed) return false;
+  _lastSyncedViewport = { w: width, h: height, top: offsetTop, left: offsetLeft };
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty("--app-width", `${width}px`);
+  rootStyle.setProperty("--app-height", `${height}px`);
+  rootStyle.setProperty("--vv-offset-top", `${offsetTop}px`);
+  rootStyle.setProperty("--vv-offset-left", `${offsetLeft}px`);
+  if (typeof window !== "undefined" && (window.scrollX !== 0 || window.scrollY !== 0)) {
+    window.scrollTo(0, 0);
+  }
+  return true;
+}
+
 class Renderer {
   constructor(canvas, dungeon, player, generator) {
     this.canvas = canvas;
@@ -1281,6 +3152,7 @@ class Renderer {
     this.minimapCanvas = document.getElementById("minimap-canvas");
     this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext("2d") : null;
 
+    this.textureCache = new Map();
     this.terrainThemes = [
       {
         floorColor: "#141821",
@@ -1290,7 +3162,14 @@ class Renderer {
         wallFrontColor: "#1d2230",
         boundaryColor: "#06080e",
         torchColor: "rgba(255, 148, 56, 0.24)",
-        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_1/Dungeon_1.png"),
+        wallAtlasSrc: "Assets/Map/Dungeon_1/Dungeon_1.png",
+        wallOverlayAtlasSrc: "Assets/Map/Dungeon_1/Dungeon_1.png",
+        floorOverlay1Src: "Assets/Map/Dungeon_1/Grass_Type_1.png",
+        floorOverlay2Src: "Assets/Map/Dungeon_1/Grass_Type_2.png",
+        wallAtlas: null,
+        wallOverlayAtlas: null,
+        floorOverlay1: null,
+        floorOverlay2: null,
         wallCrops: [
           { x: 0, y: 0, w: 16, h: 16 },
           { x: 16, y: 0, w: 16, h: 16 },
@@ -1298,15 +3177,12 @@ class Renderer {
           { x: 32, y: 16, w: 16, h: 16 },
           { x: 48, y: 16, w: 16, h: 16 }
         ],
-        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_1/Dungeon_1.png"),
         wallOverlayCrops: [
           { x: 96, y: 0, w: 16, h: 16 },
           { x: 112, y: 0, w: 16, h: 16 },
           { x: 144, y: 0, w: 16, h: 16 },
           { x: 96, y: 16, w: 16, h: 16 }
         ],
-        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_1/Grass_Type_1.png"),
-        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_1/Grass_Type_2.png"),
         pebbleCrops: [
           { x: 0, y: 144, w: 16, h: 16 },
           { x: 16, y: 144, w: 16, h: 16 },
@@ -1323,7 +3199,14 @@ class Renderer {
         wallFrontColor: "#332014",
         boundaryColor: "#0a0705",
         torchColor: "rgba(255, 160, 66, 0.25)",
-        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_2/Dungeon_2.png"),
+        wallAtlasSrc: "Assets/Map/Dungeon_2/Dungeon_2.png",
+        wallOverlayAtlasSrc: "Assets/Map/Dungeon_2/Dungeon_2_Wall_Additions.png",
+        floorOverlay1Src: "Assets/Map/Dungeon_2/Grass_Type_1.png",
+        floorOverlay2Src: "Assets/Map/Dungeon_2/Grass_Type_2.png",
+        wallAtlas: null,
+        wallOverlayAtlas: null,
+        floorOverlay1: null,
+        floorOverlay2: null,
         wallCrops: [
           { x: 0, y: 0, w: 16, h: 16 },
           { x: 16, y: 0, w: 16, h: 16 },
@@ -1331,14 +3214,11 @@ class Renderer {
           { x: 32, y: 16, w: 16, h: 16 },
           { x: 48, y: 16, w: 16, h: 16 }
         ],
-        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_2/Dungeon_2_Wall_Additions.png"),
         wallOverlayCrops: [
           { x: 0, y: 0, w: 32, h: 16 },
           { x: 32, y: 0, w: 32, h: 16 },
           { x: 64, y: 0, w: 32, h: 16 }
         ],
-        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_2/Grass_Type_1.png"),
-        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_2/Grass_Type_2.png"),
         pebbleCrops: [
           { x: 0, y: 192, w: 16, h: 16 },
           { x: 16, y: 192, w: 16, h: 16 },
@@ -1354,7 +3234,14 @@ class Renderer {
         wallFrontColor: "#1b273b",
         boundaryColor: "#060b14",
         torchColor: "rgba(155, 195, 255, 0.24)",
-        wallAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_3/Dungeon_3.png"),
+        wallAtlasSrc: "Assets/Map/Dungeon_3/Dungeon_3.png",
+        wallOverlayAtlasSrc: "Assets/Map/Dungeon_3/Dungeon3_Wall_Additions.png",
+        floorOverlay1Src: "Assets/Map/Dungeon_3/Snow_Type_1.png",
+        floorOverlay2Src: "Assets/Map/Dungeon_3/Snow_type_2.png",
+        wallAtlas: null,
+        wallOverlayAtlas: null,
+        floorOverlay1: null,
+        floorOverlay2: null,
         wallCrops: [
           { x: 96, y: 0, w: 16, h: 16 },
           { x: 112, y: 0, w: 16, h: 16 },
@@ -1362,14 +3249,11 @@ class Renderer {
           { x: 96, y: 16, w: 16, h: 16 },
           { x: 128, y: 16, w: 16, h: 16 }
         ],
-        wallOverlayAtlas: this.loadTerrainTexture("Assets/Map/Dungeon_3/Dungeon3_Wall_Additions.png"),
         wallOverlayCrops: [
           { x: 0, y: 0, w: 32, h: 32 },
           { x: 32, y: 0, w: 32, h: 32 },
           { x: 64, y: 0, w: 32, h: 32 }
         ],
-        floorOverlay1: this.loadTerrainTexture("Assets/Map/Dungeon_3/Snow_Type_1.png"),
-        floorOverlay2: this.loadTerrainTexture("Assets/Map/Dungeon_3/Snow_type_2.png"),
         pebbleCrops: [
           { x: 208, y: 192, w: 16, h: 16 },
           { x: 224, y: 192, w: 16, h: 16 },
@@ -1378,25 +3262,23 @@ class Renderer {
         archCrop: { x: 96, y: 0, w: 48, h: 48 }
       }
     ];
+    // Cargar inicialmente solo el Bioma 1 (necesario para el Piso 1); Biomas 2 y 3 se precargan en segundo plano
+    this.ensureThemeLoaded(0);
+
     this.mapDecorations = {
       chests: this.loadTerrainTexture("Assets/Map/Chests/Treasure_Chests(16x16).png"),
       pickups: this.loadTerrainTexture("Assets/Map/PowerUps/PickUp_Items-Sheet.png"),
       mushrooms: this.loadTerrainTexture("Assets/Map/Animated Mushrooms/Dungeon_Animated_Mushrooms.png"),
       uiBallsy: this.loadTerrainTexture("Assets/Map/UI/UI_Ballsy.png")
     };
-    this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
-    this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
+    this.goldenBunnySheet = null;
+    this.merchantSpriteSheet = null;
     this.keyedSpriteCache = new Map();
 
     this.liorSheet = this.loadTerrainTexture("Assets/Lior/lior.png");
     this.lior2Sheet = this.loadTerrainTexture("Assets/Lior/lior2.png");
-    this.effectImages = Object.fromEntries(
-      Object.entries(EFFECT_SHEETS).map(([key, config]) => [key, this.loadTerrainTexture(config.src)])
-    );
+    this.effectImages = {};
     this.enemyImages = new Map();
-    const projectileSheet = this.loadTerrainTexture(PROJECTILE_SHEET.src);
-    this.enemyImages.set(PROJECTILE_SHEET.src, projectileSheet);
-    projectileSheet.addEventListener("load", () => this.getProjectileSprite("small", 1));
     this.enemyAnimCache = new Map();
     this.enemyProjectiles = [];
     this.animUntil = 0;
@@ -1406,6 +3288,8 @@ class Renderer {
     this.playerAnimationFrame = null;
     this.chestOpening = null;
     this.chestOpeningFrame = null;
+    this.blueChestOpening = null;
+    this.blueChestOpeningFrame = null;
     this.damageFlashUntil = 0;
     this.floatingNumbers = [];
 
@@ -1413,25 +3297,55 @@ class Renderer {
     this.cameraFacing = player.direction;
     this.cameraOffset = { x: 0, y: 0 };
     this.lastCameraTick = 0;
+    this.bossPresentation = null;
+    this.roarEffects = [];
     this.cameraMode = "fixed";
     this.isPortraitBlocked = false;
 
+    this._cameraInitialized = false;
     this.setCameraMode("fixed", false);
     this.updateOrientationState();
 
     let resizeTimer = null;
-    const onViewportChange = () => {
+    let settleTimer = null;
+    const applyViewportUpdate = () => {
+      if (_viewportSyncRaf !== null) {
+        cancelAnimationFrame(_viewportSyncRaf);
+        _viewportSyncRaf = null;
+      }
       this.updateOrientationState();
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        this.updateOrientationState();
-        this.setCameraMode("fixed", false);
-      }, 60);
+      this.setCameraMode("fixed", false);
     };
-    window.addEventListener("resize", onViewportChange);
-    window.addEventListener("orientationchange", onViewportChange);
+    const onViewportChange = (isOrientation = false) => {
+      syncViewportCssVars();
+      this.updateOrientationState();
+      if (_viewportSyncRaf === null) {
+        _viewportSyncRaf = requestAnimationFrame(() => {
+          _viewportSyncRaf = null;
+          this.updateOrientationState();
+          this.setCameraMode("fixed", false);
+        });
+      }
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(applyViewportUpdate, 80);
+      if (isOrientation) {
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(applyViewportUpdate, 300);
+      }
+    };
+    window.addEventListener("resize", () => onViewportChange(false), { passive: true });
+    window.addEventListener("orientationchange", () => onViewportChange(true), { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => onViewportChange(false), { passive: true });
+      window.visualViewport.addEventListener("scroll", () => {
+        if (syncViewportCssVars()) {
+          this.draw();
+        }
+      }, { passive: true });
+    }
 
     setInterval(() => {
+      if (this.game?.isIntroActive()) return;
       if (!this.playerAnimation && !this.chestOpening) this.draw();
     }, 100);
   }
@@ -1441,12 +3355,18 @@ class Renderer {
   }
 
   static isPortraitViewport() {
-    return window.innerHeight > window.innerWidth;
+    const { width, height } = getViewportMetrics();
+    return height > width;
   }
 
   updateOrientationState() {
+    syncViewportCssVars();
     const portrait = Renderer.isPortraitViewport();
     this.isPortraitBlocked = portrait;
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.toggle("is-portrait", portrait);
+      document.body.classList.toggle("mode-landscape", !portrait);
+    }
     const overlay = document.getElementById("rotate-device-overlay");
     if (overlay) {
       overlay.classList.toggle("hidden", !portrait);
@@ -1457,16 +3377,15 @@ class Renderer {
   }
 
   computeResponsiveProfile() {
-    const vw = Math.max(320, window.innerWidth || 640);
-    const vh = Math.max(220, window.innerHeight || 360);
+    const { width: vw, height: vh } = getViewportMetrics();
     const isPortrait = vh > vw;
     const effW = isPortrait ? vh : vw;
     const effH = isPortrait ? vw : vh;
-    const aspect = Math.max(1.2, Math.min(2.6, effW / Math.max(1, effH)));
+    const aspect = Math.max(1.2, Math.min(2.85, effW / Math.max(1, effH)));
 
     const rows = aspect >= 1.65 ? 9 : 11;
-    const tileSize = Math.max(36, Math.min(64, Math.floor(effH / rows)));
-    let cols = Math.max(11, Math.min(25, Math.round(rows * aspect)));
+    const tileSize = Math.max(28, Math.min(64, Math.floor(effH / rows)));
+    let cols = Math.max(11, Math.min(27, Math.round(rows * aspect)));
     if (cols % 2 === 0) cols += 1;
 
     const anchorX = Math.floor(cols / 2);
@@ -1481,6 +3400,12 @@ class Renderer {
   }
 
   setCameraMode(mode = "fixed", animate = false) {
+    syncViewportCssVars();
+    const prevCols = CAMERA_CONFIG.cols || 15;
+    const prevRows = CAMERA_CONFIG.rows || 9;
+    const prevAnchorX = Math.floor(prevCols / 2);
+    const prevAnchorY = Math.floor(prevRows / 2);
+
     const profile = this.computeResponsiveProfile();
     CAMERA_PROFILES.fixed = profile;
     CAMERA_PROFILES.classic = profile;
@@ -1490,12 +3415,29 @@ class Renderer {
     CAMERA_CONFIG.rows = profile.rows;
     CAMERA_CONFIG.tileSize = profile.tileSize;
 
-    this.canvas.width = profile.cols * profile.tileSize;
-    this.canvas.height = profile.rows * profile.tileSize;
-    this.canvas.style.aspectRatio = `${profile.cols} / ${profile.rows}`;
-    document.body.classList.add("mode-landscape");
+    const targetW = profile.cols * profile.tileSize;
+    const targetH = profile.rows * profile.tileSize;
+    if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+      this.canvas.width = targetW;
+      this.canvas.height = targetH;
+    }
+    this.canvas.style.removeProperty("aspect-ratio");
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.add("mode-landscape");
+    }
 
-    this.snapCamera();
+    const newAnchor = profile.anchors[this.cameraFacing] || profile.anchors[0];
+    if (!this._cameraInitialized) {
+      this._cameraInitialized = true;
+      this.snapCamera();
+    } else {
+      const deltaX = newAnchor.x - prevAnchorX;
+      const deltaY = newAnchor.y - prevAnchorY;
+      this.cameraAnchor.x += deltaX;
+      this.cameraAnchor.y += deltaY;
+      CAMERA_CONFIG.playerScreenX = Math.round(this.cameraAnchor.x);
+      CAMERA_CONFIG.playerScreenY = Math.round(this.cameraAnchor.y);
+    }
 
     if (animate) {
       this.canvas.classList.remove("viewport-morph");
@@ -1516,33 +3458,260 @@ class Renderer {
   }
 
   commitCameraFacing() {
-    if (this.cameraFacing === this.player.direction) return;
     this.cameraFacing = this.player.direction;
     this.lastCameraTick = performance.now();
-    this.keepAnimating(400);
+    this.keepAnimating(450);
+  }
+
+  /**
+   * Inicia la presentación cinematográfica única de un enemigo de tamaño 4x4 (Sección 7.2):
+   * 1. Detecta la aparición inicial del enemigo 4x4 (!enemy.introPresented).
+   * 2. Desplaza la cámara suavemente hacia el monstruo.
+   * 3. Reproduce el rugido correspondiente a su categoría y piso + efecto visual de rugido.
+   * 4. Inicia o mantiene la música de combate del encuentro.
+   * 5. Regresa suavemente la cámara a Lior sin bloquear el control del personaje.
+   */
+  startLargeEnemyPresentation(enemy, floorNumber = 1) {
+    if (!enemy || enemy.introPresented) return;
+    if (!sounds.isBossRoarEligible(enemy, floorNumber, { ignorePlayed: false })) return;
+    enemy.introPresented = true;
+    if (enemy.cells && this.dungeon) {
+      enemy.cells.forEach(c => this.dungeon.markRevealed(c.x, c.y));
+    }
+    const size = enemy.size || 4;
+    const focusWorldX = enemy.x + (size - 1) / 2;
+    const focusWorldY = enemy.y + (size - 1) / 2;
+    const now = performance.now();
+    this.bossPresentation = {
+      enemy,
+      floorNumber,
+      focusWorldX,
+      focusWorldY,
+      startedAt: now,
+      panInMs: 520,
+      holdMs: 920,
+      panOutMs: 520,
+      roarTriggered: false
+    };
+    this.lastCameraTick = now;
+    this.keepAnimating(2100);
+  }
+
+  /**
+   * Si el jugador se mueve o actúa durante la presentación del enemigo 4x4,
+   * asegura que el rugido se haya disparado y regresa suavemente la cámara a Lior.
+   */
+   settleLargeEnemyPresentationToPlayer() {
+    if (!this.bossPresentation) return;
+    const now = performance.now();
+    const pres = this.bossPresentation;
+    const activePhase = pres.panInMs + pres.holdMs;
+    if (!pres.roarTriggered) {
+      pres.roarTriggered = true;
+      sounds.playMonsterRoar(pres.enemy, pres.floorNumber);
+      this.game?.syncBiomeMusic?.();
+      this.playEnemyAnim(pres.enemy, "attack");
+      const isDragon = pres.floorNumber === 100
+        || !!(pres.enemy?.isMegaBoss && pres.enemy?.originTier === 10);
+      this.triggerRoarVisualEffect(pres.focusWorldX, pres.focusWorldY, isDragon);
+    }
+    if (now - pres.startedAt < activePhase) {
+      pres.startedAt = now - activePhase;
+      this.keepAnimating(550);
+    }
+  }
+
+  /**
+   * Añade un efecto visual breve de onda expansiva y distorsión de aire al rugir un enemigo 4x4 (Sección 7.3).
+   */
+  triggerRoarVisualEffect(worldX, worldY, isDragon = false) {
+    if (!this.roarEffects) this.roarEffects = [];
+    this.roarEffects.push({
+      worldX,
+      worldY,
+      isDragon,
+      startedAt: performance.now(),
+      duration: 880
+    });
+    this.keepAnimating(920);
+  }
+
+  drawRoarEffects(targetCtx, now) {
+    if (!this.roarEffects || this.roarEffects.length === 0) return;
+    this.roarEffects = this.roarEffects.filter(fx => now - fx.startedAt < fx.duration);
+    if (this.roarEffects.length === 0) return;
+
+    const tileSize = CAMERA_CONFIG.tileSize;
+    this.roarEffects.forEach(fx => {
+      const progress = Math.max(0, Math.min(1, (now - fx.startedAt) / fx.duration));
+      const { screenX, screenY } = CameraTransformer.worldToScreen(fx.worldX, fx.worldY, this.player);
+      const cx = (screenX + 0.5) * tileSize;
+      const cy = (screenY + 0.5) * tileSize;
+
+      targetCtx.save();
+      for (let ring = 0; ring < 3; ring++) {
+        const ringDelay = ring * 0.16;
+        const ringProg = Math.max(0, Math.min(1, (progress - ringDelay) / (1 - ringDelay)));
+        if (ringProg <= 0 || ringProg >= 1) continue;
+
+        const easeOut = 1 - Math.pow(1 - ringProg, 2.3);
+        const radius = tileSize * (0.85 + easeOut * (fx.isDragon ? 5.2 : 4.0));
+        const alpha = (1 - ringProg) * (fx.isDragon ? 0.68 : 0.55);
+
+        targetCtx.strokeStyle = fx.isDragon
+          ? `rgba(255, 120, 40, ${alpha})`
+          : `rgba(220, 38, 70, ${alpha})`;
+        targetCtx.lineWidth = (1 - ringProg) * 4.2 + 1.2;
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+        targetCtx.stroke();
+
+        targetCtx.strokeStyle = fx.isDragon
+          ? `rgba(255, 220, 110, ${alpha * 0.52})`
+          : `rgba(168, 85, 247, ${alpha * 0.45})`;
+        targetCtx.lineWidth = 1.4;
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, radius * 0.9, 0, Math.PI * 2);
+        targetCtx.stroke();
+      }
+
+      const rayCount = 12;
+      const rayAlpha = (1 - progress) * 0.48;
+      targetCtx.strokeStyle = fx.isDragon
+        ? `rgba(255, 195, 95, ${rayAlpha})`
+        : `rgba(244, 63, 94, ${rayAlpha})`;
+      targetCtx.lineWidth = 1.7;
+      for (let i = 0; i < rayCount; i++) {
+        const angle = (i / rayCount) * Math.PI * 2 + progress * 0.25;
+        const rInner = tileSize * (0.95 + progress * 2.1);
+        const rOuter = rInner + tileSize * (0.62 * (1 - progress * 0.45));
+        targetCtx.beginPath();
+        targetCtx.moveTo(cx + Math.cos(angle) * rInner, cy + Math.sin(angle) * rInner);
+        targetCtx.lineTo(cx + Math.cos(angle) * rOuter, cy + Math.sin(angle) * rOuter);
+        targetCtx.stroke();
+      }
+      targetCtx.restore();
+    });
   }
 
   updateCamera(now) {
     const anchors = CAMERA_PROFILES.fixed.anchors;
-    const target = anchors[this.cameraFacing] || anchors[0];
+    const baseAnchor = anchors[this.cameraFacing] || anchors[0];
+    let targetX = baseAnchor.x;
+    let targetY = baseAnchor.y;
+    let smoothingTau = 70;
+
+    // 1. Presentación cinematográfica de enemigo 4x4 (Sección 7.2)
+    if (this.bossPresentation) {
+      const pres = this.bossPresentation;
+      const elapsed = now - pres.startedAt;
+      const totalDuration = pres.panInMs + pres.holdMs + pres.panOutMs;
+
+      if (elapsed >= pres.panInMs * 0.72 && !pres.roarTriggered) {
+        pres.roarTriggered = true;
+        sounds.playMonsterRoar(pres.enemy, pres.floorNumber);
+        this.game?.syncBiomeMusic?.();
+        this.playEnemyAnim(pres.enemy, "attack");
+        const isDragon = pres.floorNumber === 100
+          || !!(pres.enemy?.isMegaBoss && pres.enemy?.originTier === 10);
+        this.triggerRoarVisualEffect(pres.focusWorldX, pres.focusWorldY, isDragon);
+      }
+
+      if (elapsed < pres.panInMs + pres.holdMs) {
+        const dx = pres.focusWorldX - this.player.x;
+        const dy = pres.focusWorldY - this.player.y;
+        if (CAMERA_CONFIG.mode === "fixed") {
+          targetX = baseAnchor.x - dx;
+          targetY = baseAnchor.y - dy;
+        } else {
+          const basis = CameraTransformer.getBasis(this.player.direction);
+          const forward = dx * basis.forward.x + dy * basis.forward.y;
+          const lateral = dx * basis.right.x + dy * basis.right.y;
+          targetX = baseAnchor.x - lateral;
+          targetY = baseAnchor.y + forward;
+        }
+        smoothingTau = 110;
+        this.keepAnimating(120);
+      } else if (elapsed < totalDuration) {
+        smoothingTau = 90;
+        this.keepAnimating(120);
+      } else {
+        this.bossPresentation = null;
+      }
+    }
+
+    // 2. Seguimiento suave del marcador de Misty Step cuando sale del campo de visión (Sección 7.1)
+    if (this.game?.mistyStepPreview && !this.game.mistyStepPreview.canceled) {
+      const dest = this.game.mistyStepPreview;
+      const dx = dest.x - this.player.x;
+      const dy = dest.y - this.player.y;
+      const cols = CAMERA_CONFIG.cols || 15;
+      const rows = CAMERA_CONFIG.rows || 9;
+      const marginX = 2.0;
+      const marginY = 1.6;
+
+      let rawMarkerX, rawMarkerY;
+      if (CAMERA_CONFIG.mode === "fixed") {
+        rawMarkerX = baseAnchor.x + dx;
+        rawMarkerY = baseAnchor.y + dy;
+      } else {
+        const basis = CameraTransformer.getBasis(this.player.direction);
+        const forward = dx * basis.forward.x + dy * basis.forward.y;
+        const lateral = dx * basis.right.x + dy * basis.right.y;
+        rawMarkerX = baseAnchor.x + lateral;
+        rawMarkerY = baseAnchor.y - forward;
+      }
+
+      let shiftX = 0;
+      let shiftY = 0;
+      if (rawMarkerX < marginX) {
+        shiftX = marginX - rawMarkerX;
+      } else if (rawMarkerX > (cols - 1 - marginX)) {
+        shiftX = (cols - 1 - marginX) - rawMarkerX;
+      }
+      if (rawMarkerY < marginY) {
+        shiftY = marginY - rawMarkerY;
+      } else if (rawMarkerY > (rows - 1 - marginY)) {
+        shiftY = (rows - 1 - marginY) - rawMarkerY;
+      }
+
+      targetX = baseAnchor.x + shiftX;
+      targetY = baseAnchor.y + shiftY;
+      smoothingTau = 75;
+    }
+
     const anchor = this.cameraAnchor;
     const dt = Math.min(100, Math.max(0, now - (this.lastCameraTick || now)));
     this.lastCameraTick = now;
-    const blend = 1 - Math.exp(-dt / 70);
-    anchor.x += (target.x - anchor.x) * blend;
-    anchor.y += (target.y - anchor.y) * blend;
-    if (Math.abs(target.x - anchor.x) < 0.01 && Math.abs(target.y - anchor.y) < 0.01) {
-      anchor.x = target.x;
-      anchor.y = target.y;
+    const blend = 1 - Math.exp(-dt / smoothingTau);
+    anchor.x += (targetX - anchor.x) * blend;
+    anchor.y += (targetY - anchor.y) * blend;
+    if (Math.abs(targetX - anchor.x) < 0.01 && Math.abs(targetY - anchor.y) < 0.01) {
+      anchor.x = targetX;
+      anchor.y = targetY;
     } else {
       this.keepAnimating(100);
     }
 
     CAMERA_CONFIG.playerScreenX = Math.round(anchor.x);
     CAMERA_CONFIG.playerScreenY = Math.round(anchor.y);
+
+    let shakeX = 0;
+    let shakeY = 0;
+    if (this.roarEffects && this.roarEffects.length > 0) {
+      const activeRoar = this.roarEffects[this.roarEffects.length - 1];
+      const rElapsed = now - activeRoar.startedAt;
+      if (rElapsed >= 0 && rElapsed < activeRoar.duration) {
+        const decay = 1 - rElapsed / activeRoar.duration;
+        const amp = (activeRoar.isDragon ? 4.0 : 2.6) * decay * decay;
+        shakeX = Math.sin(now * 0.09) * amp;
+        shakeY = Math.cos(now * 0.11) * amp;
+      }
+    }
+
     this.cameraOffset = {
-      x: (anchor.x - CAMERA_CONFIG.playerScreenX) * CAMERA_CONFIG.tileSize,
-      y: (anchor.y - CAMERA_CONFIG.playerScreenY) * CAMERA_CONFIG.tileSize
+      x: (anchor.x - CAMERA_CONFIG.playerScreenX) * CAMERA_CONFIG.tileSize + shakeX,
+      y: (anchor.y - CAMERA_CONFIG.playerScreenY) * CAMERA_CONFIG.tileSize + shakeY
     };
   }
 
@@ -1561,33 +3730,139 @@ class Renderer {
   }
 
   loadTerrainTexture(src) {
+    if (!src) return null;
+    if (this.textureCache && this.textureCache.has(src)) {
+      return this.textureCache.get(src);
+    }
     const image = new Image();
-    image.addEventListener("load", () => this.draw());
+    image.addEventListener("load", () => {
+      if (!this.game?.isIntroActive()) {
+        this.draw();
+      }
+    });
     image.src = src;
+    if (this.textureCache) {
+      this.textureCache.set(src, image);
+    }
     return image;
+  }
+
+  ensureThemeLoaded(themeIndex = 0) {
+    const idx = Math.max(0, Math.min(this.terrainThemes.length - 1, themeIndex));
+    const theme = this.terrainThemes[idx];
+    if (!theme) return null;
+    if (!theme.wallAtlas && theme.wallAtlasSrc) {
+      theme.wallAtlas = this.loadTerrainTexture(theme.wallAtlasSrc);
+    }
+    if (!theme.wallOverlayAtlas && theme.wallOverlayAtlasSrc) {
+      theme.wallOverlayAtlas = this.loadTerrainTexture(theme.wallOverlayAtlasSrc);
+    }
+    if (!theme.floorOverlay1 && theme.floorOverlay1Src) {
+      theme.floorOverlay1 = this.loadTerrainTexture(theme.floorOverlay1Src);
+    }
+    if (!theme.floorOverlay2 && theme.floorOverlay2Src) {
+      theme.floorOverlay2 = this.loadTerrainTexture(theme.floorOverlay2Src);
+    }
+    return theme;
+  }
+
+  ensureEffectImage(sheetKey) {
+    const config = EFFECT_SHEETS[sheetKey];
+    if (!config) return null;
+    if (!this.effectImages[sheetKey]) {
+      this.effectImages[sheetKey] = this.loadTerrainTexture(config.src);
+    }
+    return this.effectImages[sheetKey];
+  }
+
+  ensureNpcSheetsLoaded() {
+    if (!this.goldenBunnySheet) {
+      this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
+    }
+    if (!this.merchantSpriteSheet) {
+      this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
+    }
   }
 
   static isMagentaPixel(r, g, b) {
     const minRB = Math.min(r, b);
-    if (minRB < 70 || Math.abs(r - b) > 70) return false;
-    if (g < minRB * 0.45) return true;
-    return r > 200 && b > 200 && g < minRB - 35;
+    if (minRB >= 60 && Math.abs(r - b) <= 80 && g < minRB * 0.52) return true;
+    return r > 185 && b > 185 && g < minRB - 28;
   }
 
   static isBackgroundPixel(r, g, b, bgRef) {
     if (Renderer.isMagentaPixel(r, g, b)) return true;
-    return !!bgRef && Math.abs(r - bgRef[0]) + Math.abs(g - bgRef[1]) + Math.abs(b - bgRef[2]) < 60;
+    if (!bgRef) return false;
+    if (Array.isArray(bgRef[0])) {
+      return bgRef.some(ref => Math.abs(r - ref[0]) + Math.abs(g - ref[1]) + Math.abs(b - ref[2]) < 68);
+    }
+    return Math.abs(r - bgRef[0]) + Math.abs(g - bgRef[1]) + Math.abs(b - bgRef[2]) < 68;
   }
 
-  static getBackgroundReference(data) {
-    const r = data[0], g = data[1], b = data[2];
-    return Renderer.isMagentaPixel(r, g, b) || data[3] === 0 ? null : [r, g, b];
+  static getBackgroundReference(data, width = 0, height = 0) {
+    if (!width || !height) {
+      const r = data[0], g = data[1], b = data[2];
+      return Renderer.isMagentaPixel(r, g, b) || data[3] < 16 ? null : [r, g, b];
+    }
+    const corners = [
+      0,
+      (width - 1) * 4,
+      (height - 1) * width * 4,
+      ((height - 1) * width + (width - 1)) * 4
+    ];
+    const refs = [];
+    for (const idx of corners) {
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2], a = data[idx + 3];
+      if (a >= 16 && !Renderer.isMagentaPixel(r, g, b)) {
+        if (!refs.some(ref => Math.abs(r - ref[0]) + Math.abs(g - ref[1]) + Math.abs(b - ref[2]) < 24)) {
+          refs.push([r, g, b]);
+        }
+      }
+    }
+    return refs.length > 0 ? refs : null;
   }
 
   /**
-   * Recorta únicamente el espacio transparente sobrante sin cortar ningún píxel visible,
-   * y calcula el punto de anclaje estable de los pies (footAnchorX, footAnchorY) para evitar
-   * saltos laterales o verticales cuando armas, capas o efectos sobresalen del cuerpo.
+   * Elimina los halos magentas/púrpuras producidos por la compresión JPEG o el antialiasing en los bordes
+   * de 1 píxel contiguos a píxeles transparentes sin alterar los colores internos del sprite.
+   */
+  static despillSpriteEdges(data, width, height) {
+    const total = width * height;
+    const isTransparent = new Uint8Array(total);
+    for (let i = 0; i < total; i++) {
+      if (data[i * 4 + 3] < 20) isTransparent[i] = 1;
+    }
+
+    for (let y = 0; y < height; y++) {
+      const rowOff = y * width;
+      for (let x = 0; x < width; x++) {
+        const i = rowOff + x;
+        if (isTransparent[i]) continue;
+        const touchesBg = (
+          (x > 0 && isTransparent[i - 1]) ||
+          (x + 1 < width && isTransparent[i + 1]) ||
+          (y > 0 && isTransparent[i - width]) ||
+          (y + 1 < height && isTransparent[i + width])
+        );
+        if (!touchesBg) continue;
+
+        const off = i * 4;
+        const r = data[off], g = data[off + 1], b = data[off + 2];
+        const minRB = Math.min(r, b);
+        if (minRB >= 56 && Math.abs(r - b) <= 78 && g < minRB * 0.62) {
+          data[off + 3] = 0;
+        } else if (r > g + 18 && b > g + 18) {
+          data[off] = Math.min(r, g + 10);
+          data[off + 2] = Math.min(b, g + 10);
+        }
+      }
+    }
+  }
+
+  /**
+   * Recorta el espacio transparente sobrante sin cortar ningún píxel visible y calcula el eje
+   * horizontal estable del cuerpo (footAnchorX) ponderando la columna vertebral vertical del sprite
+   * para que lanzas, espadas, armas de fuego o sombreros caídos no desplacen al personaje.
    */
   trimCanvas(sprite) {
     const { width, height } = sprite;
@@ -1616,20 +3891,19 @@ class Renderer {
     trimmed.height = trimmedH;
     trimmed.getContext("2d").drawImage(sprite, minX, minY, trimmedW, trimmedH, 0, 0, trimmedW, trimmedH);
 
-    // Calcular el centro horizontal estable de los pies/base en el 15% inferior del sprite recortado
-    const footBandStart = Math.max(minY, maxY - Math.max(4, Math.floor(trimmedH * 0.14)));
-    let footMinX = maxX;
-    let footMaxX = minX;
-    let foundFoot = false;
+    let maxColCount = 0;
     for (let x = minX; x <= maxX; x++) {
-      let colCount = 0;
-      for (let y = footBandStart; y <= maxY; y++) {
-        if (data[(y * width + x) * 4 + 3] > 28) colCount++;
-      }
-      if (colCount >= 2) {
-        if (x < footMinX) footMinX = x;
-        if (x > footMaxX) footMaxX = x;
-        foundFoot = true;
+      if (cols[x] > maxColCount) maxColCount = cols[x];
+    }
+
+    let weightedSumX = 0;
+    let totalWeight = 0;
+    const coreThreshold = Math.max(2, maxColCount * 0.45);
+    for (let x = minX; x <= maxX; x++) {
+      if (cols[x] >= coreThreshold) {
+        const w = cols[x] * cols[x];
+        weightedSumX += (x - minX) * w;
+        totalWeight += w;
       }
     }
 
@@ -1637,41 +3911,60 @@ class Renderer {
     trimmed.trimTop = minY;
     trimmed.sourceWidth = width;
     trimmed.sourceHeight = height;
-    trimmed.footAnchorX = foundFoot ? ((footMinX + footMaxX) / 2 - minX) : (trimmedW / 2);
+    trimmed.footAnchorX = totalWeight > 0 ? (weightedSumX / totalWeight) : (trimmedW / 2);
     trimmed.footAnchorY = trimmedH;
     return trimmed;
   }
 
   getKeyedSprite(sheet, sourceRect, backgroundType, options = {}) {
-    if (!sheet.complete || sheet.naturalWidth === 0) return null;
-    const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}:${options.trim ? 1 : 0}:${options.bgRef || ""}`;
-    if (this.keyedSpriteCache.has(cacheKey)) return this.keyedSpriteCache.get(cacheKey);
+    if (!sheet || !sheet.complete || sheet.naturalWidth === 0 || !sourceRect) return null;
+    const bgRefKey = options.bgRef ? JSON.stringify(options.bgRef) : "";
+    const cacheKey = `${sheet.src}:${sourceRect.x},${sourceRect.y},${sourceRect.w},${sourceRect.h}:${backgroundType}:${options.trim ? 1 : 0}:${bgRefKey}`;
+    if (!options.clusterMask && this.keyedSpriteCache.has(cacheKey)) {
+      return this.keyedSpriteCache.get(cacheKey);
+    }
 
     const sprite = document.createElement("canvas");
     sprite.width = Math.max(1, Math.round(sourceRect.w));
     sprite.height = Math.max(1, Math.round(sourceRect.h));
     const spriteCtx = sprite.getContext("2d", { willReadFrequently: true });
+    spriteCtx.imageSmoothingEnabled = false;
     spriteCtx.drawImage(sheet, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h,
       0, 0, sprite.width, sprite.height);
 
-    if (backgroundType !== "alpha") {
+    if (backgroundType !== "alpha" || options.clusterMask) {
       const imageData = spriteCtx.getImageData(0, 0, sprite.width, sprite.height);
       const { data } = imageData;
+      const w = sprite.width;
+      const h = sprite.height;
 
       if (backgroundType === "magenta") {
-        for (let offset = 0; offset < data.length; offset += 4) {
-          if (Renderer.isBackgroundPixel(data[offset], data[offset + 1], data[offset + 2], options.bgRef)) {
-            data[offset + 3] = 0;
+        const mask = options.clusterMask;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = y * w + x;
+            const offset = idx * 4;
+            if (mask && !mask(x, y)) {
+              data[offset + 3] = 0;
+              continue;
+            }
+            if (Renderer.isBackgroundPixel(data[offset], data[offset + 1], data[offset + 2], options.bgRef)) {
+              data[offset + 3] = 0;
+            }
           }
         }
-      } else {
-        this.floodKeyBackground(data, sprite.width, sprite.height, backgroundType);
+        Renderer.despillSpriteEdges(data, w, h);
+      } else if (backgroundType !== "alpha") {
+        this.floodKeyBackground(data, w, h, backgroundType);
+        Renderer.despillSpriteEdges(data, w, h);
       }
       spriteCtx.putImageData(imageData, 0, 0);
     }
 
     const result = options.trim ? this.trimCanvas(sprite) : sprite;
-    this.keyedSpriteCache.set(cacheKey, result);
+    if (!options.clusterMask) {
+      this.keyedSpriteCache.set(cacheKey, result);
+    }
     return result;
   }
 
@@ -1686,9 +3979,10 @@ class Renderer {
       if (backgroundType === "black") {
         return Math.max(data[offset], data[offset + 1], data[offset + 2]) < 30;
       }
-      return Math.abs(data[offset] - background[0]) < 27
-        && Math.abs(data[offset + 1] - background[1]) < 27
-        && Math.abs(data[offset + 2] - background[2]) < 27;
+      return Math.abs(data[offset] - background[0]) < 30
+        && Math.abs(data[offset] - data[offset + 1]) < 45
+        && Math.abs(data[offset + 1] - background[1]) < 30
+        && Math.abs(data[offset + 2] - background[2]) < 30;
     };
 
     let queueEnd = 0;
@@ -1746,8 +4040,13 @@ class Renderer {
     return result;
   }
 
-  segmentSheet(image, { rowGap = 1, colGap = 2, mergeNarrow = true, denseFractions = [0.06, 0.15], trimFrames = true } = {}) {
-    const STEP = 4;
+  /**
+   * Segmentación 2D por componentes conexos con eliminación automática de líneas de cuadrícula,
+   * cabeceras de texto ("IDLE", "WALK", "MOVEMENT", "ATTACK", "HURT", "DEATH"), márgenes exteriores
+   * y enmascaramiento por componente para impedir filtraciones de fotogramas vecinos (bleeding).
+   */
+  segmentSheet(image, { rowGap = 3, trimFrames = true } = {}) {
+    const STEP = Math.max(1, Math.min(2, Math.floor(Math.min(image.naturalWidth, image.naturalHeight) / 300) || 1));
     const width = Math.floor(image.naturalWidth / STEP);
     const height = Math.floor(image.naturalHeight / STEP);
     if (width < 4 || height < 4) return null;
@@ -1756,70 +4055,267 @@ class Renderer {
     probe.width = width;
     probe.height = height;
     const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+    probeCtx.imageSmoothingEnabled = false;
     probeCtx.drawImage(image, 0, 0, width, height);
     const { data } = probeCtx.getImageData(0, 0, width, height);
-    const bgRef = Renderer.getBackgroundReference(data);
+    const bgRef = Renderer.getBackgroundReference(data, width, height);
+
+    const bg = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const off = i * 4;
+      if (data[off + 3] < 16 || Renderer.isBackgroundPixel(data[off], data[off + 1], data[off + 2], bgRef)) {
+        bg[i] = 1;
+      }
+    }
+
+    // Detectar y eliminar líneas rectas delgadas de cuadrícula (bordes de celdas de 1-4px en ogre.png / roc.jpg)
+    const gridMask = new Uint8Array(width * height);
+    const minLineRun = Math.max(22, Math.floor(Math.min(width, height) * 0.04));
+
+    for (let y = 0; y < height; y++) {
+      const rowOff = y * width;
+      let runStart = -1;
+      for (let x = 0; x <= width; x++) {
+        let isThinV = false;
+        if (x < width && !bg[rowOff + x]) {
+          const upBg = (y < 1 || bg[(y - 1) * width + x]) || (y < 2 || bg[(y - 2) * width + x]);
+          const dnBg = (y + 1 >= height || bg[(y + 1) * width + x]) || (y + 2 >= height || bg[(y + 2) * width + x]);
+          isThinV = upBg && dnBg;
+        }
+        if (isThinV) {
+          if (runStart < 0) runStart = x;
+        } else if (runStart >= 0) {
+          if (x - runStart >= minLineRun) {
+            for (let gx = runStart; gx < x; gx++) {
+              gridMask[rowOff + gx] = 1;
+              if (y > 0) gridMask[(y - 1) * width + gx] = 1;
+              if (y + 1 < height) gridMask[(y + 1) * width + gx] = 1;
+            }
+          }
+          runStart = -1;
+        }
+      }
+    }
+
+    for (let x = 0; x < width; x++) {
+      let runStart = -1;
+      for (let y = 0; y <= height; y++) {
+        let isThinH = false;
+        if (y < height && !bg[y * width + x]) {
+          const ltBg = (x < 1 || bg[y * width + (x - 1)]) || (x < 2 || bg[y * width + (x - 2)]);
+          const rtBg = (x + 1 >= width || bg[y * width + (x + 1)]) || (x + 2 >= width || bg[y * width + (x + 2)]);
+          isThinH = ltBg && rtBg;
+        }
+        if (isThinH) {
+          if (runStart < 0) runStart = y;
+        } else if (runStart >= 0) {
+          if (y - runStart >= minLineRun) {
+            for (let gy = runStart; gy < y; gy++) {
+              gridMask[gy * width + x] = 1;
+              if (x > 0) gridMask[gy * width + (x - 1)] = 1;
+              if (x + 1 < width) gridMask[gy * width + (x + 1)] = 1;
+            }
+          }
+          runStart = -1;
+        }
+      }
+    }
 
     const solid = new Uint8Array(width * height);
     const rowCounts = new Uint32Array(height);
     for (let y = 0; y < height; y++) {
+      const rowOff = y * width;
       for (let x = 0; x < width; x++) {
-        const i = y * width + x;
-        if (!Renderer.isBackgroundPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2], bgRef)) {
+        const i = rowOff + x;
+        if (!bg[i] && !gridMask[i]) {
           solid[i] = 1;
           rowCounts[y]++;
         }
       }
     }
 
-    let bands = Renderer.findRuns(rowCounts, 3, rowGap);
+    let bands = Renderer.findRuns(rowCounts, Math.max(3, Math.floor(6 / STEP)), Math.max(1, Math.floor(rowGap * 2 / STEP)));
     const tallest = bands.reduce((max, b) => Math.max(max, b.end - b.start + 1), 0);
-    bands = bands.filter(b => b.end - b.start + 1 >= tallest * 0.2);
+    // Filtrar filas cortas que corresponden a cabeceras de texto ("IDLE", "WALK", "MOVEMENT", "HURT", "DEATH")
+    bands = bands.filter(b => (b.end - b.start + 1) >= tallest * 0.42);
 
     const rows = bands.map(band => {
-      const colCounts = new Uint32Array(width);
-      for (let y = band.start; y <= band.end; y++) {
-        for (let x = 0; x < width; x++) colCounts[x] += solid[y * width + x];
-      }
-      const bandSteps = band.end - band.start + 1;
-      let segments = Renderer.findRuns(colCounts, 2, colGap);
-      if (mergeNarrow && segments.length > 1) segments = Renderer.mergeNarrowRuns(segments);
-      const widthVariation = runs => {
-        const widths = runs.map(r => r.end - r.start + 1);
-        const mean = widths.reduce((a, b) => a + b, 0) / widths.length;
-        return Math.sqrt(widths.reduce((a, w) => a + (w - mean) ** 2, 0) / widths.length) / mean;
-      };
-      for (const fraction of denseFractions) {
-        let dense = Renderer.findRuns(colCounts, Math.max(2, Math.ceil(fraction * bandSteps)), colGap);
-        if (mergeNarrow && dense.length > 1) dense = Renderer.mergeNarrowRuns(dense);
-        const better = segments.length < 3
-          ? dense.length > segments.length
-          : dense.length >= 3 && widthVariation(dense) < widthVariation(segments) * 0.6;
-        if (!better) continue;
+      const bandY0 = band.start;
+      const bandH = band.end - band.start + 1;
+      const labels = new Int32Array(width * bandH);
+      const queue = new Int32Array(width * bandH);
+      const comps = [];
+      let currentLabel = 0;
 
-        let first = 0;
-        while (first < width - 1 && colCounts[first] < 2) first++;
-        let last = width - 1;
-        while (last > first && colCounts[last] < 2) last--;
-        const cuts = [first];
-        for (let i = 1; i < dense.length; i++) {
-          const from = dense[i - 1].end, to = dense[i].start;
-          const center = (from + to) / 2;
-          let cut = Math.floor(center);
-          for (let x = from; x <= to; x++) {
-            if (colCounts[x] < colCounts[cut] || (colCounts[x] === colCounts[cut] && Math.abs(x - center) < Math.abs(cut - center))) cut = x;
+      for (let by = 0; by < bandH; by++) {
+        const globalRow = (bandY0 + by) * width;
+        const localRow = by * width;
+        for (let bx = 0; bx < width; bx++) {
+          const localIdx = localRow + bx;
+          if (!solid[globalRow + bx] || labels[localIdx] !== 0) continue;
+
+          currentLabel++;
+          labels[localIdx] = currentLabel;
+          let qHead = 0, qTail = 0;
+          queue[qTail++] = localIdx;
+
+          let minX = bx, maxX = bx, minY = by, maxY = by, area = 0;
+          while (qHead < qTail) {
+            const cur = queue[qHead++];
+            area++;
+            const cx = cur % width;
+            const cy = (cur - cx) / width;
+            if (cx < minX) minX = cx;
+            if (cx > maxX) maxX = cx;
+            if (cy < minY) minY = cy;
+            if (cy > maxY) maxY = cy;
+
+            for (let dy = -1; dy <= 1; dy++) {
+              const ny = cy + dy;
+              if (ny < 0 || ny >= bandH) continue;
+              const nLocalRow = ny * width;
+              const nGlobalRow = (bandY0 + ny) * width;
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = cx + dx;
+                if (nx < 0 || nx >= width) continue;
+                const nLocal = nLocalRow + nx;
+                if (labels[nLocal] === 0 && solid[nGlobalRow + nx]) {
+                  labels[nLocal] = currentLabel;
+                  queue[qTail++] = nLocal;
+                }
+              }
+            }
           }
-          cuts.push(cut);
+
+          const cw = maxX - minX + 1;
+          const ch = maxY - minY + 1;
+          const minArea = Math.max(4, Math.floor(16 / (STEP * STEP)));
+          if (area < minArea) continue;
+          // Ignorar etiquetas de texto en la esquina superior de la celda (ej. "ATTACK", "HURT", "DEATH" en roc.jpg)
+          if (minY < bandH * 0.14 && (minY + ch) < bandH * 0.24 && ch < bandH * 0.20) continue;
+
+          comps.push({ lbl: currentLabel, x0: minX, y0: minY, x1: maxX, y1: maxY, w: cw, h: ch, area });
         }
-        cuts.push(last);
-        segments = dense.map((_, i) => ({ start: cuts[i], end: cuts[i + 1] }));
       }
-      const y0 = Math.max(0, band.start * STEP - 2);
-      const y1 = Math.min(image.naturalHeight, (band.end + 1) * STEP + 2);
-      return segments.map(segment => {
-        const x0 = Math.max(0, segment.start * STEP - 2);
-        const x1 = Math.min(image.naturalWidth, (segment.end + 1) * STEP + 2);
-        return this.getKeyedSprite(image, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, "magenta", { bgRef, trim: trimFrames });
+
+      const major = [];
+      const minor = [];
+      for (const comp of comps) {
+        if (comp.area >= bandH * bandH * 0.035 && comp.h >= bandH * 0.25) {
+          major.push(comp);
+        } else {
+          minor.push(comp);
+        }
+      }
+
+      major.sort((a, b) => a.x0 - b.x0);
+      const clusters = major.map(c => ({
+        x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1,
+        labels: new Set([c.lbl])
+      }));
+
+      const majorWidths = major.map(c => c.w).sort((a, b) => a - b);
+      const medW = majorWidths[Math.floor(majorWidths.length / 2)] || bandH;
+      const attachPad = Math.max(6, Math.floor(24 / STEP));
+      const unattached = [];
+
+      for (const mc of minor) {
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        for (let idx = 0; idx < clusters.length; idx++) {
+          const cl = clusters[idx];
+          let dist = 0;
+          if (mc.x1 < cl.x0 - attachPad || mc.x0 > cl.x1 + attachPad) {
+            dist = Math.min(Math.abs(mc.x0 - cl.x1), Math.abs(mc.x1 - cl.x0));
+          }
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = idx;
+          }
+        }
+        if (bestIdx >= 0 && bestDist <= medW * 0.32) {
+          const cl = clusters[bestIdx];
+          cl.x0 = Math.min(cl.x0, mc.x0);
+          cl.y0 = Math.min(cl.y0, mc.y0);
+          cl.x1 = Math.max(cl.x1, mc.x1);
+          cl.y1 = Math.max(cl.y1, mc.y1);
+          cl.labels.add(mc.lbl);
+        } else {
+          unattached.push(mc);
+        }
+      }
+
+      unattached.sort((a, b) => a.x0 - b.x0);
+      const uClusters = [];
+      const uGapMax = Math.max(Math.floor(48 / STEP), medW * 0.35);
+      for (const mc of unattached) {
+        const last = uClusters[uClusters.length - 1];
+        if (last && mc.x0 - last.x1 <= uGapMax) {
+          last.x0 = Math.min(last.x0, mc.x0);
+          last.y0 = Math.min(last.y0, mc.y0);
+          last.x1 = Math.max(last.x1, mc.x1);
+          last.y1 = Math.max(last.y1, mc.y1);
+          last.area += mc.area;
+          last.labels.add(mc.lbl);
+        } else {
+          uClusters.push({
+            x0: mc.x0, y0: mc.y0, x1: mc.x1, y1: mc.y1,
+            area: mc.area,
+            labels: new Set([mc.lbl])
+          });
+        }
+      }
+
+      const minClusterArea = Math.max(18, Math.floor(90 / (STEP * STEP)));
+      for (const ucl of uClusters) {
+        if (ucl.area >= minClusterArea) {
+          clusters.push(ucl);
+        }
+      }
+
+      clusters.sort((a, b) => a.x0 - b.x0);
+
+      // Recolectar todas las etiquetas de los demás clusters de la fila para bloquear filtraciones vecinas
+      const allClusterLabels = new Set();
+      clusters.forEach(cl => cl.labels.forEach(l => allClusterLabels.add(l)));
+
+      return clusters.map(cl => {
+        const srcX0 = Math.max(0, cl.x0 * STEP - STEP);
+        const srcY0 = Math.max(0, (bandY0 + cl.y0) * STEP - STEP);
+        const srcX1 = Math.min(image.naturalWidth, (cl.x1 + 1) * STEP + STEP);
+        const srcY1 = Math.min(image.naturalHeight, (bandY0 + cl.y1 + 1) * STEP + STEP);
+        const rect = { x: srcX0, y: srcY0, w: srcX1 - srcX0, h: srcY1 - srcY0 };
+
+        const clusterMask = (localX, localY) => {
+          const px = Math.min(width - 1, Math.max(0, Math.floor((srcX0 + localX) / STEP)));
+          const py = Math.min(bandH - 1, Math.max(0, Math.floor((srcY0 + localY) / STEP) - bandY0));
+          const lbl = labels[py * width + px];
+          if (cl.labels.has(lbl)) return true;
+          if (lbl !== 0 && allClusterLabels.has(lbl)) return false;
+          // Permitir 1 paso de borde antialiasing sólo si es vecino directo de este cluster y no de otro
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = py + dy;
+            if (ny < 0 || ny >= bandH) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = px + dx;
+              if (nx < 0 || nx >= width) continue;
+              if (cl.labels.has(labels[ny * width + nx])) return true;
+            }
+          }
+          return false;
+        };
+
+        const sprite = this.getKeyedSprite(image, rect, "magenta", {
+          bgRef,
+          trim: trimFrames,
+          clusterMask
+        });
+        if (sprite) {
+          sprite.sheetX0 = srcX0;
+          sprite.sheetX1 = srcX1;
+        }
+        return sprite;
       }).filter(Boolean);
     }).filter(frames => frames.length > 0);
 
@@ -1827,12 +4323,13 @@ class Renderer {
   }
 
   loadSheetImage(src) {
+    if (!src) return null;
     let image = this.enemyImages.get(src);
     if (!image) {
       image = this.loadTerrainTexture(src);
-      this.enemyImages.set(src, image);
+      if (image) this.enemyImages.set(src, image);
     }
-    return image.complete && image.naturalWidth > 0 ? image : null;
+    return image?.complete && image.naturalWidth > 0 ? image : null;
   }
 
   getEnemyAnimation(src) {
@@ -1842,16 +4339,75 @@ class Renderer {
 
     const rows = this.segmentSheet(image, { trimFrames: true });
     let animation = null;
-    if (rows) {
-      const idle = rows[0];
-      const attack = rows.length > 1 ? rows[1] : idle;
-      const last = rows.length > 2 ? rows[rows.length - 1] : attack;
-      const hurtCount = last.length > 2 ? Math.min(2, Math.ceil(last.length / 2)) : last.length;
+    if (rows && rows.length > 0) {
+      const splitRowBySectionGap = (rowFrames) => {
+        if (!rowFrames || rowFrames.length < 4) return null;
+        const gaps = [];
+        for (let i = 1; i < rowFrames.length; i++) {
+          const prevEnd = rowFrames[i - 1].sheetX1 ?? 0;
+          const curStart = rowFrames[i].sheetX0 ?? 0;
+          gaps.push({ index: i, gap: Math.max(1, curStart - prevEnd) });
+        }
+        const sortedGaps = [...gaps].map(g => g.gap).sort((a, b) => a - b);
+        const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 1;
+        const maxGapObj = gaps.reduce((best, cur) => (cur.gap > best.gap ? cur : best), gaps[0]);
+        if (maxGapObj && maxGapObj.gap >= Math.max(90, medianGap * 1.9)) {
+          return {
+            left: rowFrames.slice(0, maxGapObj.index),
+            right: rowFrames.slice(maxGapObj.index)
+          };
+        }
+        return null;
+      };
+
+      const rawIdleRow = rows[0];
+      const idleSplit = splitRowBySectionGap(rawIdleRow);
+      const idle = idleSplit
+        ? idleSplit.left
+        : (rawIdleRow.length >= 6 ? rawIdleRow.slice(0, 3) : rawIdleRow);
+
+      let attack = idle;
+      let hurt = idle;
+      let death = idle;
+
+      if (rows.length >= 4) {
+        // Hojas de 4 filas (ej. 1. roc.jpg: Fila 0=Idle, Fila 1=Movement, Fila 2=Attack+Hurt, Fila 3=Death)
+        const row2 = rows[2];
+        const row2Split = splitRowBySectionGap(row2);
+        if (row2Split) {
+          attack = row2Split.left;
+          hurt = row2Split.right;
+        } else if (row2.length >= 4) {
+          const half = Math.ceil(row2.length / 2);
+          attack = row2.slice(0, half);
+          hurt = row2.slice(half);
+        } else {
+          attack = row2;
+          hurt = rows[3].slice(0, Math.min(2, rows[3].length));
+        }
+        death = rows[rows.length - 1];
+      } else {
+        const rawAttackRow = rows.length > 1 ? rows[1] : rawIdleRow;
+        const attackSplit = splitRowBySectionGap(rawAttackRow);
+        attack = attackSplit ? attackSplit.right : rawAttackRow;
+
+        const last = rows.length > 2 ? rows[rows.length - 1] : attack;
+        const lastSplit = splitRowBySectionGap(last);
+        if (lastSplit) {
+          hurt = lastSplit.left;
+          death = lastSplit.right;
+        } else {
+          const hurtCount = last.length > 2 ? Math.min(2, Math.ceil(last.length / 2)) : last.length;
+          hurt = last.slice(0, hurtCount);
+          death = last.length > 2 ? last.slice(hurtCount) : last;
+        }
+      }
+
       animation = {
         idle,
         attack,
-        hurt: last.slice(0, hurtCount),
-        death: last.length > 2 ? last.slice(hurtCount) : last,
+        hurt,
+        death,
         refWidth: Math.max(...idle.map(f => f.width)),
         refHeight: Math.max(...idle.map(f => f.height))
       };
@@ -1865,13 +4421,81 @@ class Renderer {
     return (animation ? animation.death.length : 4) * ENEMY_ANIM_MS.death + 250;
   }
 
+  static getEnemyHorizontalBounds(enemy) {
+    if (enemy?.cells && enemy.cells.length > 0) {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (let i = 0; i < enemy.cells.length; i++) {
+        const cx = enemy.cells[i].x;
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+      }
+      if (Number.isFinite(minX) && Number.isFinite(maxX)) {
+        return { minX, maxX, centerX: (minX + maxX) / 2 };
+      }
+    }
+    const minX = enemy?.x ?? 0;
+    const size = Math.max(1, enemy?.size || 1);
+    const maxX = minX + size - 1;
+    return { minX, maxX, centerX: (minX + maxX) / 2 };
+  }
+
+  static recordEnemyRelativePlayerX(enemy, player) {
+    if (!enemy || !player) return;
+    const { minX, maxX } = Renderer.getEnemyHorizontalBounds(enemy);
+    if (player.x < minX) {
+      enemy.lastRelativeX = -1;
+    } else if (player.x > maxX) {
+      enemy.lastRelativeX = 1;
+    }
+  }
+
+  static orientEnemyTowardsPlayer(enemy, player) {
+    if (!enemy || !player) return false;
+    const { minX, maxX, centerX } = Renderer.getEnemyHorizontalBounds(enemy);
+    let faceLeft;
+
+    if (player.x < minX) {
+      faceLeft = true;
+      enemy.lastRelativeX = -1;
+    } else if (player.x > maxX) {
+      faceLeft = false;
+      enemy.lastRelativeX = 1;
+    } else if (enemy.lastRelativeX === -1 || enemy.lastRelativeX === 1) {
+      faceLeft = enemy.lastRelativeX < 0;
+    } else if (typeof enemy.lastMoveDx === "number" && enemy.lastMoveDx !== 0) {
+      faceLeft = enemy.lastMoveDx < 0;
+    } else if (player.x !== centerX) {
+      faceLeft = player.x < centerX;
+      enemy.lastRelativeX = faceLeft ? -1 : 1;
+    } else if (typeof enemy.facingLeft === "boolean") {
+      faceLeft = enemy.facingLeft;
+    } else {
+      faceLeft = false;
+    }
+
+    enemy.facingLeft = faceLeft;
+    enemy.flipX = faceLeft;
+    enemy.facing = faceLeft ? "left" : "right";
+    return faceLeft;
+  }
+
+  orientEnemyTowardsPlayer(enemy, player = this.player) {
+    return Renderer.orientEnemyTowardsPlayer(enemy, player);
+  }
+
   playEnemyAnim(enemy, state) {
     if (!enemy || enemy.anim?.state === "death") return;
+    if (state === "attack" || state === "hurt") {
+      this.orientEnemyTowardsPlayer(enemy, this.player);
+    }
     enemy.anim = { state, startedAt: performance.now() };
     this.keepAnimating(ENEMY_ANIM_MS[state] * 8);
   }
 
   startEnemyDeath(enemy) {
+    if (!enemy) return;
+    this.orientEnemyTowardsPlayer(enemy, this.player);
     enemy.anim = { state: "death", startedAt: performance.now() };
     if (!this.dungeon.dyingEnemies.includes(enemy)) this.dungeon.dyingEnemies.push(enemy);
     this.keepAnimating(this.getEnemyDeathDuration(enemy) + 100);
@@ -1958,16 +4582,14 @@ class Renderer {
   }
 
   getProjectileSprite(caliber, phase) {
+    const image = this.loadSheetImage(PROJECTILE_SHEET.src);
+    if (!image) return null;
+    const panelRect = PROJECTILE_SHEET.panels?.[caliber]?.[phase];
+    if (panelRect) {
+      return this.getKeyedSprite(image, panelRect, "magenta", { trim: true });
+    }
     if (this.projectileRows === undefined) {
-      const image = this.loadSheetImage(PROJECTILE_SHEET.src);
-      if (!image) return null;
-      this.projectileRows = this.segmentSheet(image, {
-        rowGap: Math.floor(image.naturalHeight / 4 * 0.05),
-        colGap: Math.floor(image.naturalWidth / 4 * 0.1),
-        mergeNarrow: false,
-        denseFractions: [],
-        trimFrames: true
-      });
+      this.projectileRows = this.segmentSheet(image, { trimFrames: true });
     }
     return this.projectileRows?.[PROJECTILE_SHEET.rows[caliber]]?.[phase] ?? null;
   }
@@ -2004,13 +4626,14 @@ class Renderer {
     const drawSprite = (sprite, center, sizeTiles, angle, alpha = 1) => {
       if (!sprite) return false;
       const scale = (sizeTiles * tileSize) / Math.max(sprite.width, sprite.height);
+      const w = Math.max(1, Math.round(sprite.width * scale));
+      const h = Math.max(1, Math.round(sprite.height * scale));
       targetCtx.save();
       targetCtx.imageSmoothingEnabled = false;
       targetCtx.globalAlpha = alpha;
-      targetCtx.translate(center.x, center.y);
+      targetCtx.translate(Math.round(center.x), Math.round(center.y));
       targetCtx.rotate(angle);
-      targetCtx.drawImage(sprite, -sprite.width * scale / 2, -sprite.height * scale / 2,
-        sprite.width * scale, sprite.height * scale);
+      targetCtx.drawImage(sprite, -Math.round(w / 2), -Math.round(h / 2), w, h);
       targetCtx.restore();
       return true;
     };
@@ -2060,8 +4683,9 @@ class Renderer {
 
   getEffectSprite(sheetKey, phase) {
     const config = EFFECT_SHEETS[sheetKey];
-    const image = this.effectImages[sheetKey];
-    if (!image.complete || image.naturalWidth === 0) return null;
+    if (!config) return null;
+    const image = this.ensureEffectImage(sheetKey);
+    if (!image || !image.complete || image.naturalWidth === 0) return null;
 
     let rect;
     if (config.panels) {
@@ -2078,6 +4702,10 @@ class Renderer {
     const tileSize = CAMERA_CONFIG.tileSize;
     const drawSize = enemy.size * tileSize;
 
+    if (enemy.anim && (enemy.anim.state === "attack" || enemy.anim.state === "hurt")) {
+      this.orientEnemyTowardsPlayer(enemy, this.player);
+    }
+
     if (!animation) {
       targetCtx.fillStyle = enemy.isBoss ? "#cc0029" : "#ff3333";
       targetCtx.fillRect(px + 2, py + 2, drawSize - 4, drawSize - 4);
@@ -2085,25 +4713,42 @@ class Renderer {
     }
 
     const sprite = this.getEnemyFrame(enemy, animation, performance.now());
-    const scale = Math.min(drawSize / animation.refWidth, drawSize / animation.refHeight);
-    const width = sprite.width * scale;
-    const height = sprite.height * scale;
+    const isWideBoss = enemy.size >= 2 && animation.refWidth > animation.refHeight * 1.3;
+    const fitWidth = isWideBoss ? drawSize * 1.14 : drawSize * 1.04;
+    const fitHeight = drawSize * 1.04;
+    const scale = Math.min(fitWidth / animation.refWidth, fitHeight / animation.refHeight);
+    const width = Math.max(1, Math.round(sprite.width * scale));
+    const height = Math.max(1, Math.round(sprite.height * scale));
     const anchorX = (sprite.footAnchorX ?? sprite.width / 2) * scale;
+    const centerX = px + drawSize / 2;
 
     targetCtx.save();
     targetCtx.imageSmoothingEnabled = false;
-    // Sombra elíptica sutil bajo los pies del enemigo
     targetCtx.fillStyle = "rgba(0, 0, 0, 0.38)";
     targetCtx.beginPath();
-    targetCtx.ellipse(px + drawSize / 2, py + drawSize - 3, drawSize * 0.32, drawSize * 0.11, 0, 0, Math.PI * 2);
+    const shadowY = isWideBoss ? (py + drawSize * 0.84) : (py + drawSize - 3);
+    targetCtx.ellipse(centerX, shadowY, drawSize * 0.32, drawSize * 0.11, 0, 0, Math.PI * 2);
     targetCtx.fill();
 
-    const drawX = Math.max(px - drawSize * 0.25, Math.min(px + drawSize * 1.25 - width, px + drawSize / 2 - anchorX));
-    targetCtx.drawImage(sprite, drawX, py + drawSize - height, width, height);
+    const flipHorizontally = !!(enemy.facingLeft || enemy.flipX);
+    if (flipHorizontally) {
+      targetCtx.translate(centerX, 0);
+      targetCtx.scale(-1, 1);
+      targetCtx.translate(-centerX, 0);
+    }
+
+    const drawX = Math.round(Math.max(px - drawSize * 0.65, Math.min(px + drawSize * 1.65 - width, centerX - anchorX)));
+    const drawY = isWideBoss
+      ? Math.round(py + (drawSize - height) * 0.55)
+      : Math.round(py + drawSize - height);
+    targetCtx.drawImage(sprite, drawX, drawY, width, height);
     targetCtx.restore();
   }
 
   drawGoldenBunny(targetCtx, bunny, screenX, screenY) {
+    if (!this.goldenBunnySheet) {
+      this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
+    }
     const fleeing = bunny.isFleeing;
     const frame = fleeing
       ? BUNNY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % BUNNY_SPRITES.bunnyFlee.length]
@@ -2113,10 +4758,10 @@ class Renderer {
 
     const tileSize = CAMERA_CONFIG.tileSize;
     const scale = Math.min((tileSize * 0.88) / sprite.width, (tileSize * 0.88) / sprite.height);
-    const width = sprite.width * scale;
-    const height = sprite.height * scale;
-    const px = screenX * tileSize + (tileSize - width) / 2;
-    const py = screenY * tileSize + tileSize - height - 2;
+    const width = Math.max(1, Math.round(sprite.width * scale));
+    const height = Math.max(1, Math.round(sprite.height * scale));
+    const px = Math.round(screenX * tileSize + (tileSize - width) / 2);
+    const py = Math.round(screenY * tileSize + tileSize - height - 2);
     const nextScreen = CameraTransformer.worldToScreen(
       bunny.x + bunny.fleeDirection.dx,
       bunny.y + bunny.fleeDirection.dy,
@@ -2137,20 +4782,25 @@ class Renderer {
   }
 
   drawMerchantSprite(targetCtx, px, py) {
+    if (!this.merchantSpriteSheet) {
+      this.merchantSpriteSheet = this.loadTerrainTexture("Assets/Enemy/merchant.png");
+    }
     const tileSize = CAMERA_CONFIG.tileSize;
-    const frame = { x: 12, y: 9, w: 37, h: 47 };
+    const frameIdx = (Math.floor(performance.now() / 1600) % 5 === 4) ? 1 : 0;
+    const frame = MERCHANT_SPRITES[frameIdx] || MERCHANT_SPRITES[0];
     const sprite = this.getKeyedSprite(this.merchantSpriteSheet, frame, "gray", { trim: true });
     if (sprite) {
-      const height = tileSize * 1.22;
-      const width = height * (sprite.width / sprite.height);
+      const height = Math.max(1, Math.round(tileSize * 1.22));
+      const width = Math.max(1, Math.round(height * (sprite.width / sprite.height)));
+      const drawX = Math.round(px + (tileSize - width) / 2);
+      const drawY = Math.round(py + tileSize - height);
       targetCtx.save();
       targetCtx.imageSmoothingEnabled = false;
       targetCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
       targetCtx.beginPath();
       targetCtx.ellipse(px + tileSize / 2, py + tileSize - 3, tileSize * 0.34, tileSize * 0.12, 0, 0, Math.PI * 2);
       targetCtx.fill();
-      targetCtx.drawImage(sprite, px + (tileSize - width) / 2,
-        py + tileSize - height, width, height);
+      targetCtx.drawImage(sprite, drawX, drawY, width, height);
       targetCtx.restore();
       return;
     }
@@ -2169,7 +4819,7 @@ class Renderer {
   getTerrainTheme() {
     const floorNumber = this.generator?.floorNumber || 1;
     const themeIndex = Math.min(2, Math.floor((floorNumber - 1) / 34));
-    return this.terrainThemes[themeIndex];
+    return this.ensureThemeLoaded(themeIndex);
   }
 
   drawTerrainTile(targetCtx, texture, sourceRect, x, y, fallbackColor, opacity = 1) {
@@ -2319,7 +4969,7 @@ class Renderer {
       const ov = theme.wallOverlayCrops[(h >> 3) % theme.wallOverlayCrops.length];
       targetCtx.save();
       targetCtx.globalAlpha = opacity * 0.65;
-      targetCtx.drawImage(theme.wallOverlayAtlas, ov.x, ov.y, Math.min(16, ov.w), Math.min(16, ov.h),
+      targetCtx.drawImage(theme.wallOverlayAtlas, ov.x, ov.y, ov.w, ov.h,
         px, py, tileSize, tileSize);
       targetCtx.restore();
     }
@@ -2440,6 +5090,52 @@ class Renderer {
     targetCtx.restore();
   }
 
+  drawBlueChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
+    const chests = this.mapDecorations.chests;
+    if (!chests.complete || chests.naturalWidth === 0) return;
+    const frame = BLUE_CHEST_SPRITES[frameIndex] || BLUE_CHEST_SPRITES[0];
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.imageSmoothingEnabled = false;
+    targetCtx.drawImage(chests, frame.x, frame.y, frame.w, frame.h, px + 5, py + 5,
+      CAMERA_CONFIG.tileSize - 10, CAMERA_CONFIG.tileSize - 10);
+    targetCtx.restore();
+  }
+
+  drawBlueChestOpeningFrame(targetCtx, playerScreenX, playerScreenY) {
+    if (!this.blueChestOpening) return;
+    const { screenX, screenY } = CameraTransformer.worldToScreen(
+      this.blueChestOpening.x, this.blueChestOpening.y, this.player
+    );
+    if (screenX < 0 || screenX >= CAMERA_CONFIG.cols || screenY < 0 || screenY >= CAMERA_CONFIG.rows) return;
+    if (!VisibilitySystem.hasLineOfSight(
+      playerScreenX, playerScreenY, screenX, screenY, this.dungeon, this.player
+    )) return;
+
+    const frameIndex = Math.min(BLUE_CHEST_SPRITES.length - 1,
+      Math.floor((performance.now() - this.blueChestOpening.startedAt) / 90));
+    this.drawBlueChestSprite(targetCtx, screenX * CAMERA_CONFIG.tileSize,
+      screenY * CAMERA_CONFIG.tileSize, 1, frameIndex);
+  }
+
+  playBlueChestOpening(x, y) {
+    if (this.blueChestOpeningFrame !== null) cancelAnimationFrame(this.blueChestOpeningFrame);
+    const opening = { x, y, startedAt: performance.now() };
+    this.blueChestOpening = opening;
+    const animate = () => {
+      if (this.blueChestOpening !== opening) return;
+      if (performance.now() - opening.startedAt >= BLUE_CHEST_SPRITES.length * 90) {
+        this.blueChestOpening = null;
+        this.blueChestOpeningFrame = null;
+        this.redrawCurrentView();
+        return;
+      }
+      this.redrawCurrentView();
+      this.blueChestOpeningFrame = requestAnimationFrame(animate);
+    };
+    animate();
+  }
+
   drawChestSprite(targetCtx, px, py, opacity, frameIndex = 0) {
     const chests = this.mapDecorations.chests;
     if (!chests.complete || chests.naturalWidth === 0) return;
@@ -2551,9 +5247,9 @@ class Renderer {
         targetCtx.scale(-1, 1);
         targetCtx.translate(-(px + tileSize / 2), 0);
       }
-      const drawX = (px + tileSize / 2) - footAnchorX;
-      const drawY = footBaselineY - renderH;
-      targetCtx.drawImage(sprite, drawX, drawY, renderW, renderH);
+      const drawX = Math.round((px + tileSize / 2) - footAnchorX);
+      const drawY = Math.round(footBaselineY - renderH);
+      targetCtx.drawImage(sprite, drawX, drawY, Math.max(1, Math.round(renderW)), Math.max(1, Math.round(renderH)));
     } else {
       const centerX = px + tileSize / 2;
       const centerY = py + tileSize / 2;
@@ -2843,6 +5539,9 @@ class Renderer {
           } else if (tile === TILE_CHEST) {
             mCtx.fillStyle = "#f59e0b";
             mCtx.fillRect(rx + 1, ry + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
+          } else if (tile === TILE_BLUE_CHEST) {
+            mCtx.fillStyle = "#38bdf8";
+            mCtx.fillRect(rx + 1, ry + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
           }
         }
       }
@@ -3037,9 +5736,25 @@ class Renderer {
     this.playSpriteAnimation(frames.map((sprite, index) => ({ sprite, effects: effectsByFrame[index] })), 80);
   }
 
+  pruneUnusedEnemyCache() {
+    if (this.enemyAnimCache.size <= 16) return;
+    const activeSrcs = new Set(
+      (this.dungeon?.enemies || []).map(e => e.spriteSrc).filter(Boolean)
+    );
+    for (const key of this.enemyAnimCache.keys()) {
+      if (this.enemyAnimCache.size <= 12) break;
+      if (!activeSrcs.has(key)) {
+        this.enemyAnimCache.delete(key);
+      }
+    }
+  }
+
   setDungeon(dungeon, generator) {
     this.dungeon = dungeon;
     this.generator = generator;
+    this.bossPresentation = null;
+    this.roarEffects = [];
+    this.pruneUnusedEnemyCache();
     this.snapCamera();
   }
 
@@ -3098,7 +5813,16 @@ class Renderer {
         const py = sy * tileSize;
 
         const isPlayerCell = (sx === playerScreenX && sy === playerScreenY);
-        const inLineOfSight = isPlayerCell || VisibilitySystem.hasLineOfSight(
+        const isBossSpotlight = !!(
+          this.bossPresentation &&
+          Math.hypot(worldCoord.x - this.bossPresentation.focusWorldX, worldCoord.y - this.bossPresentation.focusWorldY) <= 3.6
+        );
+        const isMistySpotlight = !!(
+          this.game?.mistyStepPreview &&
+          !this.game.mistyStepPreview.canceled &&
+          Math.hypot(worldCoord.x - this.game.mistyStepPreview.x, worldCoord.y - this.game.mistyStepPreview.y) <= 1.5
+        );
+        const inLineOfSight = isPlayerCell || isBossSpotlight || isMistySpotlight || VisibilitySystem.hasLineOfSight(
           playerScreenX, playerScreenY, sx, sy, this.dungeon, this.player
         );
 
@@ -3124,6 +5848,9 @@ class Renderer {
         } else if (tileType === TILE_CHEST) {
           this.drawEnhancedFloorCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
           this.drawChestSprite(targetCtx, px, py, inLineOfSight ? 1 : 0.42);
+        } else if (tileType === TILE_BLUE_CHEST) {
+          this.drawEnhancedFloorCell(targetCtx, theme, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
+          this.drawBlueChestSprite(targetCtx, px, py, inLineOfSight ? 1 : 0.42);
         } else if (tileType === TILE_ENTRANCE || tileType === TILE_EXIT) {
           this.drawPortalDoorCell(targetCtx, theme, tileType, worldCoord.x, worldCoord.y, px, py, tileSize, inLineOfSight, frameNow);
         } else if (tileType === TILE_FLOOR) {
@@ -3173,6 +5900,7 @@ class Renderer {
 
     this.drawGroundPickups(targetCtx, frameNow);
     this.drawChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
+    this.drawBlueChestOpeningFrame(targetCtx, playerScreenX, playerScreenY);
     this.drawCombatIndicators(targetCtx, frameNow);
 
     this.pruneDyingEnemies(frameNow);
@@ -3194,11 +5922,16 @@ class Renderer {
         if (screenY < minScreenY) minScreenY = screenY;
       });
 
+      if (this.bossPresentation && this.bossPresentation.enemy === enemy) {
+        hasVisibleCell = true;
+      }
       if (!hasVisibleCell) return;
       if (minScreenX + enemy.size <= 0 || minScreenX >= cols || minScreenY + enemy.size <= 0 || minScreenY >= rows) return;
 
       this.drawEnemySprite(targetCtx, enemy, minScreenX * tileSize, minScreenY * tileSize);
     });
+
+    this.drawRoarEffects(targetCtx, frameNow);
 
     this.dungeon.npcs.forEach(npc => {
       const { screenX, screenY } = CameraTransformer.worldToScreen(npc.x, npc.y, this.player);
@@ -3356,12 +6089,22 @@ class CombatSystem {
     const hpDamage = Math.min(player.hp, remaining);
     player.hp = Math.max(0, player.hp - hpDamage);
     const totalDamage = extraDamage + hpDamage;
-    if (totalDamage > 0) game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage} HP`, "damage");
+    if (totalDamage > 0) {
+      if (game?.stats) {
+        game.stats.damageTakenInstances++;
+        game.stats.totalDamageTaken += totalDamage;
+      }
+      game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage} HP`, "damage");
+      if (player.hp > 0) game?.syncBiomeMusic?.();
+    }
     return { extraDamage, hpDamage, totalDamage };
   }
 
   static applyDamageToEnemy(game, target, incomingDamage, animate = true) {
-    if (target.hp <= 0) return 0;
+    if (!target || target.hp <= 0) return 0;
+    if (game?.player) {
+      Renderer.orientEnemyTowardsPlayer(target, game.player);
+    }
     const damage = Math.min(target.hp, Math.max(0, Math.floor(incomingDamage)));
     target.hp = Math.max(0, target.hp - damage);
     if (animate && target.hp > 0) game.renderer?.playEnemyAnim(target, "hurt");
@@ -3395,6 +6138,9 @@ class CombatSystem {
   }
 
   static rollAttack(game, target, weapon = game.player.equippedWeapon) {
+    if (target && game?.player) {
+      Renderer.orientEnemyTowardsPlayer(target, game.player);
+    }
     const result = CombatSystem.resolveD20Attack(game.player, target, game.hitBonus);
     if (!result) return false;
     if (result.fumble) {
@@ -3410,6 +6156,12 @@ class CombatSystem {
     const baseDamage = CombatSystem.rollWeaponDamage(game.player, weapon);
     const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
+    if (game?.stats) {
+      if (weapon.isMelee) game.stats.swordHits++;
+      else if (weapon.id === "pistol") game.stats.pistolHits++;
+      else if (weapon.id === "musket") game.stats.musketHits++;
+      else if (weapon.id === "blunderbuss") game.stats.blunderbussHits++;
+    }
     if (weapon.id === "blunderbuss") CombatSystem.applyBlunderbussKnockback(game, target);
     if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
@@ -3430,6 +6182,21 @@ class CombatSystem {
     const deadIds = new Set(dead.map(enemy => enemy.id));
     game.dungeon.enemies = game.dungeon.enemies.filter(enemy => !deadIds.has(enemy.id));
     dead.forEach(enemy => {
+      if (game?.stats) {
+        game.stats.killsTotal++;
+        if (enemy.isMegaBoss) {
+          game.stats.killsMegaBosses++;
+          if (enemy.originTier === 10 || game.floor === 100) {
+            game.stats.solarDragonDefeated = true;
+            game.spawnBlueChest(enemy.x, enemy.y);
+          }
+        } else if (enemy.isBoss) {
+          game.stats.killsMiniBosses++;
+        } else {
+          game.stats.killsMinions++;
+        }
+        game.stats.killsByName[enemy.name] = (game.stats.killsByName[enemy.name] || 0) + 1;
+      }
       if (enemy.isMegaBoss) {
         game.player.highestMegaBossTierDefeated = Math.max(
           game.player.highestMegaBossTierDefeated,
@@ -3443,18 +6210,21 @@ class CombatSystem {
         game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
       }
       if (enemy.size === 1 && !enemy.isBoss) {
-        if (game.floor % 10 === 0) {
+        if (game.dungeon?.isBossRoom || game.floor % 10 === 0) {
           game.player.minionKillsSincePotion++;
-          if (game.player.minionKillsSincePotion >= 4) {
+          // Reducido a la mitad: umbral pasa de 8 a 16 enemigos derrotados en área de jefes
+          if (game.player.minionKillsSincePotion >= 16) {
             game.player.minionKillsSincePotion = 0;
             game.spawnPickup("potion", enemy.x, enemy.y);
           }
-        } else if (Math.random() < 0.1) {
+        } else if (Math.random() < 0.05) {
+          // Reducido a la mitad: probabilidad pasa de 0.10 (10%) a 0.05 (5%) en enemigos normales
           game.spawnPickup("potion", enemy.x, enemy.y);
         }
       }
       game.renderer?.startEnemyDeath(enemy);
     });
+    game?.syncBiomeMusic?.();
     return dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
   }
 
@@ -3517,14 +6287,20 @@ class CombatSystem {
     if (weapon.isMelee) {
       sounds.playSword();
       game.renderer?.playSwordSpin();
+      if (game?.stats) game.stats.swordSwings++;
       targets = dungeon.enemies.filter(enemy =>
         enemy.cells && enemy.cells.some(cell => Math.hypot(cell.x - player.x, cell.y - player.y) <= 1.5)
       );
       if (targets.length === 0) game.log(TEXT.logs.swordWhiff);
     } else {
       player[weapon.ammoProperty]--;
+      if (game?.stats) {
+        if (weapon.id === "pistol") game.stats.pistolShots++;
+        else if (weapon.id === "musket") game.stats.musketShots++;
+        else if (weapon.id === "blunderbuss") game.stats.blunderbussShots++;
+      }
       if (player[weapon.ammoProperty] <= 0) player.equippedWeapon = WEAPONS.SWORD;
-      sounds.playShot(weapon.id !== "pistol");
+      sounds.playShot(weapon.id);
       game.renderer?.commitCameraFacing();
       const shot = CombatSystem.resolveShot(player, dungeon, weapon);
       game.renderer?.playRangedAttack(weapon.id, shot);
@@ -3570,6 +6346,709 @@ const NARRATIVE_PANELS = [
   { id: 12, crop: { x: 270,  y: 912, w: 679, h: 287 }, fx: "portalDescent", duration: 4400 }
 ];
 
+const _BOOT_TIMESTAMP = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+/**
+ * GESTOR DE PRECARGA PROGRESIVA Y ASÍNCRONA DURANTE LA INTRODUCCIÓN NARRATIVA (Sección 4):
+ * - Divide los recursos en Críticos (indispensables para el Piso 1, Lior, HUD, SFX básicos y Bioma 1)
+ *   y Secundarios (efectos de armas avanzadas, enemigos de pisos posteriores, biomas 2 y 3, pistas MIDI futuras).
+ * - Ejecuta pequeñas tareas asíncronas en segundo plano sin bloquear el hilo principal ni congelar la presentación.
+ * - Precarga archivos de audio y MIDI en silencio sin reproducirlos anticipadamente.
+ */
+class ResourcePreloader {
+  constructor(game) {
+    this.game = game;
+    this.criticalTasks = [];
+    this.secondaryTasks = [];
+    this.queuedKeys = new Set();
+    this.completedKeys = new Set();
+
+    this.criticalTotal = 0;
+    this.criticalDone = 0;
+    this.secondaryTotal = 0;
+    this.secondaryDone = 0;
+
+    this.criticalReady = false;
+    this.allReady = false;
+    this.isRunning = false;
+    this.stepTimer = null;
+    this.criticalResolvers = [];
+    this.progressListeners = new Set();
+
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.metrics = {
+      bootStartedAt: _BOOT_TIMESTAMP,
+      preloaderCreatedAt: now,
+      introShownAt: null,
+      criticalReadyAt: null,
+      secondaryReadyAt: null,
+      floor1ReadyAt: null
+    };
+    if (typeof window !== "undefined") {
+      window.__liorLoadMetrics = this.metrics;
+    }
+  }
+
+  waitForImage(img, timeoutMs = 450) {
+    if (!img) return Promise.resolve(false);
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve(true);
+    return new Promise(resolve => {
+      let settled = false;
+      const done = (ok) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      const timer = setTimeout(() => done(false), timeoutMs);
+      img.addEventListener("load", () => done(true), { once: true });
+      img.addEventListener("error", () => done(false), { once: true });
+    });
+  }
+
+  enqueueTask(key, fn, isCritical = false) {
+    if (!key || this.queuedKeys.has(key) || this.completedKeys.has(key)) return;
+    this.queuedKeys.add(key);
+    const task = { key, fn, isCritical };
+    if (isCritical) {
+      this.criticalTasks.push(task);
+      this.criticalTotal++;
+      this.criticalReady = false;
+    } else {
+      this.secondaryTasks.push(task);
+      this.secondaryTotal++;
+      this.allReady = false;
+    }
+  }
+
+  prepareImageAndRun(img, onReady) {
+    if (!img) return;
+    if (img.complete && img.naturalWidth > 0) {
+      try { onReady(); } catch {}
+    } else {
+      img.addEventListener("load", () => {
+        setTimeout(() => { try { onReady(); } catch {} }, 0);
+      }, { once: true });
+    }
+  }
+
+  buildInitialQueues() {
+    const renderer = this.game?.renderer;
+
+    // --- 1. RECURSOS CRÍTICOS (Piso 1, Lior, Bioma 1, SFX de acciones y rugido 1-4) ---
+    this.enqueueTask("midi:intro", () => sounds.preloadMidiTrack("intro"), true);
+    this.enqueueTask("midi:biome1", () => sounds.preloadMidiTrack("biome1"), true);
+
+    this.enqueueTask("img:biome1", () => {
+      renderer?.ensureThemeLoaded(0);
+    }, true);
+
+    this.enqueueTask("img:lior-sheets", () => {
+      if (!renderer) return;
+      this.prepareImageAndRun(renderer.liorSheet, () => {
+        LIOR_SPRITES.IDLE.forEach(rect => renderer.getLiorFrame(rect));
+      });
+      this.prepareImageAndRun(renderer.lior2Sheet, () => {
+        if (LIOR2_REFERENCE.front) renderer.getLiorFrame(LIOR2_REFERENCE.front);
+        if (LIOR2_REFERENCE.side) renderer.getLiorFrame(LIOR2_REFERENCE.side);
+      });
+    }, true);
+
+    this.enqueueTask("frames:lior-actions", () => {
+      if (!renderer) return;
+      this.prepareImageAndRun(renderer.liorSheet, () => {
+        LIOR_SPRITES.WALK.slice(0, 4).forEach(rect => renderer.getLiorFrame(rect));
+        LIOR_SPRITES.SWORD_SPIN.forEach(rect => renderer.getLiorFrame(rect));
+        LIOR_SPRITES.HURT.forEach(rect => renderer.getLiorFrame(rect));
+      });
+    }, true);
+
+    // Enemigos presentes en el Piso 1 + Kobold y Ogro base del Tier 1
+    const floor1EnemySrcs = new Set([
+      ENEMY_ROSTER.minion[0]?.src,
+      ENEMY_ROSTER.miniBoss[0]?.src,
+      ...((this.game?.dungeon?.enemies || []).map(e => e.spriteSrc))
+    ].filter(Boolean));
+
+    for (const src of floor1EnemySrcs) {
+      this.enqueueTask(`enemy:critical:${src}`, () => {
+        if (!renderer) return;
+        const img = renderer.loadTerrainTexture(src);
+        renderer.enemyImages.set(src, img);
+        this.prepareImageAndRun(img, () => renderer.getEnemyAnimation(src));
+      }, true);
+    }
+
+    // SFX críticos de acciones básicas y rugido de pisos 1-4 (sin reproducirlos)
+    const criticalSfxList = [
+      AUDIO_FILES.actions.pistol,
+      AUDIO_FILES.actions.musket,
+      AUDIO_FILES.actions.blunderbuss,
+      AUDIO_FILES.actions.eldritchBlast,
+      AUDIO_FILES.actions.mistyStep,
+      AUDIO_FILES.actions.heal,
+      AUDIO_FILES.actions.liorHurt,
+      AUDIO_FILES.actions.coinPick,
+      AUDIO_FILES.actions.pickup,
+      AUDIO_FILES.monster.floors1to4
+    ];
+    criticalSfxList.forEach(src => {
+      this.enqueueTask(`sfx:critical:${src}`, () => sounds.preloadAudioFile(src), true);
+    });
+
+    // --- 2. RECURSOS SECUNDARIOS (Efectos de armas, proyectiles, NPCs, pisos y jefes posteriores) ---
+    Object.keys(EFFECT_SHEETS).forEach(sheetKey => {
+      this.enqueueTask(`effect:${sheetKey}`, () => {
+        if (!renderer) return;
+        const img = renderer.ensureEffectImage(sheetKey);
+        this.prepareImageAndRun(img, () => {
+          for (let phase = 0; phase < 3; phase++) {
+            renderer.getEffectSprite(sheetKey, phase);
+          }
+        });
+      }, false);
+    });
+
+    this.enqueueTask("projectiles:sheet", () => {
+      if (!renderer) return;
+      const img = renderer.loadTerrainTexture(PROJECTILE_SHEET.src);
+      renderer.enemyImages.set(PROJECTILE_SHEET.src, img);
+      this.prepareImageAndRun(img, () => renderer.getProjectileSprite("small", 1));
+    }, false);
+
+    this.enqueueTask("npcs:sheets", () => {
+      if (!renderer) return;
+      renderer.ensureNpcSheetsLoaded();
+    }, false);
+
+    ["shop", "crisis", "special_10_50", "biome2", "special_60_90", "biome3", "final_dragon"].forEach(trackId => {
+      this.enqueueTask(`midi:secondary:${trackId}`, () => sounds.preloadMidiTrack(trackId), false);
+    });
+
+    [
+      AUDIO_FILES.monster.floors5to9,
+      AUDIO_FILES.monster.dragon,
+      AUDIO_FILES.gameOverEffect,
+      AUDIO_FILES.gameOverSong
+    ].forEach(src => {
+      const decodeBuffer = !src.endsWith(".wav");
+      this.enqueueTask(`sfx:secondary:${src}`, () => sounds.preloadAudioFile(src, { decodeBuffer }), false);
+    });
+
+    // Precargar enemigos cercanos (Tiers 1-2 y primer jefe 4x4 de Piso 10)
+    const nearEnemySrcs = [
+      ENEMY_ROSTER.minion[1]?.src,
+      ENEMY_ROSTER.minion[2]?.src,
+      ENEMY_ROSTER.miniBoss[1]?.src,
+      ENEMY_ROSTER.megaBoss[0]?.src
+    ].filter(Boolean);
+
+    nearEnemySrcs.forEach(src => {
+      this.enqueueTask(`enemy:secondary:${src}`, () => {
+        if (!renderer) return;
+        const img = renderer.loadTerrainTexture(src);
+        renderer.enemyImages.set(src, img);
+        this.prepareImageAndRun(img, () => renderer.getEnemyAnimation(src));
+      }, false);
+    });
+
+    this.enqueueTask("theme:biome2", () => { renderer?.ensureThemeLoaded(1); }, false);
+    this.enqueueTask("theme:biome3", () => { renderer?.ensureThemeLoaded(2); }, false);
+  }
+
+  start() {
+    if (!this.initialQueuesBuilt) {
+      this.initialQueuesBuilt = true;
+      this.buildInitialQueues();
+    }
+    if (this.isRunning && this.stepTimer !== null) return;
+    this.isRunning = true;
+    this.scheduleNext(8);
+  }
+
+  scheduleNext(delayMs = 12) {
+    if (!this.isRunning) return;
+    clearTimeout(this.stepTimer);
+    this.stepTimer = setTimeout(() => this.runStep(), delayMs);
+  }
+
+  notifyProgress() {
+    this.progressListeners.forEach(listener => {
+      try { listener(this.getCriticalProgressPercent()); } catch {}
+    });
+  }
+
+  getCriticalProgressPercent() {
+    if (this.criticalTotal <= 0) return 100;
+    return Math.min(100, Math.round((this.criticalDone / this.criticalTotal) * 100));
+  }
+
+  async runStep() {
+    if (!this.isRunning) return;
+
+    if (this.criticalTasks.length > 0) {
+      const task = this.criticalTasks.shift();
+      try {
+        await task.fn();
+      } catch {}
+      this.completedKeys.add(task.key);
+      this.criticalDone++;
+      this.notifyProgress();
+
+      if (this.criticalTasks.length === 0 && !this.criticalReady) {
+        this.markCriticalReady();
+      }
+      this.scheduleNext(10);
+      return;
+    }
+
+    if (!this.criticalReady) {
+      this.markCriticalReady();
+    }
+
+    if (this.secondaryTasks.length > 0) {
+      const task = this.secondaryTasks.shift();
+      try {
+        await task.fn();
+      } catch {}
+      this.completedKeys.add(task.key);
+      this.secondaryDone++;
+      this.scheduleNext(18);
+      return;
+    }
+
+    this.allReady = true;
+    this.isRunning = false;
+    if (!this.metrics.secondaryReadyAt) {
+      this.metrics.secondaryReadyAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    }
+  }
+
+  markCriticalReady() {
+    this.criticalReady = true;
+    if (!this.metrics.criticalReadyAt) {
+      this.metrics.criticalReadyAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    }
+    const resolvers = this.criticalResolvers.splice(0);
+    resolvers.forEach(r => { try { r(true); } catch {} });
+  }
+
+  hasPendingNetworkCritical() {
+    const renderer = this.game?.renderer;
+    if (!renderer) return false;
+    const theme0 = renderer.ensureThemeLoaded(0);
+    const criticalImgs = [
+      renderer.liorSheet,
+      renderer.lior2Sheet,
+      theme0?.wallAtlas
+    ].filter(Boolean);
+    return criticalImgs.some(img => !img.complete);
+  }
+
+  /**
+   * Ejecuta de inmediato las preparaciones críticas cuyos recursos base ya estén disponibles en memoria,
+   * garantizando que el Piso 1 comience con sus texturas y sprites listos sin añadir esperas artificiales.
+   */
+  ensureCriticalForImmediateStart() {
+    const renderer = this.game?.renderer;
+    if (renderer) {
+      renderer.ensureThemeLoaded(0);
+      if (renderer.liorSheet?.complete && renderer.liorSheet.naturalWidth > 0) {
+        LIOR_SPRITES.IDLE.forEach(rect => renderer.getLiorFrame(rect));
+      }
+      if (renderer.lior2Sheet?.complete && renderer.lior2Sheet.naturalWidth > 0) {
+        if (LIOR2_REFERENCE.front) renderer.getLiorFrame(LIOR2_REFERENCE.front);
+        if (LIOR2_REFERENCE.side) renderer.getLiorFrame(LIOR2_REFERENCE.side);
+      }
+      (this.game?.dungeon?.enemies || []).forEach(enemy => {
+        if (enemy.spriteSrc) {
+          const img = renderer.loadTerrainTexture(enemy.spriteSrc);
+          renderer.enemyImages.set(enemy.spriteSrc, img);
+          if (img?.complete && img.naturalWidth > 0) {
+            renderer.getEnemyAnimation(enemy.spriteSrc);
+          }
+        }
+      });
+    }
+    if (!this.hasPendingNetworkCritical()) {
+      this.markCriticalReady();
+    }
+    this.start();
+  }
+
+  waitForCritical(timeoutMs = 1000) {
+    this.ensureCriticalForImmediateStart();
+    if (this.criticalReady) return Promise.resolve(true);
+
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.markCriticalReady();
+        resolve(true);
+      };
+      const timer = setTimeout(finish, timeoutMs);
+      this.criticalResolvers.push(finish);
+      const drainFast = async () => {
+        while (this.criticalTasks.length > 0 && !settled) {
+          const task = this.criticalTasks.shift();
+          try { await task.fn(); } catch {}
+          this.completedKeys.add(task.key);
+          this.criticalDone++;
+          this.notifyProgress();
+        }
+        finish();
+      };
+      drainFast();
+    });
+  }
+
+  /**
+   * Precarga de forma anticipada los recursos del piso actual y del próximo encuentro especial.
+   */
+  preloadForFloor(floorNumber = 1) {
+    const renderer = this.game?.renderer;
+    if (!renderer) return;
+
+    const themeIdx = Math.min(2, Math.floor((Math.max(1, floorNumber) - 1) / 34));
+    renderer.ensureThemeLoaded(themeIdx);
+
+    const enemies = this.game?.dungeon?.enemies || [];
+    enemies.forEach(enemy => {
+      if (!enemy.spriteSrc) return;
+      this.enqueueTask(`enemy:floor:${enemy.spriteSrc}`, () => {
+        const img = renderer.loadTerrainTexture(enemy.spriteSrc);
+        renderer.enemyImages.set(enemy.spriteSrc, img);
+        this.prepareImageAndRun(img, () => renderer.getEnemyAnimation(enemy.spriteSrc));
+      }, false);
+    });
+
+    const cycleFloor = ((Math.max(1, floorNumber) - 1) % 10) + 1;
+    if (cycleFloor >= 4) {
+      this.enqueueTask(`sfx:roar:5-9`, () => sounds.preloadAudioFile(AUDIO_FILES.monster.floors5to9), false);
+    }
+    if (floorNumber >= 88) {
+      this.enqueueTask(`sfx:roar:dragon`, () => sounds.preloadAudioFile(AUDIO_FILES.monster.dragon), false);
+      this.enqueueTask(`midi:final_dragon`, () => sounds.preloadMidiTrack("final_dragon"), false);
+    }
+    if (cycleFloor >= 8 || floorNumber % 10 === 0) {
+      const bossIndex = Math.min(ENEMY_ROSTER.megaBoss.length - 1, Math.max(0, Math.ceil(floorNumber / 10) - 1));
+      const bossEntry = ENEMY_ROSTER.megaBoss[bossIndex];
+      if (bossEntry?.src) {
+        this.enqueueTask(`enemy:boss:${bossEntry.src}`, () => {
+          const img = renderer.loadTerrainTexture(bossEntry.src);
+          renderer.enemyImages.set(bossEntry.src, img);
+          this.prepareImageAndRun(img, () => renderer.getEnemyAnimation(bossEntry.src));
+        }, false);
+      }
+    }
+    this.start();
+  }
+}
+
+const ENDING_PANELS = [
+  {
+    id: 1,
+    crop: { x: 0, y: 0, w: 731, h: 390 },
+    duration: 4500,
+    text: "Tras conquistar los 100 pisos del calabozo, Lior emerge exhausta y ensangrentada a la superficie."
+  },
+  {
+    id: 2,
+    crop: { x: 733, y: 0, w: 579, h: 390 },
+    duration: 4500,
+    text: "En sus manos descansa el legendario objeto encomendado por su patrona: una fina tanga negra enjoyada."
+  },
+  {
+    id: 3,
+    crop: { x: 0, y: 393, w: 639, h: 377 },
+    duration: 4500,
+    text: "Junto a la prenda, una carta con el sello de la Dama del Dolor: «Para ti, de tu patrona. jeje ♥»"
+  },
+  {
+    id: 4,
+    crop: { x: 641, y: 393, w: 671, h: 377 },
+    duration: 4800,
+    text: "LIOR: «¿...Todo esto por esto?...»"
+  },
+  {
+    id: 5,
+    crop: { x: 0, y: 772, w: 1312, h: 427 },
+    duration: 5200,
+    text: "La luz del crepúsculo baña el horizonte. La misión ha concluido con un absurdo triunfo."
+  }
+];
+
+class EndingCinematicController {
+  constructor(game) {
+    this.game = game;
+    this.container = document.getElementById("ending-cinematic");
+    this.canvas = document.getElementById("ending-canvas");
+    this.ctx = this.canvas ? this.canvas.getContext("2d") : null;
+    this.textEl = document.getElementById("ending-text");
+    this.progressEl = document.getElementById("ending-progress");
+    this.skipBtn = document.getElementById("btn-skip-ending");
+
+    this.isActive = false;
+    this.panelIndex = 0;
+    this.panelStartedAt = 0;
+    this.prevPanelIndex = -1;
+    this.rafId = null;
+    this.onCompleteCallback = null;
+
+    const endingCandidates = [
+      "Ruinas góticas y diálogo de Lior.png",
+      "Ruinas góticas y diálogo de lior.png",
+      "Ruinas goticas y dialogo de Lior.png",
+      "69486.png",
+      "Assets/Video/Ruinas góticas y diálogo de Lior.png",
+      "Assets/Video/69486.png"
+    ];
+    let candidateIdx = 0;
+    this.sheetImage = new Image();
+    this.sheetLoaded = false;
+    this.sheetImage.addEventListener("load", () => {
+      this.sheetLoaded = true;
+    });
+    this.sheetImage.addEventListener("error", () => {
+      candidateIdx++;
+      if (candidateIdx < endingCandidates.length) {
+        this.sheetImage.src = endingCandidates[candidateIdx];
+      }
+    });
+    this.sheetImage.src = endingCandidates[0];
+
+    this.particles = Array.from({ length: 32 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 1 + Math.random() * 2.2,
+      vx: (Math.random() - 0.5) * 0.00035,
+      vy: -0.00025 - Math.random() * 0.0005,
+      alpha: 0.2 + Math.random() * 0.55
+    }));
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    if (this.skipBtn) {
+      this.skipBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.finish(true);
+      });
+    }
+    if (this.container) {
+      this.container.addEventListener("click", (e) => {
+        if (e.target.closest("#btn-skip-ending, #btn-ending-fullscreen, #btn-ending-music")) return;
+        this.advanceOrReveal();
+      });
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (!this.isActive) return;
+      if (document.hidden) {
+        this.hiddenAt = performance.now();
+      } else if (this.hiddenAt) {
+        const pausedDuration = performance.now() - this.hiddenAt;
+        this.panelStartedAt += pausedDuration;
+        this.hiddenAt = null;
+      }
+    });
+  }
+
+  buildProgressDots() {
+    if (!this.progressEl) return;
+    this.progressEl.innerHTML = "";
+    ENDING_PANELS.forEach((_, idx) => {
+      const dot = document.createElement("span");
+      dot.className = "intro-dot";
+      dot.setAttribute("data-idx", String(idx));
+      this.progressEl.appendChild(dot);
+    });
+  }
+
+  updateProgressDots() {
+    if (!this.progressEl) return;
+    this.progressEl.querySelectorAll(".intro-dot").forEach((dot, idx) => {
+      dot.classList.toggle("is-active", idx === this.panelIndex);
+      dot.classList.toggle("is-done", idx < this.panelIndex);
+    });
+  }
+
+  start(onComplete) {
+    if (!this.container || !this.canvas) {
+      if (onComplete) onComplete();
+      return;
+    }
+    this.onCompleteCallback = onComplete;
+    this.isActive = true;
+    this.panelIndex = 0;
+    this.prevPanelIndex = -1;
+    this.buildProgressDots();
+    this.container.classList.remove("hidden");
+    sounds.playMusic("intro");
+    this.showPanel(0);
+
+    const loop = (now) => {
+      if (!this.isActive) return;
+      this.renderFrame(now);
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+
+  showPanel(index) {
+    if (index >= ENDING_PANELS.length) {
+      this.finish(false);
+      return;
+    }
+    this.prevPanelIndex = this.panelIndex;
+    this.panelIndex = index;
+    this.panelStartedAt = performance.now();
+    const panel = ENDING_PANELS[index];
+
+    if (this.textEl) {
+      this.textEl.textContent = panel.text;
+    }
+    this.updateProgressDots();
+  }
+
+  advanceOrReveal() {
+    if (!this.isActive) return;
+    if (this.panelIndex + 1 < ENDING_PANELS.length) {
+      this.showPanel(this.panelIndex + 1);
+    } else {
+      this.finish(false);
+    }
+  }
+
+  renderPanelArtwork(targetCtx, panel, progress, alpha = 1) {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    targetCtx.save();
+    targetCtx.globalAlpha = alpha;
+
+    if (this.sheetLoaded && this.sheetImage.naturalWidth > 0) {
+      const { x, y, w, h } = panel.crop;
+      const padTop = Math.max(44, Math.round(H * 0.12));
+      const padBottom = Math.max(38, Math.round(H * 0.11));
+      const padSides = Math.max(20, Math.round(W * 0.04));
+      const availW = Math.max(120, W - padSides * 2);
+      const availH = Math.max(100, H - padTop - padBottom);
+
+      const fitScale = Math.min(availW / w, availH / h);
+      const drawW = Math.round(w * fitScale);
+      const drawH = Math.round(h * fitScale);
+      const dx = Math.round((W - drawW) / 2);
+      const dy = Math.round(padTop + (availH - drawH) / 2);
+
+      const glow = targetCtx.createRadialGradient(
+        W / 2, dy + drawH / 2, Math.min(drawW, drawH) * 0.15,
+        W / 2, dy + drawH / 2, Math.max(drawW, drawH) * 0.75
+      );
+      glow.addColorStop(0, "rgba(180, 80, 140, 0.25)");
+      glow.addColorStop(1, "rgba(4, 5, 12, 0)");
+      targetCtx.fillStyle = glow;
+      targetCtx.fillRect(0, 0, W, H);
+
+      targetCtx.fillStyle = "#050711";
+      targetCtx.fillRect(dx - 4, dy - 4, drawW + 8, drawH + 8);
+
+      targetCtx.drawImage(this.sheetImage, x, y, w, h, dx, dy, drawW, drawH);
+
+      targetCtx.strokeStyle = "#c084fc";
+      targetCtx.lineWidth = 2;
+      targetCtx.strokeRect(dx - 1, dy - 1, drawW + 2, drawH + 2);
+      targetCtx.strokeStyle = "#4a1d6e";
+      targetCtx.lineWidth = 1;
+      targetCtx.strokeRect(dx - 4, dy - 4, drawW + 8, drawH + 8);
+    } else {
+      const grad = targetCtx.createRadialGradient(W / 2, H * 0.4, 20, W / 2, H / 2, W * 0.7);
+      grad.addColorStop(0, "#4a1236");
+      grad.addColorStop(1, "#08040d");
+      targetCtx.fillStyle = grad;
+      targetCtx.fillRect(0, 0, W, H);
+      targetCtx.fillStyle = "#ffd700";
+      targetCtx.font = "bold 16px monospace";
+      targetCtx.textAlign = "center";
+      targetCtx.fillText("✦ EL ENCARGO DE LA DAMA DEL DOLOR ✦", W / 2, H / 2 - 20);
+      targetCtx.font = "13px monospace";
+      targetCtx.fillStyle = "#e2e8f0";
+      targetCtx.fillText(panel.text, W / 2, H / 2 + 15);
+    }
+
+    targetCtx.restore();
+  }
+
+  renderFrame(now) {
+    if (!this.ctx || !this.canvas) return;
+    const { width: targetW, height: targetH } = getViewportMetrics();
+    if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+      this.canvas.width = targetW;
+      this.canvas.height = targetH;
+    }
+
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const panel = ENDING_PANELS[this.panelIndex];
+    if (!panel) return;
+
+    const elapsed = now - this.panelStartedAt;
+    const progress = Math.min(1, elapsed / panel.duration);
+
+    if (elapsed >= panel.duration) {
+      if (this.panelIndex < ENDING_PANELS.length - 1) {
+        this.showPanel(this.panelIndex + 1);
+      } else {
+        this.finish(false);
+        return;
+      }
+    }
+
+    this.ctx.fillStyle = "#03040a";
+    this.ctx.fillRect(0, 0, W, H);
+
+    if (elapsed < 300 && this.prevPanelIndex >= 0 && this.prevPanelIndex !== this.panelIndex) {
+      const prevPanel = ENDING_PANELS[this.prevPanelIndex];
+      if (prevPanel) {
+        this.renderPanelArtwork(this.ctx, prevPanel, 1, 1 - elapsed / 300);
+      }
+      this.renderPanelArtwork(this.ctx, panel, progress, elapsed / 300);
+    } else {
+      this.renderPanelArtwork(this.ctx, panel, progress, 1);
+    }
+
+    this.ctx.save();
+    this.particles.forEach(p => {
+      p.x = (p.x + p.vx + 1) % 1;
+      p.y = (p.y + p.vy + 1) % 1;
+      this.ctx.fillStyle = `rgba(244, 114, 182, ${p.alpha * 0.45})`;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+      this.ctx.fill();
+    });
+    this.ctx.restore();
+  }
+
+  finish(skipped = false) {
+    if (!this.isActive) return;
+    this.isActive = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    if (this.container) {
+      this.container.classList.add("hidden");
+    }
+    if (typeof this.onCompleteCallback === "function") {
+      const cb = this.onCompleteCallback;
+      this.onCompleteCallback = null;
+      cb(skipped);
+    }
+  }
+}
+
 class NarrativeIntroController {
   constructor(game) {
     this.game = game;
@@ -3581,11 +7060,15 @@ class NarrativeIntroController {
     this.skipBtn = document.getElementById("btn-skip-intro");
 
     this.isActive = false;
+    this.isWaitingForCritical = false;
+    this.isWaitingForConfirmation = false;
+    this.confirmationReadyAt = 0;
     this.panelIndex = 0;
     this.panelStartedAt = 0;
     this.prevPanelIndex = -1;
     this.rafId = null;
     this.onCompleteCallback = null;
+    this.hiddenAt = null;
 
     this.sheetImage = new Image();
     this.sheetLoaded = false;
@@ -3615,15 +7098,30 @@ class NarrativeIntroController {
     if (this.skipBtn) {
       this.skipBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        this.finish(true);
+        if (!this.isWaitingForConfirmation) {
+          this.panelIndex = NARRATIVE_PANELS.length - 1;
+          this.showFinalConfirmation();
+        } else {
+          this.finish(true);
+        }
       });
     }
     if (this.container) {
       this.container.addEventListener("click", (e) => {
-        if (e.target.closest("#btn-skip-intro, #btn-intro-fullscreen")) return;
+        if (e.target.closest("#btn-skip-intro, #btn-intro-fullscreen, #btn-intro-music")) return;
         this.advanceOrReveal();
       });
     }
+    document.addEventListener("visibilitychange", () => {
+      if (!this.isActive) return;
+      if (document.hidden) {
+        this.hiddenAt = performance.now();
+      } else if (this.hiddenAt) {
+        const pausedDuration = performance.now() - this.hiddenAt;
+        this.panelStartedAt += pausedDuration;
+        this.hiddenAt = null;
+      }
+    });
   }
 
   buildProgressDots() {
@@ -3632,7 +7130,7 @@ class NarrativeIntroController {
     NARRATIVE_PANELS.forEach((_, idx) => {
       const dot = document.createElement("span");
       dot.className = "intro-dot";
-      dot.dataset.idx = String(idx);
+      dot.setAttribute("data-idx", String(idx));
       this.progressEl.appendChild(dot);
     });
   }
@@ -3641,21 +7139,30 @@ class NarrativeIntroController {
     if (!this.progressEl) return;
     this.progressEl.querySelectorAll(".intro-dot").forEach((dot, idx) => {
       dot.classList.toggle("is-active", idx === this.panelIndex);
-      dot.classList.toggle("is-done", idx < this.panelIndex);
+      dot.classList.toggle("is-done", idx < this.panelIndex || this.isWaitingForConfirmation);
     });
   }
 
   start(onComplete) {
     if (!this.container || !this.canvas) {
+      this.game?.preloader?.ensureCriticalForImmediateStart();
       if (onComplete) onComplete();
       return;
     }
     this.onCompleteCallback = onComplete;
     this.isActive = true;
+    this.isWaitingForCritical = false;
+    this.isWaitingForConfirmation = false;
+    this.confirmationReadyAt = 0;
     this.panelIndex = 0;
     this.prevPanelIndex = -1;
+    if (this.game?.preloader) {
+      this.game.preloader.metrics.introShownAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+      this.game.preloader.start();
+    }
     this.buildProgressDots();
     this.container.classList.remove("hidden");
+    sounds.playMusic("intro");
     this.showPanel(0);
 
     const loop = (now) => {
@@ -3668,41 +7175,45 @@ class NarrativeIntroController {
 
   showPanel(index) {
     if (index >= NARRATIVE_PANELS.length) {
-      this.finish(false);
+      this.showFinalConfirmation();
       return;
     }
     this.prevPanelIndex = this.panelIndex;
     this.panelIndex = index;
     this.panelStartedAt = performance.now();
-    const panel = NARRATIVE_PANELS[index];
 
-    if (this.textEl) {
-      this.textEl.textContent = `Escena ${index + 1} / ${NARRATIVE_PANELS.length} — Toca la pantalla o pulsa Espacio para continuar ▶`;
+    if (this.textEl && !this.isWaitingForCritical) {
+      this.textEl.textContent = `Escena ${index + 1} / ${NARRATIVE_PANELS.length}`;
     }
     this.updateProgressDots();
+    sounds.playMusic("intro");
+  }
 
-    if (panel.fx === "starPulse" || panel.fx === "shock") {
-      sounds.playEldritchBlast();
-    } else if (panel.fx === "portalDescent") {
-      sounds.playMisty();
-    } else {
-      sounds.playStep();
+  showFinalConfirmation() {
+    this.isWaitingForConfirmation = true;
+    this.confirmationReadyAt = performance.now();
+    this.updateProgressDots();
+    if (this.textEl) {
+      this.textEl.innerHTML = `<strong>«El descenso comienza. Cuando estés listo, continúa.»</strong> <span style="color:#ffd700;font-size:11px;">[ TOCA O PULSA ESPACIO PARA COMENZAR ]</span>`;
     }
   }
 
   advanceOrReveal() {
-    if (!this.isActive) return;
+    if (!this.isActive || this.isWaitingForCritical) return;
+
+    if (this.isWaitingForConfirmation) {
+      if (performance.now() - this.confirmationReadyAt < 350) return;
+      this.finish(false);
+      return;
+    }
+
     if (this.panelIndex + 1 < NARRATIVE_PANELS.length) {
       this.showPanel(this.panelIndex + 1);
     } else {
-      this.finish(false);
+      this.showFinalConfirmation();
     }
   }
 
-  /**
-   * Dibuja el panel consecutivo COMPLETO (modo contain) respetando su proporción exacta,
-   * sin recortar bordes ni distorsionar la imagen original.
-   */
   renderPanelArtwork(targetCtx, panel, progress, alpha = 1) {
     const W = this.canvas.width;
     const H = this.canvas.height;
@@ -3711,20 +7222,18 @@ class NarrativeIntroController {
 
     if (this.sheetLoaded && this.sheetImage.naturalWidth > 0) {
       const { x, y, w, h } = panel.crop;
-      const padTop = 44;
-      const padBottom = 38;
-      const padSides = 20;
+      const padTop = Math.max(44, Math.round(H * 0.12));
+      const padBottom = Math.max(38, Math.round(H * 0.11));
+      const padSides = Math.max(20, Math.round(W * 0.04));
       const availW = Math.max(120, W - padSides * 2);
       const availH = Math.max(100, H - padTop - padBottom);
 
-      // Escalado 'contain' puro para que el cuadro salga 100% completo sin distorsión
       const fitScale = Math.min(availW / w, availH / h);
       const drawW = Math.round(w * fitScale);
       const drawH = Math.round(h * fitScale);
       const dx = Math.round((W - drawW) / 2);
       const dy = Math.round(padTop + (availH - drawH) / 2);
 
-      // Resplandor ambiental detrás del cuadro
       const glow = targetCtx.createRadialGradient(
         W / 2, dy + drawH / 2, Math.min(drawW, drawH) * 0.15,
         W / 2, dy + drawH / 2, Math.max(drawW, drawH) * 0.75
@@ -3734,7 +7243,6 @@ class NarrativeIntroController {
       targetCtx.fillStyle = glow;
       targetCtx.fillRect(0, 0, W, H);
 
-      // Sombra y marco gótico alrededor del cuadro completo
       targetCtx.fillStyle = "#050711";
       targetCtx.fillRect(dx - 4, dy - 4, drawW + 8, drawH + 8);
 
@@ -3759,8 +7267,7 @@ class NarrativeIntroController {
 
   renderFrame(now) {
     if (!this.ctx || !this.canvas) return;
-    const targetW = Math.max(320, window.innerWidth || 800);
-    const targetH = Math.max(220, window.innerHeight || 450);
+    const { width: targetW, height: targetH } = getViewportMetrics();
     if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
       this.canvas.width = targetW;
       this.canvas.height = targetH;
@@ -3773,6 +7280,17 @@ class NarrativeIntroController {
 
     const elapsed = now - this.panelStartedAt;
     const progress = Math.min(1, elapsed / panel.duration);
+
+    // Avance automático mientras lee, hasta la última escena donde espera confirmación
+    if (!this.isWaitingForConfirmation && !this.isWaitingForCritical) {
+      if (elapsed >= panel.duration) {
+        if (this.panelIndex < NARRATIVE_PANELS.length - 1) {
+          this.showPanel(this.panelIndex + 1);
+        } else {
+          this.showFinalConfirmation();
+        }
+      }
+    }
 
     this.ctx.fillStyle = "#03040a";
     this.ctx.fillRect(0, 0, W, H);
@@ -3787,7 +7305,6 @@ class NarrativeIntroController {
       this.renderPanelArtwork(this.ctx, panel, progress, 1);
     }
 
-    // Partículas arcanas discretas en los márgenes
     this.ctx.save();
     this.particles.forEach(p => {
       p.x = (p.x + p.vx + 1) % 1;
@@ -3800,15 +7317,20 @@ class NarrativeIntroController {
     this.ctx.restore();
   }
 
-  finish(skipped = false) {
+  completeIntroTransition(skipped = false) {
     if (!this.isActive) return;
     this.isActive = false;
+    this.isWaitingForCritical = false;
+    this.isWaitingForConfirmation = false;
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
     if (this.container) {
       this.container.classList.add("hidden");
+    }
+    if (this.game?.preloader?.metrics && !this.game.preloader.metrics.floor1ReadyAt) {
+      this.game.preloader.metrics.floor1ReadyAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     }
     try {
       sessionStorage.setItem("lior_narrative_intro_seen", "true");
@@ -3818,6 +7340,30 @@ class NarrativeIntroController {
       this.onCompleteCallback = null;
       cb(skipped);
     }
+  }
+
+  finish(skipped = false) {
+    if (!this.isActive || this.isWaitingForCritical) return;
+    const preloader = this.game?.preloader;
+    if (preloader) {
+      preloader.ensureCriticalForImmediateStart();
+      if (!preloader.criticalReady && preloader.hasPendingNetworkCritical()) {
+        this.isWaitingForCritical = true;
+        const updateCaption = (pct) => {
+          if (this.textEl && this.isWaitingForCritical) {
+            this.textEl.textContent = `Preparando recursos del calabozo... ${pct}%`;
+          }
+        };
+        updateCaption(preloader.getCriticalProgressPercent());
+        preloader.progressListeners.add(updateCaption);
+        preloader.waitForCritical(900).finally(() => {
+          preloader.progressListeners.delete(updateCaption);
+          this.completeIntroTransition(skipped);
+        });
+        return;
+      }
+    }
+    this.completeIntroTransition(skipped);
   }
 }
 
@@ -4135,8 +7681,12 @@ class TouchGestureController {
   }
 
   getHalf(clientX) {
-    const mid = (window.innerWidth || document.documentElement.clientWidth || 640) / 2;
-    return clientX < mid ? "left" : "right";
+    const rect = this.surface?.getBoundingClientRect?.();
+    if (rect && rect.width > 0) {
+      return clientX < (rect.left + rect.width / 2) ? "left" : "right";
+    }
+    const { width } = getViewportMetrics();
+    return clientX < width / 2 ? "left" : "right";
   }
 
   bindEvents() {
@@ -4172,9 +7722,21 @@ class TouchGestureController {
     const rows = CAMERA_CONFIG.rows || 9;
     const cellW = rect.width / cols;
     const cellH = rect.height / rows;
-    const liorScreenX = rect.left + (CAMERA_CONFIG.playerScreenX + 0.5) * cellW;
-    const liorScreenY = rect.top + (CAMERA_CONFIG.playerScreenY + 0.5) * cellH;
     const radius = Math.max(cellW, cellH) * 0.78;
+
+    const baseAnchor = CAMERA_PROFILES.fixed?.anchors?.[0] || { x: Math.floor(cols / 2), y: Math.floor(rows / 2) };
+    const baseScreenX = rect.left + (baseAnchor.x + 0.5) * cellW;
+    const baseScreenY = rect.top + (baseAnchor.y + 0.5) * cellH;
+    if (Math.hypot(clientX - baseScreenX, clientY - baseScreenY) <= radius) {
+      return true;
+    }
+
+    const offsetPxX = this.game?.renderer?.cameraOffset?.x || 0;
+    const offsetPxY = this.game?.renderer?.cameraOffset?.y || 0;
+    const scaleX = rect.width / Math.max(1, canvas.width || (cols * CAMERA_CONFIG.tileSize));
+    const scaleY = rect.height / Math.max(1, canvas.height || (rows * CAMERA_CONFIG.tileSize));
+    const liorScreenX = rect.left + (CAMERA_CONFIG.playerScreenX + 0.5) * cellW + offsetPxX * scaleX;
+    const liorScreenY = rect.top + (CAMERA_CONFIG.playerScreenY + 0.5) * cellH + offsetPxY * scaleY;
     return Math.hypot(clientX - liorScreenX, clientY - liorScreenY) <= radius;
   }
 
@@ -4629,8 +8191,13 @@ class GameController {
     this.gamepadMapping = "standard";
     this.controlDevice = this.getPreferredControlDevice();
 
+    this.pendingNarrativeIntro = !!options.playNarrativeIntro;
+    this.preloader = new ResourcePreloader(this);
     this.narrativeIntro = new NarrativeIntroController(this);
+    this.endingCinematic = new EndingCinematicController(this);
     this.tutorial = new TutorialController(this);
+    this.stats = new RunStats();
+    this.isAutoWalking = false;
 
     this.initDungeonFloor(false);
     this.touchController = new TouchGestureController(this, document.getElementById("game-container"));
@@ -4644,12 +8211,104 @@ class GameController {
     if (options.playNarrativeIntro) {
       this.startNewGameIntro();
     } else {
+      this.preloader.start();
+      this.syncBiomeMusic();
       this.tutorial.startIfEligible();
     }
   }
 
   get tier() {
     return Math.min(10, Math.floor((this.floor - 1) / 10) + 1);
+  }
+
+  /**
+   * Devuelve el identificador de la canción de 8 bits correspondiente al bioma actual:
+   * - Bioma 1 (Pisos 1–34): "biome1"
+   * - Bioma 2 (Pisos 35–68): "biome2"
+   * - Bioma 3 (Pisos 69–100): "biome3"
+   */
+  getBiomeTrackForFloor(floorNumber = this.floor) {
+    const themeIndex = Math.min(2, Math.floor((Math.max(1, floorNumber) - 1) / 34));
+    return ["biome1", "biome2", "biome3"][themeIndex];
+  }
+
+  isFinalDragonAlive() {
+    if (this.inMerchantFloor || !this.dungeon?.enemies) return false;
+    return this.floor === 100 && this.dungeon.enemies.some(
+      e => e.hp > 0 && (e.isMegaBoss || e.size >= 4 || /drag[oó]n|dragon/i.test((e.name || "") + " " + (e.spriteSrc || "")))
+    );
+  }
+
+  isSpecialEncounterActive() {
+    if (this.inMerchantFloor || !this.dungeon?.enemies) return false;
+    if (this.floor < 10 || this.floor > 90 || this.floor % 10 !== 0) return false;
+    return this.dungeon.enemies.some(e => e.hp > 0);
+  }
+
+  /**
+   * Determina la pista de música que corresponde al contexto actual siguiendo
+   * estrictamente las prioridades de la Sección 5:
+   * 1. Muerte / Game Over -> null (gestionado por game-over-efect.mp3 -> game-over-song.wav)
+   * 2. Introducción narrativa -> "intro" (18. Infinite Darkness Midi.mid)
+   * 3. Tienda / Sala del Mercader -> "shop" (16. Truth Midi.mid, prioridad sobre Crisis)
+   * 4. Dragón Final (Piso 100) -> "final_dragon" (12. Strong Boss Midi.mid, prioridad sobre Crisis)
+   * 5. Vida crítica (0 < HP <= 10) -> "crisis" (09. Crisis Midi.mid)
+   * 6. Encuentros especiales pisos 60, 70, 80, 90 -> "special_60_90" (03. Boss Battle Midi.mid)
+   * 7. Encuentros especiales pisos 10, 20, 30, 40, 50 -> "special_10_50" (01. Slay The Evil Midi.mid)
+   * 8. Pisos normales (o encuentro especial concluido) -> "biome1" / "biome2" / "biome3"
+   */
+  resolveDesiredMusicTrack() {
+    if (this.isGameOverTriggered || (this.player && this.player.hp <= 0)) {
+      return null;
+    }
+    if (this.isIntroActive()) {
+      return "intro";
+    }
+    if (this.isShopOpen() || this.inMerchantFloor || this.dungeon?.isMerchantRoom) {
+      return "shop";
+    }
+    if (this.isFinalDragonAlive()) {
+      return "final_dragon";
+    }
+    if (this.player && this.player.hp > 0 && this.player.hp <= 10) {
+      return "crisis";
+    }
+    if (this.isSpecialEncounterActive()) {
+      if ([60, 70, 80, 90].includes(this.floor)) return "special_60_90";
+      if ([10, 20, 30, 40, 50].includes(this.floor)) return "special_10_50";
+    }
+    return this.getBiomeTrackForFloor(this.floor);
+  }
+
+  syncBiomeMusic() {
+    const trackId = this.resolveDesiredMusicTrack();
+    if (!trackId) return;
+    sounds.playMusic(trackId);
+  }
+
+  /**
+   * Presenta la aparición inicial de enemigos en el piso actual (Secciones 6 y 7.2):
+   * - Si hay un enemigo de tamaño 4x4 sin presentar, inicia la presentación cinematográfica
+   *   de cámara con su rugido y música del encuentro.
+   * - En pisos normales (1 al 9 de cada ciclo de diez pisos), reproduce una sola vez el rugido
+   *   inicial correspondiente a la categoría del piso (1-4monster.mp3 o 5-9monster.mp3).
+   */
+  /**
+   * Presenta la aparición inicial de la criatura jefe exclusivamente en los niveles múltiplos de diez
+   * (10, 20, 30, 40, 50, 60, 70, 80, 90 y 100), desplazando la cámara, activando el rugido correspondiente
+   * una sola vez y regresando suavemente a Lior. Los niveles intermedios (1–9 de cada ciclo) permanecen
+   * libres de rugidos de jefe.
+   */
+  triggerFloorInitialPresentation() {
+    if (this.isIntroActive() || this.inMerchantFloor || !this.dungeon) return;
+    if (this.floor < 10 || this.floor > 100 || this.floor % 10 !== 0) return;
+
+    const largeEnemy = this.dungeon.enemies.find(
+      e => e.hp > 0 && e.isMegaBoss && (e.size || 0) >= 4 && !e.introPresented
+    );
+    if (largeEnemy) {
+      this.renderer?.startLargeEnemyPresentation(largeEnemy, this.floor);
+    }
   }
 
   get playerAC() {
@@ -4665,15 +8324,17 @@ class GameController {
   }
 
   isIntroActive() {
-    return !!(this.narrativeIntro && this.narrativeIntro.isActive);
+    return !!(this.pendingNarrativeIntro || (this.narrativeIntro && this.narrativeIntro.isActive));
   }
 
   isGameplayBlocked() {
     return (
       this.isVictory
+      || this.isAutoWalking
       || this.isPausedForDialog
       || this.isShopOpen()
       || this.isIntroActive()
+      || (this.endingCinematic && this.endingCinematic.isActive)
       || this.tutorial?.isHelpModalOpen()
       || this.renderer?.isPortraitBlocked
       || performance.now() < this.shopClosingCooldown
@@ -4683,11 +8344,17 @@ class GameController {
   }
 
   startNewGameIntro() {
+    this.pendingNarrativeIntro = false;
     if (!this.narrativeIntro) {
+      this.syncBiomeMusic();
+      this.triggerFloorInitialPresentation();
       this.tutorial?.startIfEligible();
       return;
     }
+    sounds.playMusic("intro");
     this.narrativeIntro.start(() => {
+      this.syncBiomeMusic();
+      this.triggerFloorInitialPresentation();
       this.showFloorBanner(this.floor, "El descenso.");
       this.tutorial?.startIfEligible();
       this.renderer?.draw();
@@ -4766,6 +8433,7 @@ class GameController {
     if (dirOrObj === null || dirOrObj === undefined) {
       if (this.mistyStepPreview !== null) {
         this.mistyStepPreview = null;
+        this.renderer?.keepAnimating(450);
         this.renderer?.draw();
       }
       return;
@@ -4830,6 +8498,21 @@ class GameController {
     this.initFullscreenControls();
   }
 
+  canUseNativeFullscreen() {
+    const docEl = document.documentElement;
+    if (!docEl) return false;
+    const hasReq = !!(
+      docEl.requestFullscreen
+      || docEl.webkitRequestFullscreen
+      || docEl.mozRequestFullScreen
+      || docEl.msRequestFullscreen
+    );
+    if (!hasReq) return false;
+    if ("fullscreenEnabled" in document && document.fullscreenEnabled === false) return false;
+    if ("webkitFullscreenEnabled" in document && document.webkitFullscreenEnabled === false) return false;
+    return true;
+  }
+
   isNativeFullscreenActive() {
     return !!(
       document.fullscreenElement
@@ -4843,7 +8526,7 @@ class GameController {
     return this.isNativeFullscreenActive() || document.body.classList.contains("pseudo-fullscreen");
   }
 
-  updateFullscreenUI() {
+  updateFullscreenUI(forceResize = false) {
     const active = this.isFullscreenActive();
     document.body.classList.toggle("is-fullscreen", active);
     const hudBtn = document.getElementById("btn-fullscreen");
@@ -4862,8 +8545,13 @@ class GameController {
       menuFsBtn.textContent = active ? "🗗 Salir de Pantalla Completa" : "⛶ Activar Pantalla Completa";
     }
     if (this.renderer) {
+      const vpChanged = syncViewportCssVars();
       this.renderer.updateOrientationState();
-      this.renderer.setCameraMode("fixed", false);
+      if (forceResize || vpChanged) {
+        this.renderer.setCameraMode("fixed", false);
+      } else {
+        this.renderer.draw();
+      }
     }
   }
 
@@ -4871,25 +8559,27 @@ class GameController {
     if (this.userExitedFullscreen) return;
     document.body.classList.add("pseudo-fullscreen");
     if (this.isNativeFullscreenActive()) {
-      this.updateFullscreenUI();
+      this.updateFullscreenUI(false);
       return;
     }
-    const docEl = document.documentElement;
-    const req = docEl.requestFullscreen
-      || docEl.webkitRequestFullscreen
-      || docEl.mozRequestFullScreen
-      || docEl.msRequestFullscreen;
-    if (req) {
-      try {
-        await req.call(docEl, { navigationUI: "hide" });
-        if (screen.orientation && typeof screen.orientation.lock === "function") {
-          screen.orientation.lock("landscape").catch(() => {});
+    if (this.canUseNativeFullscreen()) {
+      const docEl = document.documentElement;
+      const req = docEl.requestFullscreen
+        || docEl.webkitRequestFullscreen
+        || docEl.mozRequestFullScreen
+        || docEl.msRequestFullscreen;
+      if (req) {
+        try {
+          await req.call(docEl, { navigationUI: "hide" });
+          if (screen.orientation && typeof screen.orientation.lock === "function") {
+            screen.orientation.lock("landscape").catch(() => {});
+          }
+        } catch {
+          // Mantiene pseudo-fullscreen activo si el navegador requiere gesto de usuario o no soporta Fullscreen API
         }
-      } catch {
-        // Mantiene pseudo-fullscreen activo si el navegador requiere gesto de usuario
       }
     }
-    this.updateFullscreenUI();
+    this.updateFullscreenUI(false);
   }
 
   async toggleFullscreen(manual = true) {
@@ -4904,17 +8594,14 @@ class GameController {
         else if (document.msExitFullscreen) await document.msExitFullscreen();
       } catch {}
       document.body.classList.remove("pseudo-fullscreen");
-      this.updateFullscreenUI();
+      this.updateFullscreenUI(true);
       return;
     }
 
     if (manual && document.body.classList.contains("pseudo-fullscreen")) {
-      // Si estaba en pseudo-fullscreen pero aún no en nativo, intentamos nativo primero;
-      // si ya había intentado salir manualmente, desactivamos pseudo-fullscreen.
-      const req = docEl.requestFullscreen
-        || docEl.webkitRequestFullscreen
-        || docEl.mozRequestFullScreen
-        || docEl.msRequestFullscreen;
+      const req = this.canUseNativeFullscreen()
+        ? (docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen)
+        : null;
       if (req && !this._triedManualNativeFs) {
         this._triedManualNativeFs = true;
         try {
@@ -4923,22 +8610,21 @@ class GameController {
           if (screen.orientation && typeof screen.orientation.lock === "function") {
             screen.orientation.lock("landscape").catch(() => {});
           }
-          this.updateFullscreenUI();
+          this.updateFullscreenUI(true);
           return;
         } catch {}
       }
       this._triedManualNativeFs = false;
       this.userExitedFullscreen = true;
       document.body.classList.remove("pseudo-fullscreen");
-      this.updateFullscreenUI();
+      this.updateFullscreenUI(true);
       return;
     }
 
     this.userExitedFullscreen = false;
-    const req = docEl.requestFullscreen
-      || docEl.webkitRequestFullscreen
-      || docEl.mozRequestFullScreen
-      || docEl.msRequestFullscreen;
+    const req = this.canUseNativeFullscreen()
+      ? (docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen)
+      : null;
 
     if (req) {
       try {
@@ -4947,19 +8633,21 @@ class GameController {
           screen.orientation.lock("landscape").catch(() => {});
         }
         document.body.classList.add("pseudo-fullscreen");
-        this.updateFullscreenUI();
+        this.updateFullscreenUI(true);
         return;
       } catch {
-        // Fallback si el contenedor o navegador bloquea la API nativa
+        // Fallback si el contenedor o navegador bloquea la API nativa (ej. Safari iOS)
       }
     }
 
     document.body.classList.add("pseudo-fullscreen");
-    this.updateFullscreenUI();
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    this.updateFullscreenUI(true);
   }
 
   initFullscreenControls() {
     this.userExitedFullscreen = false;
+    this._autoFullscreenAttempted = false;
     const hudBtn = document.getElementById("btn-fullscreen");
     const introBtn = document.getElementById("btn-intro-fullscreen");
 
@@ -4977,18 +8665,34 @@ class GameController {
     }
 
     for (const evt of ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"]) {
-      document.addEventListener(evt, () => this.updateFullscreenUI());
+      document.addEventListener(evt, () => this.updateFullscreenUI(true));
     }
 
-    // 1. Activar pantalla completa desde el inicio (pseudo-fullscreen inmediato + intento nativo)
+    for (const btnId of ["btn-music-toggle", "btn-intro-music", "btn-menu-music"]) {
+      const mBtn = document.getElementById(btnId);
+      if (mBtn) {
+        mBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          sounds.toggleMusicMute();
+        });
+      }
+    }
+    sounds.updateMusicButtonsUI();
+
+    // 1. Activar modo inmersivo desde el inicio
     this.requestAutoFullscreen();
 
-    // 2. Si el navegador requirió un gesto de usuario para la API nativa, activarla automáticamente
-    // en el primer toque, clic o pulsación de tecla del jugador sin que tenga que buscar el botón.
+    // 2. Intentar pantalla completa nativa una única vez en el primer gesto del usuario
+    // sin re-ejecutar en cada toque en navegadores sin Fullscreen API (como Safari en iPhone).
     const onFirstUserGesture = (e) => {
+      if (this._autoFullscreenAttempted) return;
       if (e.target && e.target.closest && e.target.closest("#btn-fullscreen, #btn-intro-fullscreen, #btn-menu-fullscreen")) {
         return;
       }
+      this._autoFullscreenAttempted = true;
+      window.removeEventListener("pointerdown", onFirstUserGesture);
+      window.removeEventListener("touchstart", onFirstUserGesture);
+      window.removeEventListener("keydown", onFirstUserGesture);
       if (!this.userExitedFullscreen && !this.isNativeFullscreenActive()) {
         this.requestAutoFullscreen();
       }
@@ -5000,8 +8704,9 @@ class GameController {
 
   getPreferredControlDevice() {
     const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches;
-    const compactScreen = Math.max(window.innerWidth, window.innerHeight) <= 1000
-      && Math.min(window.innerWidth, window.innerHeight) <= 500;
+    const { width, height } = getViewportMetrics();
+    const compactScreen = Math.max(width, height) <= 1024
+      && Math.min(width, height) <= 520;
     return navigator.maxTouchPoints > 0 || coarsePointer || compactScreen ? "touch" : "keyboard";
   }
 
@@ -5037,6 +8742,9 @@ class GameController {
     this.touchController?.cancelAllGestures();
     if (typeof this.stopDpadHold === "function") this.stopDpadHold();
 
+    if (!isMerchantTransition) {
+      sounds.resetBossRoarTracking(this.floor);
+    }
     if (isMerchantTransition) {
       this.dungeon = new Dungeon(5, 5);
       this.dungeon.isMerchantRoom = true;
@@ -5075,8 +8783,19 @@ class GameController {
     }
     this.renderer.game = this;
 
+    if (!isMerchantTransition && this.dungeon && this.player) {
+      this.dungeon.enemies.forEach(enemy => {
+        enemy.seenAtSpawn = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+      });
+    }
+    this.preloader?.preloadForFloor(this.floor);
+
     this.updateHUD();
     this.updateButtonLabels();
+    if (!this.isIntroActive()) {
+      this.syncBiomeMusic();
+      this.triggerFloorInitialPresentation();
+    }
 
     if (isMerchantTransition) {
       this.log(`[MERCADER]: «${TEXT.logs.merchantPeace}»`);
@@ -5086,7 +8805,7 @@ class GameController {
       }, 300);
     } else {
       this.log(TEXT.logs.floorIntro(this.floor, this.tier, this.dungeon.width, this.dungeon.height, this.player.ac, this.hitBonus));
-      const arenaBoss = this.dungeon.enemies.find(e => e.isMegaBoss);
+      const arenaBoss = this.dungeon.enemies.find(e => e.isMegaBoss || e.size >= 4);
       if (arenaBoss) {
         this.log(TEXT.logs.bossArena(arenaBoss.name));
         this.showFloorBanner(this.floor, `¡${arenaBoss.name}!`);
@@ -5159,9 +8878,25 @@ class GameController {
   }
 
   resetGame() {
+    this.isGameOverTriggered = false;
+    sounds.stopGameOverAudio();
+    sounds.resetBossRoarTracking();
     this.floor = 1;
     this.inMerchantFloor = false;
     this.isVictory = false;
+    this.isAutoWalking = false;
+    if (this.stats) this.stats.reset();
+    if (this.endingCinematic) this.endingCinematic.finish(true);
+    if (this.renderer) {
+      this.renderer.isVictorySequence = false;
+      this.renderer.victoryStep = 0;
+    }
+    const hudEl = document.getElementById("hud");
+    if (hudEl) hudEl.style.removeProperty("display");
+    if (this.victoryScreen) {
+      this.victoryScreen.classList.remove("visible");
+      this.victoryScreen.classList.add("hidden");
+    }
     this.isPausedForDialog = false;
     this.isAnimatingTurn = false;
     this.pendingEnemyProjectiles = 0;
@@ -5184,6 +8919,7 @@ class GameController {
     this.dialogCallback = null;
 
     this.player = null;
+    this.pendingNarrativeIntro = true;
     this.initDungeonFloor(false);
     this.startNewGameIntro();
   }
@@ -5197,6 +8933,7 @@ class GameController {
     this.setShopView("supplies");
     this.updateShopHUD();
     this.shopModal.classList.remove("hidden");
+    this.syncBiomeMusic();
   }
 
   setShopView(view, focusTab = false) {
@@ -5223,6 +8960,7 @@ class GameController {
     this.touchController?.cancelAllGestures();
     if (wasOpen) {
       this.shopClosingCooldown = performance.now() + 250;
+      this.syncBiomeMusic();
     }
   }
 
@@ -5326,7 +9064,7 @@ class GameController {
 
     this.player.gold -= price;
     this.player.weaponUpgrades[weaponId] = level + 1;
-    sounds.playCoin();
+    sounds.playPickup();
     this.updateShopHUD();
     this.updateHUD();
     return true;
@@ -5336,6 +9074,7 @@ class GameController {
     const reward = Math.max(0, Math.floor(amount));
     if (reward === 0) return;
     this.player.gold += reward;
+    if (this.stats) this.stats.goldCollected += reward;
     this.updateHUD();
     this.renderer?.showFloatingNumber(x, y, `+${reward} PO`, "gold");
   }
@@ -5405,7 +9144,7 @@ class GameController {
           this.player.gold -= price;
           this.player.ammoPistol += 6;
           this.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
-          sounds.playCoin();
+          sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
           this.log(TEXT.logs.boughtPistol(price));
@@ -5421,7 +9160,7 @@ class GameController {
           this.player.gold -= price;
           this.player.ammoMusket += 4;
           this.player.unlockedWeapons.add(WEAPONS.MUSKET.id);
-          sounds.playCoin();
+          sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
           this.log(TEXT.logs.boughtMusket(price));
@@ -5437,7 +9176,7 @@ class GameController {
           this.player.gold -= price;
           this.player.ammoBlunderbuss += 2;
           this.player.unlockedWeapons.add(WEAPONS.BLUNDERBUSS.id);
-          sounds.playCoin();
+          sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
           this.log(TEXT.logs.boughtBlunderbuss(price));
@@ -5457,9 +9196,14 @@ class GameController {
             this.player.gold -= price;
             const restored = restoreHealth(this.player, heal);
             if (restored.totalRestored > 0) {
+              if (this.stats) {
+                this.stats.potionsDrunk++;
+                this.stats.totalHealing += restored.totalRestored;
+              }
               this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
             }
             sounds.playHeal();
+            this.syncBiomeMusic();
             this.updateHUD();
             this.updateShopHUD();
             this.log(TEXT.logs.boughtPotion(restored.totalRestored, price));
@@ -5572,6 +9316,8 @@ class GameController {
   }
 
   triggerGameOver() {
+    if (this.isGameOverTriggered) return;
+    this.isGameOverTriggered = true;
     sounds.playDeath();
     this.log(TEXT.logs.deadPlayer);
 
@@ -5591,40 +9337,191 @@ class GameController {
     }, 1200);
   }
 
-  startVictorySequence() {
-    this.isVictory = true;
-    document.getElementById("hud").style.display = "none";
+  spawnBlueChest(approxX, approxY) {
+    if (this.dungeon.blueChestSpawned) return;
+    this.dungeon.blueChestSpawned = true;
+    let target = null;
+    const candidates = [
+      { x: 7, y: 3 }, { x: 7, y: 4 }, { x: 6, y: 3 }, { x: 8, y: 3 },
+      { x: 7, y: 2 }, { x: 7, y: 5 }, { x: 6, y: 4 }, { x: 8, y: 4 }
+    ];
+    for (const c of candidates) {
+      if (this.dungeon.isInsideBounds(c.x, c.y) &&
+          this.dungeon.getTile(c.x, c.y) === TILE_FLOOR &&
+          !(c.x === this.player.x && c.y === this.player.y) &&
+          !(c.x === this.dungeon.exit.x && c.y === this.dungeon.exit.y)) {
+        target = c;
+        break;
+      }
+    }
+    if (!target) {
+      for (let r = 1; r < 7 && !target; r++) {
+        for (let dy = -r; dy <= r && !target; dy++) {
+          for (let dx = -r; dx <= r && !target; dx++) {
+            const tx = 7 + dx;
+            const ty = 7 + dy;
+            if (this.dungeon.isInsideBounds(tx, ty) &&
+                this.dungeon.getTile(tx, ty) === TILE_FLOOR &&
+                !(tx === this.player.x && ty === this.player.y) &&
+                !(tx === this.dungeon.exit.x && ty === this.dungeon.exit.y)) {
+              target = { x: tx, y: ty };
+            }
+          }
+        }
+      }
+    }
+    if (target) {
+      this.dungeon.setTile(target.x, target.y, TILE_BLUE_CHEST);
+      this.dungeon.blueChest = { x: target.x, y: target.y };
+      this.log("¡El líder cayó! Un cofre azul ha aparecido en la arena.");
+      this.renderer?.draw();
+    }
+  }
 
-    this.renderer.isVictorySequence = true;
-    this.renderer.victoryStep = 0;
-    this.renderer.draw();
+  openBlueChest() {
+    const tile = this.dungeon.getTile(this.player.x, this.player.y);
+    if (tile !== TILE_BLUE_CHEST) return;
 
-    let steps = 0;
-    const walkInterval = setInterval(() => {
-      steps++;
-      this.renderer.victoryStep = steps;
+    this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
+    this.player.hasRetrievedQuestItem = true;
+    this.renderer.playBlueChestOpening(this.player.x, this.player.y);
+    sounds.playPickup();
+    this.log("¡Has recuperado el encargo de la Dama del Dolor!");
+
+    this.isAutoWalking = true;
+    setTimeout(() => {
+      this.autoWalkToExit();
+    }, 700);
+  }
+
+  autoWalkToExit() {
+    const dungeon = this.dungeon;
+    const startX = this.player.x;
+    const startY = this.player.y;
+    const exitX = dungeon.exit.x;
+    const exitY = dungeon.exit.y;
+
+    const queue = [{ x: startX, y: startY, path: [] }];
+    const visited = new Set([`${startX},${startY}`]);
+    const dirs = [
+      { x: 0, y: -1, cardinal: 0 },
+      { x: 1, y: 0, cardinal: 1 },
+      { x: 0, y: 1, cardinal: 2 },
+      { x: -1, y: 0, cardinal: 3 }
+    ];
+
+    let foundPath = [];
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      if (curr.x === exitX && curr.y === exitY) {
+        foundPath = curr.path;
+        break;
+      }
+      for (const d of dirs) {
+        const nx = curr.x + d.x;
+        const ny = curr.y + d.y;
+        const key = `${nx},${ny}`;
+        if (!visited.has(key) && dungeon.isInsideBounds(nx, ny) && dungeon.getTile(nx, ny) !== TILE_WALL) {
+          visited.add(key);
+          queue.push({ x: nx, y: ny, path: [...curr.path, { x: nx, y: ny, cardinal: d.cardinal }] });
+        }
+      }
+    }
+
+    if (foundPath.length === 0) {
+      this.isAutoWalking = false;
+      this.startEndingCinematic();
+      return;
+    }
+
+    let stepIndex = 0;
+    const walkTimer = setInterval(() => {
+      if (stepIndex >= foundPath.length) {
+        clearInterval(walkTimer);
+        this.isAutoWalking = false;
+        this.startEndingCinematic();
+        return;
+      }
+      const nextStep = foundPath[stepIndex++];
+      this.player.direction = nextStep.cardinal;
+      this.player.x = nextStep.x;
+      this.player.y = nextStep.y;
       sounds.playStep();
+      this.renderer.commitCameraFacing();
+      this.renderer.playWalk();
       this.renderer.draw();
 
-      if (steps >= 6) {
-        clearInterval(walkInterval);
-        setTimeout(() => {
-          const title = document.querySelector(".victory-title");
-          const desc = document.querySelector(".victory-desc");
-          const stats = document.getElementById("victory-stats-display");
-          const btn = document.querySelector(".victory-restart-btn");
-
-          if (title) title.textContent = TEXT.victory.title;
-          if (desc) desc.innerHTML = TEXT.victory.desc;
-          if (stats) stats.innerHTML = TEXT.victory.stats(this.player.kills, this.player.gold);
-          if (btn) btn.textContent = TEXT.victory.btn;
-
-          this.victoryScreen.classList.remove("hidden");
-          this.victoryScreen.classList.add("visible");
-          sounds.playLogoJingle();
-        }, 800);
+      if (this.player.x === exitX && this.player.y === exitY) {
+        clearInterval(walkTimer);
+        this.isAutoWalking = false;
+        setTimeout(() => this.startEndingCinematic(), 350);
       }
-    }, 400);
+    }, 240);
+  }
+
+  startEndingCinematic() {
+    this.isVictory = true;
+    this.isAutoWalking = false;
+    const hudEl = document.getElementById("hud");
+    if (hudEl) hudEl.style.display = "none";
+
+    if (this.endingCinematic) {
+      this.endingCinematic.start(() => {
+        this.showRunStatsScreen();
+      });
+    } else {
+      this.showRunStatsScreen();
+    }
+  }
+
+  showRunStatsScreen() {
+    this.isVictory = true;
+    sounds.stopMusic();
+    sounds.playLogoJingle();
+
+    if (this.stats) {
+      this.stats.finalGold = this.player.gold;
+      this.stats.floorsCleared = Math.max(100, this.floor);
+    }
+
+    const stats = this.stats || new RunStats();
+
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(val);
+    };
+
+    setTxt("vstat-floors", stats.floorsCleared);
+    setTxt("vstat-gold-total", `${stats.goldCollected} PO`);
+    setTxt("vstat-gold-final", `${stats.finalGold} PO`);
+    setTxt("vstat-steps", stats.totalSteps);
+
+    setTxt("vstat-kills-total", stats.killsTotal);
+    setTxt("vstat-kills-minions", stats.killsMinions);
+    setTxt("vstat-kills-minibosses", stats.killsMiniBosses);
+    setTxt("vstat-kills-megabosses", stats.killsMegaBosses);
+    setTxt("vstat-dragon", stats.solarDragonDefeated ? "¡ABATIDO!" : "NO DERROTADO");
+
+    setTxt("vstat-sword", `${stats.swordSwings} (${stats.swordHits} imp.)`);
+    setTxt("vstat-pistol", `${stats.pistolShots} (${stats.pistolHits} imp.)`);
+    setTxt("vstat-musket", `${stats.musketShots} (${stats.musketHits} imp.)`);
+    setTxt("vstat-blunderbuss", `${stats.blunderbussShots} (${stats.blunderbussHits} imp.)`);
+    setTxt("vstat-blast", `${stats.eldritchBlastCasts} (${stats.eldritchBlastHits} imp.)`);
+    setTxt("vstat-misty", stats.mistyStepUses);
+
+    setTxt("vstat-potions", stats.potionsDrunk);
+    setTxt("vstat-healing", `+${stats.totalHealing} HP`);
+    setTxt("vstat-hits-taken", stats.damageTakenInstances);
+    setTxt("vstat-damage-taken", `-${stats.totalDamageTaken} HP`);
+
+    if (this.victoryScreen) {
+      this.victoryScreen.classList.remove("hidden");
+      this.victoryScreen.classList.add("visible");
+    }
+  }
+
+  startVictorySequence() {
+    this.startEndingCinematic();
   }
 
   clearMistyStepConfirmation() {
@@ -5680,6 +9577,7 @@ class GameController {
     this.player.advanceAction();
     sounds.playMisty();
     this.player.mistyStepCharges--;
+    if (this.stats) this.stats.mistyStepUses++;
 
     // Asegurar que la orientación visual de Lior se mantenga en una de las 4 direcciones cardinales (0..3)
     if (destination.cardinal !== undefined) {
@@ -5698,8 +9596,10 @@ class GameController {
       return;
     }
 
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.player.x = destination.x;
     this.player.y = destination.y;
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.renderer.commitCameraFacing();
     this.renderer.playMistyStep();
     this.handleTileInteractions();
@@ -5819,12 +9719,15 @@ class GameController {
 
     sounds.playEldritchBlast();
     this.player.blastCurrentCharges = 0;
+    if (this.stats) this.stats.eldritchBlastCasts++;
     this.renderer.commitCameraFacing();
     const rayCount = calculateEldritchBlastRayCount(this.floor);
     const damageByRay = splitDamageAcrossRays(calculateEldritchBlastDamage(this.floor), rayCount);
     this.renderer.playEldritchBlastAnimation(beamReach);
 
     if (hitEnemy) {
+      if (this.stats) this.stats.eldritchBlastHits++;
+      Renderer.orientEnemyTowardsPlayer(hitEnemy, this.player);
       let blastDamage = 0;
       damageByRay.forEach(rayDamage => {
         blastDamage += CombatSystem.applyDamageToEnemy(this, hitEnemy, rayDamage, false);
@@ -5848,10 +9751,13 @@ class GameController {
     this.clearMistyStepConfirmation();
     if (this.player.getAvailableWeapons().length < 2) return;
 
+    const prevWeaponId = this.player.equippedWeapon?.id;
     this.player.cycleWeapon();
+    if (this.player.equippedWeapon?.id === prevWeaponId) return;
+
     this.showWeaponRange = true;
     if (!this.player.equippedWeapon.isMelee) this.renderer.commitCameraFacing();
-    sounds.playStep();
+    sounds.playPickup();
 
     const w = this.player.equippedWeapon;
     const ammoInfo = w.ammoProperty ? ` (${this.player[w.ammoProperty]} balas)` : " (∞)";
@@ -5973,7 +9879,10 @@ class GameController {
         else { enemy.bossAttackReady = true; canAttack = false; }
       }
 
+      Renderer.recordEnemyRelativePlayerX(enemy, this.player);
+
       if (canAttack) {
+        Renderer.orientEnemyTowardsPlayer(enemy, this.player);
         const attack = CombatSystem.resolveD20Attack(
           enemy,
           this.player,
@@ -6001,8 +9910,8 @@ class GameController {
           setTimeout(() => {
             try {
               if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory || !attack.hit) return;
-              sounds.playHurt();
               CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
+              if (this.player.hp > 0) sounds.playHurt();
               this.log(hitMessage);
               this.updateHUD();
               this.renderer.playHurt(this.player.hp <= 0);
@@ -6021,7 +9930,6 @@ class GameController {
         }
 
         if (attack.hit && !isRanged) {
-          sounds.playHurt();
           CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
           tookDamage = true;
           this.log(hitMessage);
@@ -6094,12 +10002,22 @@ class GameController {
           enemy.x += dir.dx;
           enemy.y += dir.dy;
           enemy.cells = candidateCells;
+          if (dir.dx !== 0) {
+            enemy.lastMoveDx = dir.dx;
+            enemy.facingLeft = dir.dx < 0;
+            enemy.flipX = enemy.facingLeft;
+            enemy.facing = enemy.facingLeft ? "left" : "right";
+          }
+          Renderer.recordEnemyRelativePlayerX(enemy, this.player);
           break;
         }
       }
     });
 
-    if (tookDamage) this.renderer.playHurt(this.player.hp <= 0);
+    if (tookDamage) {
+      if (this.player.hp > 0) sounds.playHurt();
+      this.renderer.playHurt(this.player.hp <= 0);
+    }
 
     if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.turnCount % 4 === 0
       && this.dungeon.enemies.some(e => e.isMegaBoss)) {
@@ -6199,9 +10117,13 @@ class GameController {
     const isTutorialMovePractice = this.tutorial?.isActive && this.tutorial.step === 1;
     if (!isTutorialMovePractice) {
       this.player.advanceAction();
+      if (this.stats) this.stats.totalSteps++;
     }
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.player.x = nextX;
     this.player.y = nextY;
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
+    this.renderer.settleLargeEnemyPresentationToPlayer?.();
     sounds.playStep();
     this.renderer.commitCameraFacing();
     this.renderer.playWalk();
@@ -6256,7 +10178,9 @@ class GameController {
     }
 
     this.player.advanceAction();
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.player.moveBackward();
+    this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     sounds.playStep();
     this.renderer.commitCameraFacing();
     this.renderer.playWalk();
@@ -6275,14 +10199,18 @@ class GameController {
     this.dungeon.chests.delete(chestKey);
     this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     this.renderer.playChestOpening(this.player.x, this.player.y);
-    sounds.playCoin();
 
     if (Math.random() < 0.5) {
       const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored > 0) {
+        if (this.stats) {
+          this.stats.potionsDrunk++;
+          this.stats.totalHealing += restored.totalRestored;
+        }
         this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
       }
       sounds.playHeal();
+      this.syncBiomeMusic();
       this.renderer.playDrinkPotion();
       this.log(TEXT.logs.chestPotion(restored.totalRestored));
     } else {
@@ -6293,6 +10221,7 @@ class GameController {
       const isNewWeapon = !this.player.unlockedWeapons.has(weapon.id);
       this.player.unlockedWeapons.add(weapon.id);
       this.player[weapon.ammoProperty] += ammo;
+      sounds.playPickup();
 
       if (isNewWeapon) {
         this.log(TEXT.logs.chestWeapon(weapon.name, ammo));
@@ -6324,6 +10253,9 @@ class GameController {
     if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_CHEST) {
       this.openChest();
     }
+    if (this.dungeon.getTile(this.player.x, this.player.y) === TILE_BLUE_CHEST) {
+      this.openBlueChest();
+    }
 
     this.checkGoldenBunnyCapture();
     this.collectGroundPickups();
@@ -6332,13 +10264,15 @@ class GameController {
     if (this.player.x === this.dungeon.exit.x && this.player.y === this.dungeon.exit.y) {
       if (this.dungeon.enemies.length > 0) {
         this.log(TEXT.logs.exitLocked(this.dungeon.enemies.length));
-      } else {
-        if (this.floor >= 100) {
-          this.startVictorySequence();
+      } else if (this.floor >= 100) {
+        if (!this.player.hasRetrievedQuestItem) {
+          this.log("La salida aguarda, pero antes debes abrir el cofre azul y recuperar el encargo.");
+        } else {
+          this.startEndingCinematic();
           return;
         }
-
-        sounds.playCoin();
+      } else {
+        sounds.playStep();
         this.log(TEXT.logs.exitDescend);
 
         if (this.inMerchantFloor) {
@@ -6357,21 +10291,32 @@ class GameController {
   collectGroundPickups() {
     const collected = this.dungeon.pickups.filter(pickup => pickup.x === this.player.x && pickup.y === this.player.y);
     const consumed = new Set();
+    let healed = false;
+    let pickedGold = false;
     collected.forEach(pickup => {
       if (pickup.type === "gold") {
         this.addGold(pickup.amount, pickup.x, pickup.y);
-        sounds.playCoin();
+        pickedGold = true;
         consumed.add(pickup);
         return;
       }
 
       const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored === 0) return;
+      if (this.stats) {
+        this.stats.potionsDrunk++;
+        this.stats.totalHealing += restored.totalRestored;
+      }
       this.renderer.showFloatingNumber(pickup.x, pickup.y, `+${restored.totalRestored} HP`, "healing");
-      sounds.playHeal();
+      healed = true;
       consumed.add(pickup);
     });
     this.dungeon.pickups = this.dungeon.pickups.filter(pickup => !consumed.has(pickup));
+    if (pickedGold) sounds.playCoin();
+    if (healed) {
+      sounds.playHeal();
+      this.syncBiomeMusic();
+    }
     if (consumed.size > 0) this.updateHUD();
   }
 
@@ -6398,8 +10343,10 @@ class GameController {
     for (const [id, action] of Object.entries(dpadActions)) {
       const btn = document.getElementById(id);
       if (!btn) continue;
+      let lastPointerDownAt = 0;
       btn.addEventListener("pointerdown", (e) => {
         e.preventDefault();
+        lastPointerDownAt = performance.now();
         stopHold();
         action();
         holdDelayTimer = setTimeout(() => {
@@ -6415,7 +10362,9 @@ class GameController {
       for (const type of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel", "mouseleave"]) {
         btn.addEventListener(type, stopHold);
       }
-      btn.addEventListener("click", (e) => { if (e.detail === 0) action(); });
+      btn.addEventListener("click", (e) => {
+        if (e.detail === 0 && performance.now() - lastPointerDownAt > 350) action();
+      });
     }
     window.addEventListener("blur", stopHold);
     document.addEventListener("visibilitychange", stopHold);
@@ -6431,6 +10380,8 @@ class GameController {
 
     const restartBtn = document.getElementById("btn-restart-game");
     if (restartBtn) restartBtn.addEventListener("click", () => this.resetGame());
+    const victoryRestartBtn = document.getElementById("btn-victory-restart") || document.querySelector(".victory-restart-btn");
+    if (victoryRestartBtn) victoryRestartBtn.addEventListener("click", () => this.resetGame());
 
     window.addEventListener("keydown", (e) => {
       if (this.isVictory) return;
@@ -6574,6 +10525,10 @@ class GameController {
         case "F":
           if (!e.repeat) this.toggleFullscreen(true);
           break;
+        case "b":
+        case "B":
+          if (!e.repeat) sounds.toggleMusicMute();
+          break;
         case "m":
         case "M":
           if (!e.repeat) this.tutorial?.openHelpModal();
@@ -6684,11 +10639,8 @@ window.addEventListener("DOMContentLoaded", () => {
   let gameStarted = false;
   let stayTimer;
 
-  const introAlreadyPlayed = sessionStorage.getItem("lior_intro_played") === "true";
-
-  if (!splashScreen || introAlreadyPlayed) {
-    if (splashScreen) splashScreen.style.display = "none";
-    new GameController({ playNarrativeIntro: !introAlreadyPlayed });
+  if (!splashScreen) {
+    new GameController({ playNarrativeIntro: true });
     return;
   }
 
@@ -6696,7 +10648,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (gameStarted) return;
     gameStarted = true;
     clearTimeout(stayTimer);
-    sessionStorage.setItem("lior_intro_played", "true");
+    try { sessionStorage.setItem("lior_intro_played", "true"); } catch {}
 
     if (fromUserGesture) {
       const docEl = document.documentElement;
@@ -6715,6 +10667,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => { splashScreen.style.display = "none"; }, SPLASH_FADE_MS);
   }
 
+  sounds.preloadMidiTrack("intro");
   sounds.playLogoJingle();
   requestAnimationFrame(() => splashLogo?.classList.add("show"));
   stayTimer = setTimeout(startGame, SPLASH_FADE_MS + SPLASH_STAY_MS);

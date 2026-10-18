@@ -2,9 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Lior Kurogane - Dungeon Crawler</title>
   <meta name="theme-color" content="#10081d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pwa-icon-192.png">
   <link rel="stylesheet" href="./styles.css">
@@ -23,12 +26,29 @@
     <div class="intro-top-bar">
       <div id="intro-progress" class="intro-progress" aria-hidden="true"></div>
       <div class="intro-top-actions">
+        <button id="btn-intro-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música (B)" aria-label="Alternar música">♪ MÚSICA</button>
         <button id="btn-intro-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
         <button id="btn-skip-intro" class="intro-skip-btn" type="button">OMITIR INTRO ⏭</button>
       </div>
     </div>
     <div id="intro-caption-bar" class="intro-caption-bar">
-      <span id="intro-text" class="intro-caption-text">Escena 1 / 12 — Toca o pulsa Espacio para avanzar ▶</span>
+      <span id="intro-text" class="intro-caption-text">Escena 1 / 12</span>
+    </div>
+  </section>
+
+  <!-- CINEMÁTICA FINAL: EL REGALO DE LA DAMA DEL DOLOR (PISO 100) -->
+  <section id="ending-cinematic" class="narrative-intro hidden" aria-label="Cinemática final">
+    <canvas id="ending-canvas" width="960" height="540"></canvas>
+    <div class="intro-top-bar">
+      <div id="ending-progress" class="intro-progress" aria-hidden="true"></div>
+      <div class="intro-top-actions">
+        <button id="btn-ending-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música (B)" aria-label="Alternar música">♪ MÚSICA</button>
+        <button id="btn-ending-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
+        <button id="btn-skip-ending" class="intro-skip-btn" type="button">OMITIR ⏭</button>
+      </div>
+    </div>
+    <div id="ending-caption-bar" class="intro-caption-bar">
+      <span id="ending-text" class="intro-caption-text"></span>
     </div>
   </section>
 
@@ -92,8 +112,9 @@
         <span id="hud-dir-arrow" class="direction-arrow" aria-hidden="true">↑</span>
         <span id="hud-dir">Norte</span>
       </div>
+      <button id="btn-music-toggle" class="hud-help-btn hud-music-btn" type="button" title="Silenciar música (B)" aria-label="Alternar música">♪</button>
       <button id="btn-fullscreen" class="hud-help-btn hud-fullscreen-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶</button>
-      <button id="btn-tutorial-help" class="hud-menu-btn" type="button" title="Abrir Menú del Juego (M)" aria-label="Abrir Menú del Juego"><span class="hud-menu-icon" aria-hidden="true">☰</span><span>MENÚ</span></button>
+      <button id="btn-tutorial-help" class="hud-menu-btn" type="button" title="Abrir Menú del Juego (M)" aria-label="Abrir Menú del Juego"><span class="hud-menu-icon" aria-hidden="true">☰</span><span class="hud-menu-label">MENÚ</span></button>
     </header>
 
     <!-- ÁREA CENTRAL DE JUEGO A PANTALLA COMPLETA Y MODALES -->
@@ -124,6 +145,7 @@
         <div class="pc-legend-row"><kbd>L</kbd><span>Bruma (Misty)</span></div>
         <div class="pc-legend-row"><kbd>I</kbd><span>Cambiar Arma</span></div>
         <div class="pc-legend-row"><kbd>F</kbd><span>Pantalla Completa</span></div>
+        <div class="pc-legend-row"><kbd>B</kbd><span>Música</span></div>
         <div class="pc-legend-row"><kbd>M</kbd><span>Menú del Juego</span></div>
       </aside>
 
@@ -168,6 +190,7 @@
             <h3 id="tutorial-help-title">✦ MENÚ DEL JUEGO ✦</h3>
             <div class="game-menu-quick-actions">
               <button id="btn-tutorial-resume" class="tutorial-btn tutorial-btn-primary" type="button">▶ Continuar Partida</button>
+              <button id="btn-menu-music" class="tutorial-btn" type="button">♪ Silenciar Música</button>
               <button id="btn-menu-fullscreen" class="tutorial-btn" type="button">⛶ Pantalla Completa</button>
               <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial Táctil</button>
               <button id="btn-menu-restart-game" class="tutorial-btn tutorial-btn-danger" type="button">↻ Reiniciar Partida</button>
@@ -195,8 +218,8 @@
               <p>Presiona el <em>lado izquierdo y el lado derecho</em> de la pantalla al mismo tiempo para cambiar entre tus armas disponibles.</p>
             </div>
             <div class="tutorial-help-item">
-              <strong>6. Teclado (PC) y Pantalla Completa</strong>
-              <p><em>WASD / Flechas</em>: Mover · <em>QEZC</em>: Diagonal · <em>K / Espacio</em>: Atacar · <em>J</em>: E. Blast · <em>L</em>: Bruma · <em>I</em>: Arma · <em>F</em>: Pantalla completa · <em>M</em>: Menú.</p>
+              <strong>6. Teclado (PC), Mando y Pantalla Completa</strong>
+              <p><em>WASD / Flechas / Stick</em>: Mover · <em>QEZC</em>: Diagonal · <em>K / Espacio / A</em>: Atacar · <em>J / X</em>: E. Blast · <em>L / B</em>: Bruma · <em>I / Y</em>: Arma · <em>M</em>: Menú.</p>
             </div>
           </div>
         </div>
@@ -216,15 +239,62 @@
         <div class="death-title">HAS CAÍDO</div>
         <div class="death-desc">Las sombras del calabozo han consumido a Lior.</div>
         <div id="death-stats-display" class="death-stats"></div>
-        <button id="btn-restart-game" class="death-restart-btn">☠ REINICIAR PARTIDA</button>
+        <button id="btn-restart-game" class="death-restart-btn" type="button">☠ REINICIAR PARTIDA</button>
       </div>
 
-      <!-- VENTANA DE VICTORIA (PISO 100) -->
+      <!-- VENTANA DE VICTORIA / REGISTRO COMPLETO DE ESTADÍSTICAS (PISO 100) -->
       <div id="victory-screen" class="hidden">
-        <div class="victory-title">FIN</div>
-        <div class="victory-desc">Lior Kurogane ha emergido a la superficie.<br>El laberinto ha sido purificado.</div>
-        <div id="victory-stats-display" class="victory-stats"></div>
-        <button class="victory-restart-btn" onclick="location.reload()">REINICIAR VIAJE</button>
+        <div class="victory-dashboard gothic-dialog-box">
+          <div class="victory-header">
+            <h2 class="victory-title">✦ REGISTRO DE LA TRAVESÍA ✦</h2>
+            <div class="victory-desc">Piso 100 Purificado · El encargo de la Dama del Dolor ha sido recuperado</div>
+          </div>
+
+          <div class="victory-grid">
+            <!-- Tarjeta 1: Recorrido -->
+            <div class="victory-card">
+              <div class="victory-card-title">📜 RECORRIDO</div>
+              <div class="victory-stat-row"><span>Pisos conquistados:</span><span id="vstat-floors" class="victory-stat-val">100</span></div>
+              <div class="victory-stat-row"><span>Oro total reunido:</span><span id="vstat-gold-total" class="victory-stat-val">0 PO</span></div>
+              <div class="victory-stat-row"><span>Oro final acumulado:</span><span id="vstat-gold-final" class="victory-stat-val">0 PO</span></div>
+              <div class="victory-stat-row"><span>Pasos totales:</span><span id="vstat-steps" class="victory-stat-val">0</span></div>
+            </div>
+
+            <!-- Tarjeta 2: Enemigos -->
+            <div class="victory-card">
+              <div class="victory-card-title">☠ ENEMIGOS ABATIDOS</div>
+              <div class="victory-stat-row"><span>Total derrotados:</span><span id="vstat-kills-total" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Esbirros menores (1×1):</span><span id="vstat-kills-minions" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Jefes de piso (2×2):</span><span id="vstat-kills-minibosses" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Mega-jefes (4×4):</span><span id="vstat-kills-megabosses" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Dragón solar (Piso 100):</span><span id="vstat-dragon" class="victory-stat-highlight">¡ABATIDO!</span></div>
+            </div>
+
+            <!-- Tarjeta 3: Armas y Habilidades -->
+            <div class="victory-card">
+              <div class="victory-card-title">⚔ ARMAS Y COMBATE</div>
+              <div class="victory-stat-row"><span>Golpes de espada:</span><span id="vstat-sword" class="victory-stat-val">0 (0 imp.)</span></div>
+              <div class="victory-stat-row"><span>Disparos de Pistola:</span><span id="vstat-pistol" class="victory-stat-val">0 (0 imp.)</span></div>
+              <div class="victory-stat-row"><span>Disparos de Mosquete:</span><span id="vstat-musket" class="victory-stat-val">0 (0 imp.)</span></div>
+              <div class="victory-stat-row"><span>Disparos de Trabuco:</span><span id="vstat-blunderbuss" class="victory-stat-val">0 (0 imp.)</span></div>
+              <div class="victory-stat-row"><span>Eldritch Blast:</span><span id="vstat-blast" class="victory-stat-val">0 (0 imp.)</span></div>
+              <div class="victory-stat-row"><span>Misty Step (Bruma):</span><span id="vstat-misty" class="victory-stat-val">0</span></div>
+            </div>
+
+            <!-- Tarjeta 4: Salud y Recursos -->
+            <div class="victory-card">
+              <div class="victory-card-title">🩸 SALUD Y RECURSOS</div>
+              <div class="victory-stat-row"><span>Pociones bebidas:</span><span id="vstat-potions" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Curación recibida:</span><span id="vstat-healing" class="victory-stat-val">+0 HP</span></div>
+              <div class="victory-stat-row"><span>Veces herida:</span><span id="vstat-hits-taken" class="victory-stat-val">0</span></div>
+              <div class="victory-stat-row"><span>Daño total sufrido:</span><span id="vstat-damage-taken" class="victory-stat-val">-0 HP</span></div>
+            </div>
+          </div>
+
+          <div class="victory-footer">
+            <button id="btn-victory-restart" class="victory-restart-btn" type="button">REINICIAR VIAJE</button>
+          </div>
+        </div>
       </div>
 
       <!-- MODAL DE LA TIENDA -->
