@@ -73,11 +73,27 @@
       <div class="health-panel">
         <span class="pixel-heart" aria-hidden="true"></span>
         <div class="health-details">
-          <div class="health-track" role="img" aria-label="Vida de Lior">
-            <span id="hud-hp-fill" class="health-fill"></span>
-            <span id="hud-extra-fill" class="extra-health-fill"></span>
+          <div class="health-track" role="img" aria-label="Vida y escudo de Lior">
+            <div class="health-bar-row">
+              <span id="hud-hp-fill" class="health-fill"></span>
+            </div>
+            <div id="hud-shield-track" class="shield-segment-track" title="Segmentos de escudo (0/10)">
+              <span id="hud-extra-fill" class="extra-health-fill"></span>
+              <div id="hud-shield-cells" class="shield-cells-overlay" aria-hidden="true">
+                <span class="shield-cell" data-seg="1"></span>
+                <span class="shield-cell" data-seg="2"></span>
+                <span class="shield-cell" data-seg="3"></span>
+                <span class="shield-cell" data-seg="4"></span>
+                <span class="shield-cell" data-seg="5"></span>
+                <span class="shield-cell" data-seg="6"></span>
+                <span class="shield-cell" data-seg="7"></span>
+                <span class="shield-cell" data-seg="8"></span>
+                <span class="shield-cell" data-seg="9"></span>
+                <span class="shield-cell" data-seg="10"></span>
+              </div>
+            </div>
           </div>
-          <div id="hud-vitals" class="health-label">30 / 30 (+0)</div>
+          <div id="hud-vitals" class="health-label">30/30 · 🛡0/10</div>
         </div>
       </div>
       <div class="weapon-panel" id="hud-weapon-panel">
@@ -188,8 +204,10 @@
         <div class="tutorial-help-card gothic-dialog-box">
           <div class="game-menu-header">
             <h3 id="tutorial-help-title">✦ MENÚ DEL JUEGO ✦</h3>
+            <div id="menu-save-status" class="menu-save-status">💾 Guardado automático al entrar a cada piso · Si mueres, reinicias desde el Piso 1</div>
             <div class="game-menu-quick-actions">
               <button id="btn-tutorial-resume" class="tutorial-btn tutorial-btn-primary" type="button">▶ Continuar Partida</button>
+              <button id="btn-menu-suspend-game" class="tutorial-btn" type="button">⏸ Suspender Partida</button>
               <button id="btn-menu-music" class="tutorial-btn" type="button">♪ Silenciar Música</button>
               <button id="btn-menu-fullscreen" class="tutorial-btn" type="button">⛶ Pantalla Completa</button>
               <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial Táctil</button>
@@ -221,6 +239,26 @@
               <strong>6. Teclado (PC), Mando y Pantalla Completa</strong>
               <p><em>WASD / Flechas / Stick</em>: Mover · <em>QEZC</em>: Diagonal · <em>K / Espacio / A</em>: Atacar · <em>J / X</em>: E. Blast · <em>L / B</em>: Bruma · <em>I / Y</em>: Arma · <em>M</em>: Menú.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL DE PARTIDA GUARDADA / SUSPENDIDA (GUARDADO AUTOMÁTICO AL ENTRAR A CADA PISO) -->
+      <div id="save-resume-modal" class="save-resume-modal hidden" role="dialog" aria-modal="true" aria-labelledby="save-resume-title">
+        <div class="save-resume-card gothic-dialog-box">
+          <h3 id="save-resume-title" class="save-resume-title">✦ PARTIDA GUARDADA ✦</h3>
+          <p id="save-resume-desc" class="save-resume-desc">Tienes un descenso en curso guardado automáticamente al entrar al piso.</p>
+          <div id="save-resume-summary" class="save-resume-summary">
+            <div class="save-summary-row"><span>Piso guardado:</span><strong id="save-stat-floor">Piso 01</strong></div>
+            <div class="save-summary-row"><span>Salud y Escudo:</span><strong id="save-stat-vitals">30/30 HP · 🛡0/10</strong></div>
+            <div class="save-summary-row"><span>Oro acumulado:</span><strong id="save-stat-gold">0 PO</strong></div>
+            <div class="save-summary-row"><span>Arma equipada:</span><strong id="save-stat-weapon">Espada</strong></div>
+            <div class="save-summary-row"><span>Enemigos abatidos:</span><strong id="save-stat-kills">0</strong></div>
+          </div>
+          <p class="save-resume-note">☠ Si Lior cae en combate, el guardado se borra y la travesía se reinicia desde el Piso 1.</p>
+          <div class="save-resume-actions">
+            <button id="btn-resume-saved-game" class="tutorial-btn tutorial-btn-primary save-resume-btn" type="button">▶ CONTINUAR EN PISO 01</button>
+            <button id="btn-discard-saved-game" class="tutorial-btn tutorial-btn-danger save-discard-btn" type="button">↻ NUEVA PARTIDA (DESDE PISO 1)</button>
           </div>
         </div>
       </div>
@@ -283,9 +321,10 @@
 
             <!-- Tarjeta 4: Salud y Recursos -->
             <div class="victory-card">
-              <div class="victory-card-title">🩸 SALUD Y RECURSOS</div>
-              <div class="victory-stat-row"><span>Pociones bebidas:</span><span id="vstat-potions" class="victory-stat-val">0</span></div>
+              <div class="victory-card-title">🩸 SALUD Y ESCUDO</div>
+              <div class="victory-stat-row"><span>Pociones rojas / azules:</span><span id="vstat-potions" class="victory-stat-val">0 / 0</span></div>
               <div class="victory-stat-row"><span>Curación recibida:</span><span id="vstat-healing" class="victory-stat-val">+0 HP</span></div>
+              <div class="victory-stat-row"><span>Segmentos escudo usados:</span><span id="vstat-shield-used" class="victory-stat-val">0 (-0 DMG)</span></div>
               <div class="victory-stat-row"><span>Veces herida:</span><span id="vstat-hits-taken" class="victory-stat-val">0</span></div>
               <div class="victory-stat-row"><span>Daño total sufrido:</span><span id="vstat-damage-taken" class="victory-stat-val">-0 HP</span></div>
             </div>
@@ -321,8 +360,12 @@
               <button id="buy-blunderbuss-ammo" class="shop-btn">1 PO</button>
             </div>
             <div class="shop-item" tabindex="0">
-              <span id="potion-shop-label">Poción de Vida</span>
+              <span id="potion-shop-label">Poción Roja</span>
               <button id="buy-potion" class="shop-btn">2 PO</button>
+            </div>
+            <div class="shop-item" id="shop-shield-item" tabindex="0">
+              <span id="shield-shop-label">Escudo (0/10)</span>
+              <button id="buy-shield-segments" class="shop-btn" type="button">1 PO</button>
             </div>
           </section>
 

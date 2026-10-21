@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "lior-dungeon-crawler-";
-const CACHE_NAME = `${CACHE_PREFIX}v8`;
+const CACHE_NAME = `${CACHE_PREFIX}v12`;
 const SHELL_PATHS = [
   "./",
   "./index.html",

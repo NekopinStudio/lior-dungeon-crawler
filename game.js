@@ -56,7 +56,11 @@ const TEXT = {
     noAmmoPistol: "¡Sin balas de Pistola! Cambia de arma.",
     noAmmoMusket: "¡Sin balas de Mosquete! Cambia de arma.",
     noAmmoBlunderbuss: "¡Sin balas de Trabuco! Cambia de arma.",
-    chestPotion: (heal) => `Encontraste una poción: +${heal} HP.`,
+    chestPotion: (heal) => `Encontraste una poción roja: +${heal} HP.`,
+    chestShieldPotion: (segs, cur, max) => `Encontraste +${segs} ${segs === 1 ? "segmento" : "segmentos"} de escudo (${cur}/${max}).`,
+    chestShieldSegment: (cur, max) => `Encontraste +1 segmento de escudo (${cur}/${max}).`,
+    chestShieldFallbackAmmo: (weapon, ammo) => `Escudo al máximo (10/10): recibes +${ammo} ${ammo === 1 ? "bala" : "balas"} de ${weapon}.`,
+    pickupShieldPotion: (segs, cur, max) => `Obtuviste +${segs} ${segs === 1 ? "segmento" : "segmentos"} de escudo (${cur}/${max}).`,
     chestWeapon: (weapon, ammo) => `Encontraste ${weapon} y ${ammo} ${ammo === 1 ? "bala" : "balas"}.`,
     chestAmmo: (weapon, ammo) => `El cofre tenía ${ammo} ${ammo === 1 ? "bala" : "balas"} de ${weapon}.`,
     swordWhiff: "Blandes tu espada en círculo, pero no hay enemigos al alcance.",
@@ -66,7 +70,10 @@ const TEXT = {
     attackDefended: (total, ac, name) => `[${total} vs CA ${ac}] ${name} se defiende.`,
     criticalMiss: (name) => `${name} pifia y queda aturdido para su próximo ataque.`,
     stunned: (name) => `${name} pierde su turno de ataque por el aturdimiento.`,
-    enemyHit: (name, total, ac, dmg) => `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} de daño (escudo primero).`,
+    enemyHit: (name, total, ac, dmg, mitigated = 0, remSeg = 0) =>
+      mitigated > 0
+        ? `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} HP (🛡 absorbió ${mitigated}, quedan ${remSeg}/10 seg.).`
+        : `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} de daño.`,
     goldDrop: (gold, name) => `+${gold} PO (${name})`,
     panic: "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen.",
     deadPlayer: "Lior ha caído en combate. Fin de la partida.",
@@ -82,7 +89,14 @@ const TEXT = {
     boughtPistol: (price) => `Compraste 6 balas de Pistola (-${price} PO).`,
     boughtMusket: (price) => `Compraste 4 balas de Mosquete (-${price} PO).`,
     boughtBlunderbuss: (price) => `Compraste 2 balas de Trabuco (-${price} PO).`,
-    boughtPotion: (heal, price) => `Bebiste una poción: +${heal} HP (-${price} PO).`,
+    boughtPotion: (heal, price) => `Bebiste una poción roja: +${heal} HP (-${price} PO).`,
+    boughtShield: (count, price, cur, max) =>
+      `Compraste +${count} ${count === 1 ? "segmento" : "segmentos"} de escudo (-${price} PO) · Escudo: ${cur}/${max}.`,
+    shieldFullReject: "Escudo al máximo (10/10 segmentos). No puedes comprar más segmentos.",
+    shieldSpaceReject: (req, avail) =>
+      `Espacio insuficiente: solicitaste +${req} seg., pero solo caben +${avail} (máx. 10/10).`,
+    shieldGoldReject: (cost, gold) =>
+      `Oro insuficiente: necesitas ${cost} PO y tienes ${gold} PO.`,
     mistyInvalid: "Destino inválido para Misty Step."
   }
 };
@@ -912,15 +926,294 @@ class SoundEngine {
     this.gameOverSongAudio = null;
     this.gameOverFallbackTimer = null;
 
+    this.activeHtmlAudioElements = new Set();
+    this.isBackgroundSuspended = false;
+    this._lifecycleBound = false;
+    this._resumePendingOnGesture = false;
+
     this._unlockBound = false;
     this.bindAutoUnlock();
+    this.bindLifecycleEvents();
+  }
+
+  /**
+   * Comprueba si el documento se encuentra oculto o en segundo plano.
+   */
+  isPageHidden() {
+    if (typeof document === "undefined") return false;
+    return !!(document.hidden || document.visibilityState === "hidden");
+  }
+
+  /**
+   * Comprueba si el estado actual del juego permite reproducir o reanudar música.
+   */
+  canPlayMusicInCurrentState() {
+    if (this.isPageHidden() || this.isBackgroundSuspended) return false;
+    if (this.musicMuted) return false;
+    const gc = typeof window !== "undefined" ? (window.__lior || window.gameController) : null;
+    if (gc && gc.renderer && gc.renderer.isPortraitBlocked) return false;
+    return true;
+  }
+
+  /**
+   * Gestiona el ciclo de vida de visibilidad y primer/segundo plano en Android e iPhone (iOS):
+   * - visibilitychange (cuando document.hidden pasa a true/false)
+   * - pagehide / pageshow (suspensión, cierre o navegación en iOS Safari / WebKit)
+   * - blur / focus y freeze / resume como respaldo adicional en navegadores móviles
+   */
+  bindLifecycleEvents() {
+    if (this._lifecycleBound || typeof window === "undefined" || typeof document === "undefined") return;
+    this._lifecycleBound = true;
+
+    this._onVisibilityChange = () => {
+      if (this.isPageHidden()) {
+        this.suspendForBackground("visibilitychange");
+      } else {
+        this.resumeFromBackground("visibilitychange");
+      }
+    };
+
+    this._onPageHide = () => {
+      this.suspendForBackground("pagehide");
+    };
+
+    this._onPageShow = () => {
+      if (!this.isPageHidden()) {
+        this.resumeFromBackground("pageshow");
+      }
+    };
+
+    this._onWindowBlur = () => {
+      if (this.isPageHidden()) {
+        this.suspendForBackground("blur");
+      }
+    };
+
+    this._onWindowFocus = () => {
+      if (!this.isPageHidden() && this.isBackgroundSuspended) {
+        this.resumeFromBackground("focus");
+      }
+    };
+
+    document.addEventListener("visibilitychange", this._onVisibilityChange, { passive: true });
+    window.addEventListener("pagehide", this._onPageHide, { passive: true });
+    window.addEventListener("pageshow", this._onPageShow, { passive: true });
+    window.addEventListener("blur", this._onWindowBlur, { passive: true });
+    window.addEventListener("focus", this._onWindowFocus, { passive: true });
+    document.addEventListener("freeze", this._onPageHide, { passive: true });
+    document.addEventListener("resume", this._onPageShow, { passive: true });
+  }
+
+  /**
+   * Detiene y suspende inmediatamente toda reproducción de música y efectos activos
+   * cuando la aplicación pasa a segundo plano, se oculta la pestaña o se suspende en iOS/Android.
+   */
+  suspendForBackground(reason = "hidden") {
+    this.isBackgroundSuspended = true;
+
+    // 1. Detener el temporizador del secuenciador para impedir que se programen nuevas notas en segundo plano
+    if (this.schedulerTimer !== null) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+
+    // 2. Cancelar temporizadores de atenuación pendientes
+    if (this.musicDuckTimer !== null) {
+      clearTimeout(this.musicDuckTimer);
+      this.musicDuckTimer = null;
+    }
+
+    // 3. Detener todas las voces Web Audio programadas actualmente
+    this.stopAllScheduledVoices();
+
+    // 4. Detener cualquier nodo de efecto Web Audio activo
+    if (this.activeSfxNodes && this.activeSfxNodes.size > 0) {
+      this.activeSfxNodes.forEach(node => {
+        try { node.stop(); } catch {}
+        try { node.disconnect(); } catch {}
+      });
+      this.activeSfxNodes.clear();
+    }
+
+    // 5. Pausar pistas HTMLAudioElement de Game Over si estaban sonando
+    if (this.gameOverEffectAudio) {
+      try {
+        if (!this.gameOverEffectAudio.paused) {
+          this.gameOverEffectAudio._pausedByBackground = true;
+          this.gameOverEffectAudio.pause();
+        }
+      } catch {}
+    }
+    if (this.gameOverSongAudio) {
+      try {
+        if (!this.gameOverSongAudio.paused) {
+          this.gameOverSongAudio._pausedByBackground = true;
+          this.gameOverSongAudio.pause();
+        }
+      } catch {}
+    }
+
+    // 6. Pausar y limpiar cualquier instancia HTMLAudioElement de SFX activa
+    if (this.activeHtmlAudioElements && this.activeHtmlAudioElements.size > 0) {
+      this.activeHtmlAudioElements.forEach(audioEl => {
+        try {
+          if (audioEl !== this.gameOverEffectAudio && audioEl !== this.gameOverSongAudio) {
+            audioEl.pause();
+            audioEl.currentTime = 0;
+          }
+        } catch {}
+      });
+      this.activeHtmlAudioElements.clear();
+    }
+
+    // 7. Suspender el AudioContext para liberar el hardware de audio en Android e iPhone
+    if (this.ctx && typeof this.ctx.suspend === "function" && this.ctx.state === "running") {
+      try {
+        const suspendRes = this.ctx.suspend();
+        if (suspendRes && typeof suspendRes.catch === "function") {
+          suspendRes.catch(() => {});
+        }
+      } catch {}
+    }
+  }
+
+  /**
+   * Reanuda el audio de forma segura únicamente cuando la página vuelve a estar visible
+   * y el estado del juego y de silencio (musicMuted) lo permiten, evitando duplicar pistas.
+   */
+  resumeFromBackground(reason = "visible") {
+    if (this.isPageHidden()) return false;
+    this.isBackgroundSuspended = false;
+
+    // Respetar el estado de silencio configurado por el jugador
+    if (this.musicMuted) {
+      if (this.masterMusicGain && this.ctx) {
+        try {
+          this.masterMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+          this.masterMusicGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        } catch {}
+      }
+      return false;
+    }
+
+    // Si estaba en pantalla de Game Over, reanudar únicamente el audio de Game Over correspondiente
+    if (this.isGameOverActive) {
+      if (this.gameOverEffectAudio && this.gameOverEffectAudio._pausedByBackground && !this.gameOverEffectAudio.ended) {
+        this.gameOverEffectAudio._pausedByBackground = false;
+        if (typeof this.gameOverEffectAudio.play === "function") {
+          this.gameOverEffectAudio.play().catch(() => {
+            this._resumePendingOnGesture = true;
+          });
+        }
+      } else if (this.gameOverSongAudio) {
+        this.gameOverSongAudio._pausedByBackground = false;
+        this.gameOverSongAudio.volume = this.musicMuted ? 0 : 0.76;
+        if (this.gameOverSongAudio.paused && typeof this.gameOverSongAudio.play === "function") {
+          this.gameOverSongAudio.play().catch(() => {
+            this._resumePendingOnGesture = true;
+          });
+        }
+      }
+      return true;
+    }
+
+    // Sincronizar cuál es la pista deseada según el estado actual del juego
+    const gc = typeof window !== "undefined" ? (window.__lior || window.gameController) : null;
+    if (gc && typeof gc.resolveDesiredMusicTrack === "function") {
+      const resolvedTrack = gc.resolveDesiredMusicTrack();
+      if (resolvedTrack) {
+        this.desiredTrackId = resolvedTrack;
+      }
+    }
+
+    if (!this.desiredTrackId || !this.canPlayMusicInCurrentState()) {
+      return false;
+    }
+
+    if (!this.ctx) {
+      this.init();
+    }
+
+    const startOrSyncScheduler = () => {
+      if (this.isPageHidden() || this.isBackgroundSuspended || this.musicMuted || this.isGameOverActive) return;
+      if (!this.ctx) return;
+
+      // Garantizar que nunca haya dos intervalos ni voces superpuestas
+      if (this.schedulerTimer !== null) {
+        clearInterval(this.schedulerTimer);
+        this.schedulerTimer = null;
+      }
+      this.stopAllScheduledVoices();
+
+      const targetTrack = this.desiredTrackId;
+      if (!targetTrack || !CHIPTUNE_TRACKS[targetTrack]) return;
+
+      if (this.currentTrackId !== targetTrack) {
+        this.currentTrackId = targetTrack;
+        this.activeMidiData = this.midiCache.get(targetTrack) || null;
+        this.midiNoteIndex = 0;
+        this.musicStep = 0;
+        if (!this.activeMidiData) {
+          this.loadMidiTrack(targetTrack).then(parsed => {
+            if (parsed && this.currentTrackId === targetTrack && !this.isGameOverActive && !this.isBackgroundSuspended && this.ctx) {
+              this.stopAllScheduledVoices();
+              this.activeMidiData = parsed;
+              this.midiNoteIndex = 0;
+              this.midiLoopStartTime = this.ctx.currentTime + 0.02;
+            }
+          });
+        }
+      }
+
+      if (this.masterMusicGain) {
+        try {
+          this.masterMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+          this.masterMusicGain.gain.setValueAtTime(this.musicMuted ? 0 : this.baseMusicGainValue, this.ctx.currentTime);
+        } catch {}
+      }
+
+      const now = this.ctx.currentTime;
+      if (this.activeMidiData && this.activeMidiData.notes.length > 0) {
+        const currentNoteOffset = this.activeMidiData.notes[this.midiNoteIndex]?.startTime || 0;
+        this.midiLoopStartTime = now + 0.03 - currentNoteOffset;
+      }
+      this.nextNoteTime = now + 0.03;
+      this.schedulerTimer = setInterval(() => this.scheduleMusicSteps(), 25);
+    };
+
+    if (this.ctx && this.ctx.state === "suspended" && typeof this.ctx.resume === "function") {
+      try {
+        const resumePromise = this.ctx.resume();
+        if (resumePromise && typeof resumePromise.then === "function") {
+          resumePromise.then(() => {
+            this._resumePendingOnGesture = false;
+            startOrSyncScheduler();
+          }).catch(() => {
+            this._resumePendingOnGesture = true;
+          });
+          return true;
+        }
+      } catch {
+        this._resumePendingOnGesture = true;
+      }
+    }
+
+    startOrSyncScheduler();
+    return true;
   }
 
   bindAutoUnlock() {
     if (this._unlockBound || typeof window === "undefined") return;
     this._unlockBound = true;
     const unlock = () => {
+      if (this.isPageHidden()) return;
+      this.isBackgroundSuspended = false;
       this.init();
+      if (this._resumePendingOnGesture) {
+        this._resumePendingOnGesture = false;
+        this.resumeFromBackground("gesture");
+        return;
+      }
       if (this.isGameOverActive) {
         if (this.gameOverSongAudio && this.gameOverSongAudio.paused && (!this.gameOverEffectAudio || this.gameOverEffectAudio.ended)) {
           if (typeof this.gameOverSongAudio.play === "function") {
@@ -929,7 +1222,7 @@ class SoundEngine {
         }
         return;
       }
-      if (this.desiredTrackId && !this.schedulerTimer) {
+      if (this.desiredTrackId && !this.schedulerTimer && !this.musicMuted) {
         this.playMusic(this.desiredTrackId);
       } else if (this.ctx && this.ctx.state === "running" && this.currentTrackId) {
         if (this.nextNoteTime < this.ctx.currentTime) {
@@ -974,7 +1267,7 @@ class SoundEngine {
         this.buildNoiseBuffer();
       }
     }
-    if (this.ctx && this.ctx.state === "suspended") {
+    if (this.ctx && this.ctx.state === "suspended" && !this.isPageHidden() && !this.isBackgroundSuspended) {
       this.ctx.resume().catch(() => {});
     }
     if (this.ctx && this.sfxRawBufferCache.size > 0) {
@@ -1212,6 +1505,9 @@ class SoundEngine {
       if (typeof fallbackFn === "function") fallbackFn();
       return null;
     }
+    if (this.isPageHidden() || this.isBackgroundSuspended) {
+      return null;
+    }
     const key = sfxKey || src;
     if (!loop && !this.canTriggerSfx(key, dedupeMs)) {
       return null;
@@ -1319,14 +1615,24 @@ class SoundEngine {
       } catch {}
 
       let endedHandled = false;
+      const cleanupTrackedAudio = () => {
+        if (this.activeHtmlAudioElements) {
+          this.activeHtmlAudioElements.delete(instance);
+        }
+      };
       const triggerEnded = () => {
+        cleanupTrackedAudio();
         if (endedHandled) return;
         endedHandled = true;
         if (typeof onEnded === "function") onEnded();
       };
 
-      if (typeof onEnded === "function") {
-        instance.addEventListener("ended", triggerEnded, { once: true });
+      instance.addEventListener("ended", triggerEnded, { once: true });
+      instance.addEventListener("pause", () => {
+        if (!instance._pausedByBackground) cleanupTrackedAudio();
+      });
+      if (this.activeHtmlAudioElements) {
+        this.activeHtmlAudioElements.add(instance);
       }
 
       const playPromise = instance.play();
@@ -1404,6 +1710,12 @@ class SoundEngine {
     if (this.isGameOverActive) return;
 
     this.desiredTrackId = trackId;
+    if (this.isPageHidden() || this.isBackgroundSuspended) {
+      this.currentTrackId = trackId;
+      this.updateMusicButtonsUI();
+      return;
+    }
+
     this.init();
     if (!this.ctx) return;
 
@@ -1421,7 +1733,7 @@ class SoundEngine {
 
     if (!this.activeMidiData) {
       this.loadMidiTrack(trackId).then(parsed => {
-        if (parsed && this.currentTrackId === trackId && !this.isGameOverActive && this.ctx) {
+        if (parsed && this.currentTrackId === trackId && !this.isGameOverActive && !this.isPageHidden() && !this.isBackgroundSuspended && this.ctx) {
           this.stopAllScheduledVoices();
           this.activeMidiData = parsed;
           this.midiNoteIndex = 0;
@@ -1511,6 +1823,10 @@ class SoundEngine {
   }
 
   scheduleMusicSteps() {
+    if (this.isPageHidden() || this.isBackgroundSuspended) {
+      this.suspendForBackground("scheduler-guard");
+      return;
+    }
     if (!this.ctx || !this.currentTrackId || this.isGameOverActive) return;
     if (this.ctx.state === "suspended") return;
 
@@ -1859,6 +2175,7 @@ class SoundEngine {
   }
 
   playLogoJingle() {
+    if (this.isPageHidden() || this.isBackgroundSuspended) return;
     this.init();
     if (!this.ctx) return;
     const out = this.masterSfxGain || this.ctx.destination;
@@ -1878,6 +2195,7 @@ class SoundEngine {
   }
 
   playStep() {
+    if (this.isPageHidden() || this.isBackgroundSuspended) return;
     if (this.areGameplaySfxSuppressed()) return;
     if (!this.canTriggerSfx("step", 45)) return;
     this.recordSfxHistory("step", "synth:step");
@@ -1897,6 +2215,7 @@ class SoundEngine {
   }
 
   playSword() {
+    if (this.isPageHidden() || this.isBackgroundSuspended) return;
     if (this.areGameplaySfxSuppressed()) return;
     if (!this.canTriggerSfx("sword", 70)) return;
     this.recordSfxHistory("sword", "synth:sword");
@@ -2212,7 +2531,14 @@ const MERCHANT_SPRITES = [
 const CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 0, w: 16, h: 16 }));
 const BLUE_CHEST_SPRITES = [0, 16, 32, 48, 64].map(x => ({ x, y: 48, w: 16, h: 16 }));
 const PICKUP_SPRITES = {
-  potion: [{ x: 0, y: 0, w: 16, h: 16 }, { x: 16, y: 0, w: 16, h: 16 }],
+  potion: [{ x: 0, y: 0, w: 16, h: 16 }],
+  shieldPotion: [
+    { x: 48, y: 16, w: 16, h: 16 },
+    { x: 64, y: 16, w: 16, h: 16 },
+    { x: 80, y: 16, w: 16, h: 16 },
+    { x: 96, y: 16, w: 16, h: 16 },
+    { x: 112, y: 16, w: 16, h: 16 }
+  ],
   coins: [
     { x: 96, y: 0, w: 16, h: 16 }, { x: 112, y: 0, w: 16, h: 16 },
     { x: 0, y: 16, w: 16, h: 16 }, { x: 16, y: 16, w: 16, h: 16 },
@@ -2324,8 +2650,61 @@ function calculateLiorAC(floor) {
   return 12 + Math.floor((tier - 1) / 2);
 }
 
+const MAX_SHIELD_SEGMENTS = 10;
+const SAVE_STORAGE_KEY = "lior_dungeon_save_v1";
+const SHIELD_POTION_SEGMENTS = 1;
+const CHEST_REWARD_PROBABILITIES = {
+  potion: 0.40,
+  shield: 0.10,
+  weaponOrAmmo: 0.50
+};
+
+/**
+ * Precio del siguiente segmento de escudo según la cantidad real de segmentos que Lior ya tenga:
+ * Precio del siguiente segmento = cantidad actual de segmentos + 1.
+ * Si Lior ya tiene 10 segmentos, no puede comprar más (Infinity).
+ */
+function calculateNextShieldSegmentPrice(currentSegments = 0) {
+  const current = Math.floor(Number(currentSegments) || 0);
+  if (!Number.isInteger(current) || current < 0 || current >= MAX_SHIELD_SEGMENTS) return Infinity;
+  return current + 1;
+}
+
+/**
+ * Precio progresivo de comprar `segmentCount` segmentos en la tienda a partir de `currentSegments`:
+ * Cada segmento adquirido cuesta (segmentos actuales en ese instante + 1).
+ * Ejemplo: si Lior tiene 2 segmentos y compra 3, paga 3 + 4 + 5 = 12 de oro y termina con 5 segmentos.
+ */
+function calculateShieldPurchaseCost(segmentCount, currentSegments = 0) {
+  const count = Math.floor(Number(segmentCount));
+  const current = Math.floor(Number(currentSegments) || 0);
+  if (!Number.isInteger(count) || count < 1) return Infinity;
+  if (!Number.isInteger(current) || current < 0 || current >= MAX_SHIELD_SEGMENTS) return Infinity;
+  if (current + count > MAX_SHIELD_SEGMENTS) return Infinity;
+  return count * current + (count * (count + 1)) / 2;
+}
+
+function restoreShieldSegments(player, segments = SHIELD_POTION_SEGMENTS) {
+  if (!player) return { segmentsRestored: 0, currentSegments: 0, maxSegments: MAX_SHIELD_SEGMENTS };
+  player.maxShieldSegments = MAX_SHIELD_SEGMENTS;
+  const current = Math.max(0, Math.min(player.maxShieldSegments, Math.floor(player.shieldSegments || 0)));
+  const incoming = Math.max(0, Math.floor(Number(segments) || 0));
+  const segmentsRestored = Math.min(player.maxShieldSegments - current, incoming);
+  player.shieldSegments = current + segmentsRestored;
+  return {
+    segmentsRestored,
+    currentSegments: player.shieldSegments,
+    maxSegments: player.maxShieldSegments
+  };
+}
+
+/**
+ * Compatibilidad entre extraHp y el nuevo sistema de escudo por segmentos:
+ * Se limita maxExtraHp a 0 para evitar acumular +50% de sobrecuración encima de los 10 segmentos
+ * de mitigación al 50%, reutilizando la barra secundaria del HUD (#hud-extra-fill) para los 10 segmentos.
+ */
 function calculateMaxExtraHP(maxHP) {
-  return Math.floor(Math.max(0, maxHP) / 2);
+  return 0;
 }
 
 function restoreHealth(player, healing) {
@@ -2414,7 +2793,7 @@ function getBossRoomMinionLimit(tier) {
   return 10 + (tier - 1);
 }
 
-function createMinion(floor, x, y, visionRange = 2) {
+function createMinion(floor, x, y, visionRange = 2, isSummoned = false) {
   const spawnTier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
   const maxHp = calculateMinionMaxHP(entry.tier);
@@ -2435,6 +2814,7 @@ function createMinion(floor, x, y, visionRange = 2) {
     ranged: !!entry.ranged,
     isMegaBoss: false,
     isBoss: false,
+    isSummoned: !!isSummoned,
     size: 1,
     cells: [{ x, y }],
     fearCooldown: 0,
@@ -2499,7 +2879,12 @@ class RunStats {
     this.mistyStepUses = 0;
 
     this.potionsDrunk = 0;
+    this.bluePotionsDrunk = 0;
     this.totalHealing = 0;
+    this.shieldSegmentsPurchased = 0;
+    this.shieldSegmentsRestored = 0;
+    this.shieldSegmentsConsumed = 0;
+    this.shieldDamageMitigated = 0;
     this.damageTakenInstances = 0;
     this.totalDamageTaken = 0;
   }
@@ -2562,6 +2947,8 @@ class Player {
     this.ac = calculateLiorAC(1);
     this.maxExtraHp = calculateMaxExtraHP(this.maxHp);
     this.extraHp = 0;
+    this.maxShieldSegments = MAX_SHIELD_SEGMENTS;
+    this.shieldSegments = 0;
     this.stunned = false;
     this.gold = 0;
     this.kills = 0;
@@ -2575,7 +2962,10 @@ class Player {
     this.weaponUpgrades = { sword: 0, pistol: 0, musket: 0, blunderbuss: 0 };
     this.highestMegaBossTierDefeated = 0;
 
+    this.mistyStepMaxCharges = 2;
     this.mistyStepCharges = 2;
+    this.mistyStepRechargeMax = 20;
+    this.mistyStepActionCounter = 0;
     this.blastMaxCharges = 10;
     this.blastCurrentCharges = 10;
     this.hasRetrievedQuestItem = false;
@@ -2632,6 +3022,17 @@ class Player {
   advanceAction() {
     if (this.blastCurrentCharges < this.blastMaxCharges) {
       this.blastCurrentCharges++;
+    }
+    const maxMisty = this.mistyStepMaxCharges || 2;
+    const rechargeCadence = this.mistyStepRechargeMax || 20;
+    if (this.mistyStepCharges < maxMisty) {
+      this.mistyStepActionCounter = (this.mistyStepActionCounter || 0) + 1;
+      if (this.mistyStepActionCounter >= rechargeCadence) {
+        this.mistyStepCharges = Math.min(maxMisty, this.mistyStepCharges + 1);
+        this.mistyStepActionCounter = 0;
+      }
+    } else {
+      this.mistyStepActionCounter = 0;
     }
   }
 
@@ -3354,9 +3755,22 @@ class Renderer {
     return "fixed";
   }
 
+  static isMobileDevice() {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    const isTouch = (navigator.maxTouchPoints || 0) > 0;
+    const isCoarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    const isIPadOS = /Macintosh/i.test(ua) && isTouch && isCoarse;
+    return isMobileUA || isIPadOS || (isTouch && isCoarse);
+  }
+
   static isPortraitViewport() {
+    if (!Renderer.isMobileDevice()) return false;
     const { width, height } = getViewportMetrics();
-    return height > width;
+    const isPortraitRatio = height > width;
+    const isPortraitMedia = !!(window.matchMedia && window.matchMedia("(orientation: portrait)").matches);
+    return isPortraitRatio || isPortraitMedia;
   }
 
   updateOrientationState() {
@@ -4519,16 +4933,56 @@ class Renderer {
     requestAnimationFrame(step);
   }
 
-  showFloatingNumber(x, y, text, type) {
-    this.floatingNumbers.push({ x, y, text, type, startedAt: performance.now() });
+  showFloatingNumber(x, y, text, type, isCritical = false) {
+    this.floatingNumbers.push({ x, y, text, type, isCritical: !!isCritical, startedAt: performance.now() });
     this.keepAnimating(1000);
+  }
+
+  drawPixelExplosionIcon(targetCtx, cx, cy) {
+    const p = 2;
+    const outer = [
+      [-3, -3], [0, -4], [3, -3],
+      [-4, 0],           [4, 0],
+      [-3, 3],  [0, 4],  [3, 3],
+      [-2, -2], [-1, -2], [0, -2], [1, -2], [2, -2],
+      [-2, -1],                             [2, -1],
+      [-2, 0],                              [2, 0],
+      [-2, 1],                              [2, 1],
+      [-2, 2],  [-1, 2],  [0, 2],  [1, 2],  [2, 2]
+    ];
+    const mid = [
+      [0, -3], [-3, 0], [3, 0], [0, 3],
+      [-1, -1], [0, -1], [1, -1],
+      [-1, 0],           [1, 0],
+      [-1, 1],  [0, 1],  [1, 1]
+    ];
+    const core = [[0, 0]];
+
+    targetCtx.save();
+    targetCtx.fillStyle = "#101010";
+    outer.forEach(([dx, dy]) => {
+      targetCtx.fillRect(Math.round(cx + dx * p - p / 2) - 1, Math.round(cy + dy * p - p / 2) - 1, p + 2, p + 2);
+    });
+    targetCtx.fillStyle = "#ff2d20";
+    outer.forEach(([dx, dy]) => {
+      targetCtx.fillRect(Math.round(cx + dx * p - p / 2), Math.round(cy + dy * p - p / 2), p, p);
+    });
+    targetCtx.fillStyle = "#ff9f1c";
+    mid.forEach(([dx, dy]) => {
+      targetCtx.fillRect(Math.round(cx + dx * p - p / 2), Math.round(cy + dy * p - p / 2), p, p);
+    });
+    targetCtx.fillStyle = "#fff3b0";
+    core.forEach(([dx, dy]) => {
+      targetCtx.fillRect(Math.round(cx + dx * p - p / 2), Math.round(cy + dy * p - p / 2), p, p);
+    });
+    targetCtx.restore();
   }
 
   drawFloatingNumbers(targetCtx, now) {
     this.floatingNumbers = this.floatingNumbers.filter(number => now - number.startedAt < 1000);
     const tileSize = CAMERA_CONFIG.tileSize;
     const placedLabels = [];
-    const startingAngles = { damage: -Math.PI / 2, gold: -Math.PI / 4, healing: -3 * Math.PI / 4 };
+    const startingAngles = { damage: -Math.PI / 2, gold: -Math.PI / 4, healing: -3 * Math.PI / 4, shield: -5 * Math.PI / 8 };
     this.floatingNumbers.forEach((number, index) => {
       const progress = Math.min(1, (now - number.startedAt) / 1000);
       const { screenX, screenY } = CameraTransformer.worldToScreen(number.x, number.y, this.player);
@@ -4542,7 +4996,9 @@ class Renderer {
       targetCtx.textBaseline = "middle";
       targetCtx.lineWidth = 2.5;
       targetCtx.strokeStyle = "#101010";
-      const labelWidth = targetCtx.measureText(number.text).width + 6;
+      const textWidth = targetCtx.measureText(number.text).width;
+      const critIconSpace = number.isCritical ? 18 : 0;
+      const labelWidth = textWidth + 6 + critIconSpace;
       const labelHeight = 16;
       const angleStart = startingAngles[number.type] ?? startingAngles.damage;
       let position = null;
@@ -4559,11 +5015,16 @@ class Renderer {
         )) position = candidate;
       }
       placedLabels.push({ x: position.x, y: position.y, width: labelWidth, height: labelHeight });
+      const textCenterX = number.isCritical ? (position.x + critIconSpace / 2) : position.x;
+      if (number.isCritical) {
+        const iconCenterX = textCenterX - textWidth / 2 - 9;
+        this.drawPixelExplosionIcon(targetCtx, iconCenterX, position.y);
+      }
       targetCtx.fillStyle = number.type === "healing"
         ? "#5cff78"
-        : (number.type === "gold" ? "#ffdf55" : "#ff5757");
-      targetCtx.strokeText(number.text, position.x, position.y);
-      targetCtx.fillText(number.text, position.x, position.y);
+        : (number.type === "shield" ? "#60d5ff" : (number.type === "gold" ? "#ffdf55" : "#ff5757"));
+      targetCtx.strokeText(number.text, textCenterX, position.y);
+      targetCtx.fillText(number.text, textCenterX, position.y);
       targetCtx.restore();
     });
   }
@@ -5159,8 +5620,10 @@ class Renderer {
         CAMERA_CONFIG.playerScreenX, CAMERA_CONFIG.playerScreenY, screenX, screenY, this.dungeon, this.player
       )) return;
 
-      const frames = pickup.type === "gold" ? PICKUP_SPRITES.coins : PICKUP_SPRITES.potion;
-      const frame = frames[Math.floor(now / (pickup.type === "gold" ? 100 : 220)) % frames.length];
+      const frames = pickup.type === "gold"
+        ? PICKUP_SPRITES.coins
+        : (pickup.type === "shield_potion" ? PICKUP_SPRITES.shieldPotion : PICKUP_SPRITES.potion);
+      const frame = frames[Math.floor(now / 100) % frames.length];
       const size = tileSize * 0.7;
       targetCtx.save();
       targetCtx.imageSmoothingEnabled = false;
@@ -6082,22 +6545,70 @@ class CombatSystem {
   }
 
   static applyDamageToPlayer(game, player, incomingDamage) {
-    let remaining = Math.max(0, Math.floor(incomingDamage));
-    const extraDamage = Math.min(player.extraHp, remaining);
-    player.extraHp = Math.max(0, player.extraHp - extraDamage);
+    const rawDamage = Math.max(0, Math.floor(incomingDamage));
+    if (rawDamage <= 0) {
+      return {
+        rawDamage: 0,
+        mitigatedDamage: 0,
+        effectiveDamage: 0,
+        shieldConsumed: 0,
+        extraDamage: 0,
+        hpDamage: 0,
+        totalDamage: 0
+      };
+    }
+
+    let effectiveDamage = rawDamage;
+    let mitigatedDamage = 0;
+    let shieldConsumed = 0;
+
+    if ((player.shieldSegments || 0) > 0) {
+      player.shieldSegments = Math.max(0, player.shieldSegments - 1);
+      shieldConsumed = 1;
+      // Redondeo coherente hacia arriba del daño reducido para evitar que impactos de 1 de daño se anulen a 0:
+      // 20 -> 10, 42 -> 21, 3 -> 2, 1 -> 1.
+      effectiveDamage = Math.max(1, Math.ceil(rawDamage / 2));
+      mitigatedDamage = rawDamage - effectiveDamage;
+      if (game?.stats) {
+        game.stats.shieldSegmentsConsumed++;
+        game.stats.shieldDamageMitigated += mitigatedDamage;
+      }
+    }
+
+    let remaining = effectiveDamage;
+    const extraDamage = Math.min(player.extraHp || 0, remaining);
+    player.extraHp = Math.max(0, (player.extraHp || 0) - extraDamage);
     remaining -= extraDamage;
     const hpDamage = Math.min(player.hp, remaining);
     player.hp = Math.max(0, player.hp - hpDamage);
     const totalDamage = extraDamage + hpDamage;
-    if (totalDamage > 0) {
-      if (game?.stats) {
+
+    if (totalDamage > 0 || shieldConsumed > 0) {
+      if (totalDamage > 0 && game?.stats) {
         game.stats.damageTakenInstances++;
         game.stats.totalDamageTaken += totalDamage;
       }
-      game.renderer?.showFloatingNumber(player.x, player.y, `-${totalDamage} HP`, "damage");
-      if (player.hp > 0) game?.syncBiomeMusic?.();
+      const floatLabel = shieldConsumed > 0
+        ? `-${totalDamage} HP (🛡-${mitigatedDamage})`
+        : `-${totalDamage} HP`;
+      game?.renderer?.showFloatingNumber(player.x, player.y, floatLabel, "damage");
+      if (player.hp <= 0) {
+        game?.clearSavedGame?.();
+      } else {
+        game?.syncBiomeMusic?.();
+      }
+      game?.updateHUD?.();
+      if (game?.isShopOpen?.()) game.updateShopHUD();
     }
-    return { extraDamage, hpDamage, totalDamage };
+    return {
+      rawDamage,
+      mitigatedDamage,
+      effectiveDamage,
+      shieldConsumed,
+      extraDamage,
+      hpDamage,
+      totalDamage
+    };
   }
 
   static applyDamageToEnemy(game, target, incomingDamage, animate = true) {
@@ -6111,30 +6622,80 @@ class CombatSystem {
     return damage;
   }
 
-  static applyBlunderbussKnockback(game, target) {
-    if (target.size !== 1 || target.hp <= 0) return false;
+  static applyBlunderbussKnockback(game, target, maxPushSteps = 2) {
+    if (target.size !== 1 || target.hp <= 0) return { moved: false, stepsMoved: 0, hitWall: false };
 
     const dx = Math.sign(target.x - game.player.x);
     const dy = Math.sign(target.y - game.player.y);
-    if (dx === 0 && dy === 0) return false;
+    if (dx === 0 && dy === 0) return { moved: false, stepsMoved: 0, hitWall: false };
 
-    const destination = { x: target.x + dx, y: target.y + dy };
     const { dungeon, player } = game;
-    if (!dungeon.isInsideBounds(destination.x, destination.y)) return false;
+    let curX = target.x;
+    let curY = target.y;
+    let stepsMoved = 0;
+    let hitWall = false;
 
-    const tile = dungeon.getTile(destination.x, destination.y);
-    const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(enemy => enemy.hp > 0);
-    if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS || lockedExit
-      || (destination.x === player.x && destination.y === player.y)) return false;
+    for (let step = 1; step <= maxPushSteps; step++) {
+      const nextX = curX + dx;
+      const nextY = curY + dy;
 
-    const occupied = dungeon.enemies.some(enemy => enemy !== target && enemy.hp > 0
-      && enemy.cells?.some(cell => cell.x === destination.x && cell.y === destination.y));
-    if (occupied) return false;
+      if (!dungeon.isInsideBounds(nextX, nextY)) {
+        hitWall = true;
+        break;
+      }
 
-    target.x = destination.x;
-    target.y = destination.y;
-    target.cells = [destination];
-    return true;
+      const tile = dungeon.getTile(nextX, nextY);
+      const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(enemy => enemy.hp > 0);
+      if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS || lockedExit) {
+        hitWall = true;
+        break;
+      }
+
+      if (nextX === player.x && nextY === player.y) {
+        break;
+      }
+
+      const occupied = dungeon.enemies.some(enemy => enemy !== target && enemy.hp > 0
+        && enemy.cells?.some(cell => cell.x === nextX && cell.y === nextY));
+      if (occupied) {
+        break;
+      }
+
+      curX = nextX;
+      curY = nextY;
+      stepsMoved++;
+    }
+
+    if (stepsMoved > 0) {
+      target.x = curX;
+      target.y = curY;
+      target.cells = [{ x: curX, y: curY }];
+    }
+
+    return { moved: stepsMoved > 0, stepsMoved, hitWall };
+  }
+
+  static rollWeaponDamageBreakdown(player, weapon = player.equippedWeapon) {
+    const weaponId = weapon.id;
+    const level = Math.max(0, Math.min(3, player.weaponUpgrades[weaponId] || 0));
+    if (weaponId === "pistol" && level >= 2) {
+      const normalDice = 2;
+      const trueDice = level === 2 ? 1 : 2;
+      const normalDamage = CombatSystem.rollDamageDice(normalDice, 6);
+      const trueDamage = CombatSystem.rollDamageDice(trueDice, 6);
+      return {
+        normalDamage,
+        trueDamage,
+        totalDamage: normalDamage + trueDamage
+      };
+    }
+    const [diceCount, dieSides] = WEAPON_DAMAGE_BY_UPGRADE[weaponId][level];
+    const normalDamage = CombatSystem.rollDamageDice(diceCount, dieSides);
+    return {
+      normalDamage,
+      trueDamage: 0,
+      totalDamage: normalDamage
+    };
   }
 
   static rollAttack(game, target, weapon = game.player.equippedWeapon) {
@@ -6148,13 +6709,33 @@ class CombatSystem {
       game.player.stunned = true;
       return true;
     }
+
+    const dmgBreakdown = CombatSystem.rollWeaponDamageBreakdown(game.player, weapon);
+
     if (!result.hit) {
+      if (dmgBreakdown.trueDamage > 0) {
+        const damage = CombatSystem.applyDamageToEnemy(game, target, dmgBreakdown.trueDamage);
+        if (game?.stats && weapon.id === "pistol") {
+          game.stats.pistolHits++;
+        }
+        if (damage > 0) {
+          game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage", false);
+        }
+        game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
+        return false;
+      }
       game.log(TEXT.logs.attackDefended(result.total, target.ac, target.name));
       return false;
     }
 
-    const baseDamage = CombatSystem.rollWeaponDamage(game.player, weapon);
-    const rolledDamage = result.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
+    let knockbackResult = null;
+    if (weapon.id === "blunderbuss") {
+      knockbackResult = CombatSystem.applyBlunderbussKnockback(game, target, 2);
+    }
+
+    const isCriticalHit = !!(result.critical || (weapon.id === "blunderbuss" && knockbackResult?.hitWall));
+    const baseDamage = dmgBreakdown.totalDamage;
+    const rolledDamage = isCriticalHit ? Math.ceil(baseDamage * 1.5) : baseDamage;
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
     if (game?.stats) {
       if (weapon.isMelee) game.stats.swordHits++;
@@ -6162,17 +6743,15 @@ class CombatSystem {
       else if (weapon.id === "musket") game.stats.musketHits++;
       else if (weapon.id === "blunderbuss") game.stats.blunderbussHits++;
     }
-    if (weapon.id === "blunderbuss") CombatSystem.applyBlunderbussKnockback(game, target);
-    if (damage > 0) game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage");
+    if (damage > 0) {
+      game.renderer?.showFloatingNumber(target.x, target.y, `-${damage} HP`, "damage", isCriticalHit);
+    }
     game.log(TEXT.logs.attackHit(result.total, target.ac, damage, target.name, target.hp));
     return false;
   }
 
   static rollWeaponDamage(player, weapon = player.equippedWeapon) {
-    const weaponId = weapon.id;
-    const level = Math.max(0, Math.min(3, player.weaponUpgrades[weaponId] || 0));
-    const [diceCount, dieSides] = WEAPON_DAMAGE_BY_UPGRADE[weaponId][level];
-    return CombatSystem.rollDamageDice(diceCount, dieSides);
+    return CombatSystem.rollWeaponDamageBreakdown(player, weapon).totalDamage;
   }
 
   static processDeaths(game, targets) {
@@ -6204,22 +6783,25 @@ class CombatSystem {
         );
       }
       game.player.kills++;
-      const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.5 : 0.25);
-      if (enemy.isMegaBoss || Math.random() < dropChance) {
-        const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
-        game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
-      }
-      if (enemy.size === 1 && !enemy.isBoss) {
-        if (game.dungeon?.isBossRoom || game.floor % 10 === 0) {
-          game.player.minionKillsSincePotion++;
-          // Reducido a la mitad: umbral pasa de 8 a 16 enemigos derrotados en área de jefes
-          if (game.player.minionKillsSincePotion >= 16) {
-            game.player.minionKillsSincePotion = 0;
-            game.spawnPickup("potion", enemy.x, enemy.y);
+      // Los esbirros invocados repetidamente por megajefes (isSummoned === true) no sueltan oro ni pociones
+      // para impedir el farmeo infinito de escudo o recursos en salas de jefe.
+      if (!enemy.isSummoned) {
+        const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.5 : 0.25);
+        if (enemy.isMegaBoss || Math.random() < dropChance) {
+          const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
+          game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
+        }
+        if (enemy.size === 1 && !enemy.isBoss) {
+          const pickPotionType = () => (Math.random() < 0.35 ? "shield_potion" : "potion");
+          if (game.dungeon?.isBossRoom || game.floor % 10 === 0) {
+            game.player.minionKillsSincePotion++;
+            if (game.player.minionKillsSincePotion >= 16) {
+              game.player.minionKillsSincePotion = 0;
+              game.spawnPickup(pickPotionType(), enemy.x, enemy.y);
+            }
+          } else if (Math.random() < 0.05) {
+            game.spawnPickup(pickPotionType(), enemy.x, enemy.y);
           }
-        } else if (Math.random() < 0.05) {
-          // Reducido a la mitad: probabilidad pasa de 0.10 (10%) a 0.05 (5%) en enemigos normales
-          game.spawnPickup("potion", enemy.x, enemy.y);
         }
       }
       game.renderer?.startEnemyDeath(enemy);
@@ -6840,7 +7422,17 @@ class EndingCinematicController {
       });
     }
     if (this.container) {
+      this.container.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
+      this.container.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: false });
+      this.container.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+      }, { passive: false });
       this.container.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (e.target.closest("#btn-skip-ending, #btn-ending-fullscreen, #btn-ending-music")) return;
         this.advanceOrReveal();
       });
@@ -6916,6 +7508,9 @@ class EndingCinematicController {
 
   advanceOrReveal() {
     if (!this.isActive) return;
+    if (this.game?.renderer?.isPortraitBlocked) return;
+    const now = performance.now();
+    if (now - this.panelStartedAt < 250) return;
     if (this.panelIndex + 1 < ENDING_PANELS.length) {
       this.showPanel(this.panelIndex + 1);
     } else {
@@ -6997,14 +7592,7 @@ class EndingCinematicController {
     const elapsed = now - this.panelStartedAt;
     const progress = Math.min(1, elapsed / panel.duration);
 
-    if (elapsed >= panel.duration) {
-      if (this.panelIndex < ENDING_PANELS.length - 1) {
-        this.showPanel(this.panelIndex + 1);
-      } else {
-        this.finish(false);
-        return;
-      }
-    }
+    // Avance manual exclusivamente: no avanzar automáticamente por tiempo
 
     this.ctx.fillStyle = "#03040a";
     this.ctx.fillRect(0, 0, W, H);
@@ -7107,7 +7695,17 @@ class NarrativeIntroController {
       });
     }
     if (this.container) {
+      this.container.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
+      this.container.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: false });
+      this.container.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+      }, { passive: false });
       this.container.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (e.target.closest("#btn-skip-intro, #btn-intro-fullscreen, #btn-intro-music")) return;
         this.advanceOrReveal();
       });
@@ -7200,9 +7798,12 @@ class NarrativeIntroController {
 
   advanceOrReveal() {
     if (!this.isActive || this.isWaitingForCritical) return;
+    if (this.game?.renderer?.isPortraitBlocked) return;
+    const now = performance.now();
+    if (now - this.panelStartedAt < 250) return;
 
     if (this.isWaitingForConfirmation) {
-      if (performance.now() - this.confirmationReadyAt < 350) return;
+      if (now - this.confirmationReadyAt < 250) return;
       this.finish(false);
       return;
     }
@@ -7281,16 +7882,7 @@ class NarrativeIntroController {
     const elapsed = now - this.panelStartedAt;
     const progress = Math.min(1, elapsed / panel.duration);
 
-    // Avance automático mientras lee, hasta la última escena donde espera confirmación
-    if (!this.isWaitingForConfirmation && !this.isWaitingForCritical) {
-      if (elapsed >= panel.duration) {
-        if (this.panelIndex < NARRATIVE_PANELS.length - 1) {
-          this.showPanel(this.panelIndex + 1);
-        } else {
-          this.showFinalConfirmation();
-        }
-      }
-    }
+    // Avance manual interactivo exclusivamente: se eliminó el avance automático por tiempo
 
     this.ctx.fillStyle = "#03040a";
     this.ctx.fillRect(0, 0, W, H);
@@ -7418,6 +8010,7 @@ class TutorialController {
     const helpBtn = document.getElementById("btn-tutorial-help");
     const resumeBtn = document.getElementById("btn-tutorial-resume");
     const restartBtn = document.getElementById("btn-tutorial-restart");
+    const menuSuspendBtn = document.getElementById("btn-menu-suspend-game");
     const menuFsBtn = document.getElementById("btn-menu-fullscreen");
     const menuResetBtn = document.getElementById("btn-menu-restart-game");
 
@@ -7436,6 +8029,12 @@ class TutorialController {
         this.game.toggleFullscreen(true);
       });
     }
+    if (menuSuspendBtn) {
+      menuSuspendBtn.addEventListener("click", () => {
+        this.closeHelpModal();
+        this.game.suspendGame();
+      });
+    }
     if (menuResetBtn) {
       menuResetBtn.addEventListener("click", () => {
         this.closeHelpModal();
@@ -7447,6 +8046,7 @@ class TutorialController {
   openHelpModal() {
     if (!this.helpModal) return;
     this.game.touchController?.cancelAllGestures();
+    this.game.updateMenuSaveStatus?.();
     this.helpModal.classList.remove("hidden");
   }
 
@@ -7705,7 +8305,7 @@ class TouchGestureController {
   isInteractiveOverlayTarget(target) {
     if (!target || !target.closest) return false;
     return !!target.closest(
-      "button, #shop-modal, #merchant-dialog-modal, #narrative-intro, #tutorial-help-modal, #death-screen, #victory-screen, #rotate-device-overlay"
+      "button, #shop-modal, #merchant-dialog-modal, #narrative-intro, #ending-cinematic, #tutorial-help-modal, #save-resume-modal, #death-screen, #victory-screen, #rotate-device-overlay"
     );
   }
 
@@ -7829,8 +8429,11 @@ class TouchGestureController {
 
   onPointerDown(e) {
     if (this.isInteractiveOverlayTarget(e.target)) return;
-    if (this.game.renderer?.isPortraitBlocked) return;
-    if (this.game.isIntroActive() || this.game.isShopOpen() || this.game.isPausedForDialog || this.game.tutorial?.isHelpModalOpen()) return;
+    if (this.game.renderer?.isPortraitBlocked) {
+      this.cancelAllGestures();
+      return;
+    }
+    if (this.game.isIntroActive() || (this.game.endingCinematic && this.game.endingCinematic.isActive) || this.game.isShopOpen() || this.game.isPausedForDialog || this.game.tutorial?.isHelpModalOpen() || this.game.isResumeModalOpen?.()) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
     if (e.pointerType === "touch") {
@@ -8009,6 +8612,10 @@ class TouchGestureController {
   }
 
   onPointerUp(e) {
+    if (this.game.renderer?.isPortraitBlocked) {
+      this.cancelAllGestures();
+      return;
+    }
     const track = this.pointers.get(e.pointerId);
     if (!track) return;
 
@@ -8130,6 +8737,10 @@ class TouchGestureController {
   }
 
   onPointerCancel(e) {
+    if (this.game.renderer?.isPortraitBlocked) {
+      this.cancelAllGestures();
+      return;
+    }
     if (e.pointerId === this.leftPointerId) {
       this.stopContinuousMove();
     }
@@ -8165,6 +8776,8 @@ class GameController {
     this.deathScreen = document.getElementById("death-screen");
     this.shopModal = document.getElementById("shop-modal");
     this.dialogModal = document.getElementById("merchant-dialog-modal");
+    this.resumeModal = document.getElementById("save-resume-modal");
+    this.resumeModalMode = null;
     this.isVictory = false;
     this.isPausedForDialog = false;
     this.isAnimatingTurn = false;
@@ -8191,7 +8804,9 @@ class GameController {
     this.gamepadMapping = "standard";
     this.controlDevice = this.getPreferredControlDevice();
 
-    this.pendingNarrativeIntro = !!options.playNarrativeIntro;
+    const existingSave = this.readSavedGame();
+    this.hasPendingResumePrompt = !!existingSave;
+    this.pendingNarrativeIntro = !existingSave && !!options.playNarrativeIntro;
     this.preloader = new ResourcePreloader(this);
     this.narrativeIntro = new NarrativeIntroController(this);
     this.endingCinematic = new EndingCinematicController(this);
@@ -8203,15 +8818,20 @@ class GameController {
     this.touchController = new TouchGestureController(this, document.getElementById("game-container"));
     this.bindEvents();
     this.initShopEvents();
+    this.initSaveResumeEvents();
     this.initDeviceDetection();
     this.initOrientationNotice();
     this.startGamepadLoop();
     window.__lior = this;
 
-    if (options.playNarrativeIntro) {
+    if (existingSave) {
+      this.preloader.start();
+      this.openResumeModal(existingSave, "boot");
+    } else if (options.playNarrativeIntro) {
       this.startNewGameIntro();
     } else {
       this.preloader.start();
+      this.saveFloorCheckpoint();
       this.syncBiomeMusic();
       this.tutorial.startIfEligible();
     }
@@ -8323,6 +8943,10 @@ class GameController {
     return !!(this.shopModal && !this.shopModal.classList.contains("hidden"));
   }
 
+  isResumeModalOpen() {
+    return !!(this.resumeModal && !this.resumeModal.classList.contains("hidden"));
+  }
+
   isIntroActive() {
     return !!(this.pendingNarrativeIntro || (this.narrativeIntro && this.narrativeIntro.isActive));
   }
@@ -8333,6 +8957,7 @@ class GameController {
       || this.isAutoWalking
       || this.isPausedForDialog
       || this.isShopOpen()
+      || this.isResumeModalOpen()
       || this.isIntroActive()
       || (this.endingCinematic && this.endingCinematic.isActive)
       || this.tutorial?.isHelpModalOpen()
@@ -8343,9 +8968,382 @@ class GameController {
     );
   }
 
+  /**
+   * Guarda automáticamente el progreso en localStorage al momento de entrar a un piso
+   * (NUNCA al entrar a la tienda, ya que la tienda pertenece al piso anterior).
+   */
+  saveFloorCheckpoint() {
+    if (this.inMerchantFloor || this.dungeon?.isMerchantRoom) return false;
+    if (this.isVictory || this.isGameOverTriggered) return false;
+    if (!this.player || this.player.hp <= 0 || !this.dungeon) return false;
+
+    const payload = {
+      version: 1,
+      savedAt: Date.now(),
+      floor: this.floor,
+      inMerchantFloor: false,
+      player: {
+        x: this.player.x,
+        y: this.player.y,
+        direction: this.player.direction,
+        maxHp: this.player.maxHp,
+        hp: this.player.hp,
+        ac: this.player.ac,
+        maxExtraHp: this.player.maxExtraHp,
+        extraHp: this.player.extraHp,
+        maxShieldSegments: this.player.maxShieldSegments,
+        shieldSegments: this.player.shieldSegments,
+        stunned: false,
+        gold: this.player.gold,
+        kills: this.player.kills,
+        minionKillsSincePotion: this.player.minionKillsSincePotion,
+        ammoPistol: this.player.ammoPistol,
+        ammoMusket: this.player.ammoMusket,
+        ammoBlunderbuss: this.player.ammoBlunderbuss,
+        unlockedWeapons: [...this.player.unlockedWeapons],
+        equippedWeaponId: this.player.equippedWeapon?.id || WEAPONS.SWORD.id,
+        weaponUpgrades: { ...this.player.weaponUpgrades },
+        highestMegaBossTierDefeated: this.player.highestMegaBossTierDefeated,
+        mistyStepMaxCharges: this.player.mistyStepMaxCharges,
+        mistyStepCharges: this.player.mistyStepCharges,
+        mistyStepRechargeMax: this.player.mistyStepRechargeMax,
+        mistyStepActionCounter: this.player.mistyStepActionCounter,
+        blastMaxCharges: this.player.blastMaxCharges,
+        blastCurrentCharges: this.player.blastCurrentCharges,
+        hasRetrievedQuestItem: !!this.player.hasRetrievedQuestItem
+      },
+      stats: {
+        ...(this.stats || new RunStats()),
+        killsByName: { ...(this.stats?.killsByName || {}) }
+      },
+      dungeon: {
+        width: this.dungeon.width,
+        height: this.dungeon.height,
+        isMerchantRoom: false,
+        isBossRoom: !!this.dungeon.isBossRoom,
+        turnCount: this.dungeon.turnCount || 0,
+        entrance: { ...this.dungeon.entrance },
+        exit: { ...this.dungeon.exit },
+        tiles: [...this.dungeon.tiles.entries()],
+        revealed: [...this.dungeon.revealed],
+        chests: [...this.dungeon.chests],
+        npcs: (this.dungeon.npcs || []).map(n => ({
+          ...n,
+          fleeDirection: n.fleeDirection ? { ...n.fleeDirection } : { dx: 1, dy: 0 }
+        })),
+        pickups: (this.dungeon.pickups || []).map(p => ({ ...p })),
+        enemies: (this.dungeon.enemies || []).map(e => ({
+          ...e,
+          cells: (e.cells || []).map(c => ({ ...c })),
+          anim: null,
+          introPresented: false,
+          roarPlayed: false
+        }))
+      }
+    };
+
+    try {
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      return false;
+    }
+    this.updateMenuSaveStatus();
+    return true;
+  }
+
+  readSavedGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (
+        !parsed
+        || parsed.version !== 1
+        || !Number.isInteger(parsed.floor)
+        || parsed.floor < 1
+        || parsed.floor > 100
+        || !parsed.player
+        || !(Number(parsed.player.hp) > 0)
+      ) {
+        localStorage.removeItem(SAVE_STORAGE_KEY);
+        return null;
+      }
+      return parsed;
+    } catch {
+      try { localStorage.removeItem(SAVE_STORAGE_KEY); } catch {}
+      return null;
+    }
+  }
+
+  hasSavedGame() {
+    return !!this.readSavedGame();
+  }
+
+  clearSavedGame() {
+    try {
+      localStorage.removeItem(SAVE_STORAGE_KEY);
+    } catch {}
+    this.updateMenuSaveStatus();
+  }
+
+  updateMenuSaveStatus() {
+    const statusEl = document.getElementById("menu-save-status");
+    if (!statusEl) return;
+    const saved = this.readSavedGame();
+    if (saved) {
+      const fl = String(saved.floor).padStart(2, "0");
+      statusEl.textContent = `💾 Guardado automático activo: Inicio del Piso ${fl} · Si mueres, reinicias desde el Piso 1`;
+    } else {
+      statusEl.textContent = "💾 Guardado automático al entrar a cada piso · Si mueres, reinicias desde el Piso 1";
+    }
+  }
+
+  loadSavedGame(saveData = null) {
+    const data = saveData || this.readSavedGame();
+    if (!data || !data.player || !(Number(data.player.hp) > 0)) return false;
+
+    this.hasPendingResumePrompt = false;
+    this.pendingNarrativeIntro = false;
+    this.isGameOverTriggered = false;
+    sounds.stopGameOverAudio();
+    this.floor = Math.max(1, Math.min(100, Math.floor(Number(data.floor) || 1)));
+    sounds.resetBossRoarTracking(this.floor);
+    this.inMerchantFloor = false;
+    this.isVictory = false;
+    this.isAutoWalking = false;
+    this.isPausedForDialog = false;
+    this.isAnimatingTurn = false;
+    this.pendingEnemyProjectiles = 0;
+    this.showWeaponRange = false;
+    this.isAiming = false;
+    this.eldritchBlastPreviewDir = null;
+    this.mistyStepPreview = null;
+    this.mistyStepConfirmation = null;
+    this.entryPreviewUntil = performance.now() + 1500;
+    clearTimeout(this.merchantInitTimer);
+    this.touchController?.cancelAllGestures();
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+
+    this.stats = new RunStats();
+    if (data.stats && typeof data.stats === "object") {
+      Object.keys(this.stats).forEach(key => {
+        if (key === "killsByName") {
+          this.stats.killsByName = { ...(data.stats.killsByName || {}) };
+        } else if (key in data.stats) {
+          this.stats[key] = data.stats[key];
+        }
+      });
+    }
+
+    if (
+      data.dungeon
+      && Number.isInteger(data.dungeon.width)
+      && Number.isInteger(data.dungeon.height)
+      && Array.isArray(data.dungeon.tiles)
+    ) {
+      this.dungeon = new Dungeon(data.dungeon.width, data.dungeon.height);
+      this.dungeon.isMerchantRoom = false;
+      this.dungeon.isBossRoom = !!data.dungeon.isBossRoom;
+      this.dungeon.turnCount = Number(data.dungeon.turnCount) || 0;
+      if (data.dungeon.entrance) this.dungeon.entrance = { ...data.dungeon.entrance };
+      if (data.dungeon.exit) this.dungeon.exit = { ...data.dungeon.exit };
+      this.dungeon.tiles = new Map(data.dungeon.tiles);
+      this.dungeon.revealed = new Set(Array.isArray(data.dungeon.revealed) ? data.dungeon.revealed : []);
+      this.dungeon.chests = new Set(Array.isArray(data.dungeon.chests) ? data.dungeon.chests : []);
+      this.dungeon.npcs = (data.dungeon.npcs || []).map(n => ({
+        ...n,
+        fleeDirection: n.fleeDirection ? { ...n.fleeDirection } : { dx: 1, dy: 0 }
+      }));
+      this.dungeon.pickups = (data.dungeon.pickups || []).map(p => ({ ...p }));
+      this.dungeon.enemies = (data.dungeon.enemies || []).map(e => ({
+        ...e,
+        cells: (e.cells || []).map(c => ({ ...c })),
+        anim: null,
+        introPresented: false,
+        roarPlayed: false
+      }));
+      this.generator = {
+        dungeon: this.dungeon,
+        floorNumber: this.floor,
+        tier: this.tier
+      };
+    } else {
+      const { width, height } = getRandomDungeonDimensions(10, 30, this.floor);
+      this.dungeon = new Dungeon(width, height);
+      this.dungeon.isMerchantRoom = false;
+      this.generator = new DungeonGenerator(this.dungeon, this.floor);
+    }
+
+    const startX = Number.isInteger(data.player.x) ? data.player.x : this.dungeon.entrance.x;
+    const startY = Number.isInteger(data.player.y) ? data.player.y : this.dungeon.entrance.y;
+    this.player = new Player(startX, startY);
+    this.player.direction = Number.isInteger(data.player.direction) ? ((data.player.direction % 4) + 4) % 4 : 0;
+    this.player.maxHp = calculateLiorMaxHP(this.floor);
+    this.player.hp = Math.max(1, Math.min(this.player.maxHp, Math.floor(Number(data.player.hp) || this.player.maxHp)));
+    this.player.ac = this.playerAC;
+    this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
+    this.player.extraHp = 0;
+    this.player.maxShieldSegments = MAX_SHIELD_SEGMENTS;
+    this.player.shieldSegments = Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(Number(data.player.shieldSegments) || 0)));
+    this.player.stunned = false;
+    this.player.gold = Math.max(0, Math.floor(Number(data.player.gold) || 0));
+    this.player.kills = Math.max(0, Math.floor(Number(data.player.kills) || 0));
+    this.player.minionKillsSincePotion = Math.max(0, Math.floor(Number(data.player.minionKillsSincePotion) || 0));
+    this.player.ammoPistol = Math.max(0, Math.floor(Number(data.player.ammoPistol) || 0));
+    this.player.ammoMusket = Math.max(0, Math.floor(Number(data.player.ammoMusket) || 0));
+    this.player.ammoBlunderbuss = Math.max(0, Math.floor(Number(data.player.ammoBlunderbuss) || 0));
+
+    const unlockedList = Array.isArray(data.player.unlockedWeapons) ? data.player.unlockedWeapons : [WEAPONS.SWORD.id];
+    this.player.unlockedWeapons = new Set([WEAPONS.SWORD.id, ...unlockedList]);
+
+    const upg = data.player.weaponUpgrades || {};
+    this.player.weaponUpgrades = {
+      sword: Math.max(0, Math.min(3, Math.floor(Number(upg.sword) || 0))),
+      pistol: Math.max(0, Math.min(3, Math.floor(Number(upg.pistol) || 0))),
+      musket: Math.max(0, Math.min(3, Math.floor(Number(upg.musket) || 0))),
+      blunderbuss: Math.max(0, Math.min(3, Math.floor(Number(upg.blunderbuss) || 0)))
+    };
+
+    const desiredWeapon = Object.values(WEAPONS).find(w => w.id === data.player.equippedWeaponId) || WEAPONS.SWORD;
+    this.player.equippedWeapon = desiredWeapon;
+    this.player.ensureEquippedWeaponAvailable();
+
+    this.player.highestMegaBossTierDefeated = Math.max(0, Math.floor(Number(data.player.highestMegaBossTierDefeated) || 0));
+    this.player.mistyStepMaxCharges = Math.max(1, Math.floor(Number(data.player.mistyStepMaxCharges) || 2));
+    this.player.mistyStepCharges = Math.max(0, Math.min(this.player.mistyStepMaxCharges, Math.floor(Number(data.player.mistyStepCharges ?? 2))));
+    this.player.mistyStepRechargeMax = Math.max(1, Math.floor(Number(data.player.mistyStepRechargeMax) || 20));
+    this.player.mistyStepActionCounter = Math.max(0, Math.floor(Number(data.player.mistyStepActionCounter) || 0));
+    this.player.blastMaxCharges = Math.max(1, Math.floor(Number(data.player.blastMaxCharges) || 10));
+    this.player.blastCurrentCharges = Math.max(0, Math.min(this.player.blastMaxCharges, Math.floor(Number(data.player.blastCurrentCharges ?? 10))));
+    this.player.hasRetrievedQuestItem = !!data.player.hasRetrievedQuestItem;
+
+    if (!this.renderer) {
+      this.renderer = new Renderer(this.canvas, this.dungeon, this.player, this.generator);
+    } else {
+      this.renderer.player = this.player;
+      this.renderer.setDungeon(this.dungeon, this.generator);
+    }
+    this.renderer.game = this;
+
+    this.dungeon.enemies.forEach(enemy => {
+      enemy.seenAtSpawn = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+    });
+    this.preloader?.preloadForFloor(this.floor);
+
+    this.closeResumeModal();
+    this.updateHUD();
+    this.updateButtonLabels();
+    this.updateMenuSaveStatus();
+    this.syncBiomeMusic();
+    this.triggerFloorInitialPresentation();
+    this.showFloorBanner(this.floor, "Partida reanudada.");
+    this.log(`💾 Partida reanudada en el Piso ${this.floor}.`);
+    this.renderer.draw();
+    return true;
+  }
+
+  openResumeModal(saveData = null, mode = "boot") {
+    const data = saveData || this.readSavedGame();
+    if (!this.resumeModal || !data) return false;
+    this.resumeModalMode = mode;
+    this.touchController?.cancelAllGestures();
+    if (typeof this.stopDpadHold === "function") this.stopDpadHold();
+
+    const flNum = Math.max(1, Math.min(100, Math.floor(Number(data.floor) || 1)));
+    const flStr = String(flNum).padStart(2, "0");
+    const maxHp = calculateLiorMaxHP(flNum);
+    const hp = Math.max(1, Math.min(maxHp, Math.floor(Number(data.player?.hp) || maxHp)));
+    const segs = Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(Number(data.player?.shieldSegments) || 0)));
+    const gold = Math.max(0, Math.floor(Number(data.player?.gold) || 0));
+    const kills = Math.max(0, Math.floor(Number(data.player?.kills) || 0));
+    const weaponId = data.player?.equippedWeaponId || "sword";
+    const weaponName = TEXT.weaponNames[weaponId] || TEXT.weaponNames.sword;
+
+    const titleEl = document.getElementById("save-resume-title");
+    const descEl = document.getElementById("save-resume-desc");
+    const floorEl = document.getElementById("save-stat-floor");
+    const vitalsEl = document.getElementById("save-stat-vitals");
+    const goldEl = document.getElementById("save-stat-gold");
+    const weaponEl = document.getElementById("save-stat-weapon");
+    const killsEl = document.getElementById("save-stat-kills");
+    const resumeBtn = document.getElementById("btn-resume-saved-game");
+
+    if (titleEl) {
+      titleEl.textContent = mode === "suspend" ? "✦ PARTIDA SUSPENDIDA ✦" : "✦ PARTIDA GUARDADA ✦";
+    }
+    if (descEl) {
+      descEl.textContent = mode === "suspend"
+        ? `Tu progreso está guardado en el inicio del Piso ${flStr}. Puedes cerrar el juego y regresar cuando quieras.`
+        : `Se encontró un descenso en curso guardado al entrar al Piso ${flStr}.`;
+    }
+    if (floorEl) floorEl.textContent = `Piso ${flStr}`;
+    if (vitalsEl) vitalsEl.textContent = `${hp}/${maxHp} HP · 🛡${segs}/${MAX_SHIELD_SEGMENTS}`;
+    if (goldEl) goldEl.textContent = `${gold} PO`;
+    if (weaponEl) weaponEl.textContent = weaponName;
+    if (killsEl) killsEl.textContent = String(kills);
+    if (resumeBtn) {
+      resumeBtn.textContent = mode === "suspend"
+        ? "▶ VOLVER A LA PARTIDA"
+        : `▶ CONTINUAR EN PISO ${flStr}`;
+    }
+
+    this.resumeModal.classList.remove("hidden");
+    return true;
+  }
+
+  closeResumeModal() {
+    if (!this.resumeModal) return;
+    this.resumeModal.classList.add("hidden");
+    this.resumeModalMode = null;
+  }
+
+  suspendGame() {
+    if (this.isVictory || !this.player || this.player.hp <= 0) return false;
+    if (!this.inMerchantFloor && !this.hasSavedGame()) {
+      this.saveFloorCheckpoint();
+    }
+    const saved = this.readSavedGame();
+    if (!saved) return false;
+    return this.openResumeModal(saved, "suspend");
+  }
+
+  resumeFromSavedGame() {
+    if (this.resumeModalMode === "suspend" && !this.hasPendingResumePrompt) {
+      this.closeResumeModal();
+      this.syncBiomeMusic();
+      this.renderer?.draw();
+      return true;
+    }
+    return this.loadSavedGame();
+  }
+
+  startFreshNewGame() {
+    this.hasPendingResumePrompt = false;
+    this.closeResumeModal();
+    this.resetGame();
+  }
+
+  initSaveResumeEvents() {
+    const resumeBtn = document.getElementById("btn-resume-saved-game");
+    const discardBtn = document.getElementById("btn-discard-saved-game");
+    if (resumeBtn) {
+      resumeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.resumeFromSavedGame();
+      });
+    }
+    if (discardBtn) {
+      discardBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.startFreshNewGame();
+      });
+    }
+  }
+
   startNewGameIntro() {
     this.pendingNarrativeIntro = false;
     if (!this.narrativeIntro) {
+      this.saveFloorCheckpoint();
       this.syncBiomeMusic();
       this.triggerFloorInitialPresentation();
       this.tutorial?.startIfEligible();
@@ -8353,6 +9351,7 @@ class GameController {
     }
     sounds.playMusic("intro");
     this.narrativeIntro.start(() => {
+      this.saveFloorCheckpoint();
       this.syncBiomeMusic();
       this.triggerFloorInitialPresentation();
       this.showFloorBanner(this.floor, "El descenso.");
@@ -8765,13 +9764,18 @@ class GameController {
       this.player.x = startX;
       this.player.y = startY;
       this.player.direction = 0;
+      this.player.mistyStepMaxCharges = 2;
       this.player.mistyStepCharges = 2;
+      this.player.mistyStepRechargeMax = 20;
+      this.player.mistyStepActionCounter = 0;
     }
 
     this.player.maxHp = calculateLiorMaxHP(this.floor);
     this.player.hp = Math.min(this.player.hp, this.player.maxHp);
     this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
     this.player.extraHp = Math.min(this.player.extraHp, this.player.maxExtraHp);
+    this.player.maxShieldSegments = MAX_SHIELD_SEGMENTS;
+    this.player.shieldSegments = Math.max(0, Math.min(this.player.maxShieldSegments, Math.floor(this.player.shieldSegments || 0)));
     this.player.ac = this.playerAC;
     if (!isMerchantTransition) this.entryPreviewUntil = performance.now() + 1500;
 
@@ -8792,7 +9796,10 @@ class GameController {
 
     this.updateHUD();
     this.updateButtonLabels();
-    if (!this.isIntroActive()) {
+    if (!isMerchantTransition && !this.isIntroActive() && !this.hasPendingResumePrompt) {
+      this.saveFloorCheckpoint();
+    }
+    if (!this.isIntroActive() && !this.hasPendingResumePrompt) {
       this.syncBiomeMusic();
       this.triggerFloorInitialPresentation();
     }
@@ -8809,7 +9816,7 @@ class GameController {
       if (arenaBoss) {
         this.log(TEXT.logs.bossArena(arenaBoss.name));
         this.showFloorBanner(this.floor, `¡${arenaBoss.name}!`);
-      } else if (!this.isIntroActive()) {
+      } else if (!this.isIntroActive() && !this.hasPendingResumePrompt) {
         this.showFloorBanner(this.floor, "El descenso.");
       }
     }
@@ -8878,6 +9885,9 @@ class GameController {
   }
 
   resetGame() {
+    this.clearSavedGame();
+    this.hasPendingResumePrompt = false;
+    this.closeResumeModal();
     this.isGameOverTriggered = false;
     sounds.stopGameOverAudio();
     sounds.resetBossRoarTracking();
@@ -8998,10 +10008,73 @@ class GameController {
       button.disabled = this.player.gold < price;
     });
     const potionBtn = document.getElementById("buy-potion");
-    if (potionBtn) potionBtn.textContent = `${calculatePotionPrice(this.floor)} PO`;
+    const potionPrice = calculatePotionPrice(this.floor);
+    if (potionBtn) {
+      potionBtn.textContent = `${potionPrice} PO`;
+      potionBtn.disabled = this.player.gold < potionPrice || this.player.hp >= this.player.maxHp;
+    }
     const potionLabel = document.getElementById("potion-shop-label");
-    if (potionLabel) potionLabel.textContent = `Poción de Vida (${calculatePotionDice(this.floor)}d4 + 4)`;
+    if (potionLabel) potionLabel.textContent = `Poción Roja (${calculatePotionDice(this.floor)}d4 + 4)`;
+    this.updateShopShieldHUD();
     this.updateShopUpgrades();
+  }
+
+  updateShopShieldHUD() {
+    if (!this.player) return;
+    const currentSegs = Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(this.player.shieldSegments || 0)));
+    const maxSegs = MAX_SHIELD_SEGMENTS;
+    const availSpace = Math.max(0, maxSegs - currentSegs);
+    const nextSinglePrice = calculateNextShieldSegmentPrice(currentSegs);
+
+    const labelEl = document.getElementById("shield-shop-label");
+    if (labelEl) labelEl.textContent = `Escudo (${currentSegs}/${maxSegs})`;
+
+    const buyBtn = document.getElementById("buy-shield-segments");
+    if (buyBtn) {
+      if (availSpace <= 0) {
+        buyBtn.textContent = "MÁX";
+        buyBtn.disabled = true;
+      } else {
+        buyBtn.textContent = `${nextSinglePrice} PO`;
+        buyBtn.disabled = !Number.isFinite(nextSinglePrice) || this.player.gold < nextSinglePrice;
+      }
+    }
+  }
+
+  purchaseShieldSegments() {
+    if (!this.player) return false;
+    const currentSegs = Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(this.player.shieldSegments || 0)));
+    const availSpace = Math.max(0, MAX_SHIELD_SEGMENTS - currentSegs);
+
+    if (availSpace <= 0) {
+      this.log(TEXT.logs.shieldFullReject);
+      this.updateShopShieldHUD();
+      return false;
+    }
+
+    const count = 1;
+    const cost = calculateNextShieldSegmentPrice(currentSegs);
+    if (!Number.isFinite(cost) || this.player.gold < cost) {
+      const msg = TEXT.logs.shieldGoldReject(cost, this.player.gold);
+      this.log(msg);
+      this.updateShopShieldHUD();
+      return false;
+    }
+
+    this.player.gold -= cost;
+    const restored = restoreShieldSegments(this.player, count);
+    if (this.stats) {
+      this.stats.shieldSegmentsPurchased += restored.segmentsRestored;
+      this.stats.shieldSegmentsRestored += restored.segmentsRestored;
+    }
+    sounds.playPickup();
+    this.renderer?.showFloatingNumber(this.player.x, this.player.y, `+${restored.segmentsRestored} 🛡`, "shield");
+    const confirmMsg = TEXT.logs.boughtShield(restored.segmentsRestored, cost, this.player.shieldSegments, this.player.maxShieldSegments);
+    this.log(confirmMsg);
+
+    this.updateHUD();
+    this.updateShopHUD();
+    return true;
   }
 
   updateShopUpgrades() {
@@ -9211,6 +10284,14 @@ class GameController {
         }
       });
     }
+
+    const buyShieldBtn = document.getElementById("buy-shield-segments");
+    if (buyShieldBtn) {
+      buyShieldBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.purchaseShieldSegments();
+      });
+    }
   }
 
   log(message) {
@@ -9248,15 +10329,33 @@ class GameController {
     this.player.ensureEquippedWeaponAvailable();
     this.player.maxExtraHp = calculateMaxExtraHP(this.player.maxHp);
     this.player.extraHp = Math.max(0, Math.min(this.player.extraHp, this.player.maxExtraHp));
+    this.player.maxShieldSegments = MAX_SHIELD_SEGMENTS;
+    this.player.shieldSegments = Math.max(0, Math.min(this.player.maxShieldSegments, Math.floor(this.player.shieldSegments || 0)));
     const directionNames = ["Norte", "Este", "Sur", "Oeste"];
     const directionArrows = ["↑", "→", "↓", "←"];
-    const totalHealthCapacity = Math.max(1, this.player.maxHp + this.player.maxExtraHp);
+    const maxHpCap = Math.max(1, this.player.maxHp);
     if (elFloor) elFloor.textContent = String(this.floor).padStart(2, "0");
     if (elDir) elDir.textContent = directionNames[this.player.direction];
     if (elDirArrow) elDirArrow.textContent = directionArrows[this.player.direction];
-    if (elVitals) elVitals.textContent = `${this.player.hp} / ${this.player.maxHp} (+${this.player.extraHp})`;
-    if (elHpFill) elHpFill.style.width = `${(this.player.hp / totalHealthCapacity) * 100}%`;
-    if (elExtraFill) elExtraFill.style.width = `${(this.player.extraHp / totalHealthCapacity) * 100}%`;
+    if (elVitals) {
+      elVitals.textContent = `${this.player.hp}/${this.player.maxHp} · 🛡${this.player.shieldSegments}/${this.player.maxShieldSegments}`;
+    }
+    if (elHpFill) elHpFill.style.width = `${(this.player.hp / maxHpCap) * 100}%`;
+    if (elExtraFill) elExtraFill.style.width = `${(this.player.shieldSegments / MAX_SHIELD_SEGMENTS) * 100}%`;
+
+    const elShieldTrack = document.getElementById("hud-shield-track");
+    if (elShieldTrack) {
+      elShieldTrack.title = `Segmentos de escudo (${this.player.shieldSegments}/${this.player.maxShieldSegments})`;
+    }
+    const elShieldCells = document.getElementById("hud-shield-cells");
+    if (elShieldCells) {
+      const cells = elShieldCells.querySelectorAll(".shield-cell");
+      cells.forEach((cell, idx) => {
+        const isAvailable = (idx + 1) <= this.player.shieldSegments;
+        cell.classList.toggle("is-active", isAvailable);
+        cell.classList.toggle("is-empty", !isAvailable);
+      });
+    }
     if (elGold) elGold.textContent = this.player.gold;
     const weapon = this.player.equippedWeapon;
     if (elAmmo) elAmmo.textContent = weapon.ammoProperty ? this.player[weapon.ammoProperty] : "∞";
@@ -9312,10 +10411,11 @@ class GameController {
     const distant = freeCells.filter(c => Math.hypot(c.x - this.player.x, c.y - this.player.y) >= 3);
     const pool = distant.length > 0 ? distant : freeCells;
     const spot = pool[Math.floor(Math.random() * pool.length)];
-    this.dungeon.enemies.push(createMinion(this.floor, spot.x, spot.y, 3));
+    this.dungeon.enemies.push(createMinion(this.floor, spot.x, spot.y, 3, true));
   }
 
   triggerGameOver() {
+    this.clearSavedGame();
     if (this.isGameOverTriggered) return;
     this.isGameOverTriggered = true;
     sounds.playDeath();
@@ -9460,6 +10560,7 @@ class GameController {
   }
 
   startEndingCinematic() {
+    this.clearSavedGame();
     this.isVictory = true;
     this.isAutoWalking = false;
     const hudEl = document.getElementById("hud");
@@ -9475,6 +10576,7 @@ class GameController {
   }
 
   showRunStatsScreen() {
+    this.clearSavedGame();
     this.isVictory = true;
     sounds.stopMusic();
     sounds.playLogoJingle();
@@ -9509,8 +10611,9 @@ class GameController {
     setTxt("vstat-blast", `${stats.eldritchBlastCasts} (${stats.eldritchBlastHits} imp.)`);
     setTxt("vstat-misty", stats.mistyStepUses);
 
-    setTxt("vstat-potions", stats.potionsDrunk);
+    setTxt("vstat-potions", `${stats.potionsDrunk} / ${stats.bluePotionsDrunk || 0}`);
     setTxt("vstat-healing", `+${stats.totalHealing} HP`);
+    setTxt("vstat-shield-used", `${stats.shieldSegmentsConsumed || 0} (-${stats.shieldDamageMitigated || 0} DMG)`);
     setTxt("vstat-hits-taken", stats.damageTakenInstances);
     setTxt("vstat-damage-taken", `-${stats.totalDamageTaken} HP`);
 
@@ -9590,6 +10693,7 @@ class GameController {
       this.player.x = destination.x;
       this.player.y = destination.y;
       this.player.hp = 0;
+      this.clearSavedGame();
       this.updateHUD();
       this.renderer.draw();
       this.triggerGameOver();
@@ -9602,6 +10706,7 @@ class GameController {
     this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.renderer.commitCameraFacing();
     this.renderer.playMistyStep();
+    this.processEnemiesTurn();
     this.handleTileInteractions();
     this.updateHUD();
   }
@@ -9900,7 +11005,6 @@ class GameController {
           const [damageDice, damageSides, flatBonus] = getEnemyDamageProfile(enemy);
           const baseDamage = CombatSystem.rollDamageDice(damageDice, damageSides) + flatBonus;
           totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
-          hitMessage = TEXT.logs.enemyHit(enemy.name, attack.total, this.player.ac, totalDmg);
         }
 
         if (isRanged) {
@@ -9910,9 +11014,16 @@ class GameController {
           setTimeout(() => {
             try {
               if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory || !attack.hit) return;
-              CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
+              const dmgRes = CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
               if (this.player.hp > 0) sounds.playHurt();
-              this.log(hitMessage);
+              this.log(TEXT.logs.enemyHit(
+                enemy.name,
+                attack.total,
+                this.player.ac,
+                dmgRes.totalDamage,
+                dmgRes.mitigatedDamage,
+                this.player.shieldSegments
+              ));
               this.updateHUD();
               this.renderer.playHurt(this.player.hp <= 0);
               if (this.player.hp <= 0) this.triggerGameOver();
@@ -9930,9 +11041,16 @@ class GameController {
         }
 
         if (attack.hit && !isRanged) {
-          CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
+          const dmgRes = CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
           tookDamage = true;
-          this.log(hitMessage);
+          this.log(TEXT.logs.enemyHit(
+            enemy.name,
+            attack.total,
+            this.player.ac,
+            dmgRes.totalDamage,
+            dmgRes.mitigatedDamage,
+            this.player.shieldSegments
+          ));
         }
         return;
       }
@@ -9962,10 +11080,17 @@ class GameController {
       ];
 
       if (enemy.isMegaBoss) {
-        const lastCol = Math.max(...enemy.cells.map(c => c.x));
-        if (this.player.x < enemy.x) directions = [{ dx: -1, dy: 0 }];
-        else if (this.player.x > lastCol) directions = [{ dx: 1, dy: 0 }];
-        else directions = [];
+        if (this.dungeon.turnCount % 4 !== 0) {
+          directions = [];
+        } else {
+          const centerX = enemy.x + (enemy.size - 1) / 2;
+          const centerY = enemy.y + (enemy.size - 1) / 2;
+          directions.sort((a, b) => {
+            const dA = Math.hypot((centerX + a.dx) - this.player.x, (centerY + a.dy) - this.player.y);
+            const dB = Math.hypot((centerX + b.dx) - this.player.x, (centerY + b.dy) - this.player.y);
+            return dA - dB;
+          });
+        }
       } else if (mode === "flee") {
         directions.sort((a, b) => {
           const dA = Math.hypot((enemy.x + a.dx) - this.player.x, (enemy.y + a.dy) - this.player.y);
@@ -10192,15 +11317,24 @@ class GameController {
     return true;
   }
 
-  openChest() {
+  openChest(rollOverride = null) {
     const chestKey = this.dungeon.getKey(this.player.x, this.player.y);
-    if (!this.dungeon.chests.has(chestKey)) return;
+    if (!this.dungeon.chests.has(chestKey)) return null;
 
     this.dungeon.chests.delete(chestKey);
     this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     this.renderer.playChestOpening(this.player.x, this.player.y);
 
-    if (Math.random() < 0.5) {
+    const roll = (typeof rollOverride === "number" && Number.isFinite(rollOverride))
+      ? Math.max(0, Math.min(0.999999, rollOverride))
+      : Math.random();
+
+    const potionCutoff = CHEST_REWARD_PROBABILITIES.potion; // 0.40 (40 %)
+    const shieldCutoff = potionCutoff + CHEST_REWARD_PROBABILITIES.shield; // 0.50 (10 %)
+    let outcome = null;
+
+    if (roll < potionCutoff) {
+      // 40 % de probabilidad: Poción de curación
       const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored > 0) {
         if (this.stats) {
@@ -10213,7 +11347,52 @@ class GameController {
       this.syncBiomeMusic();
       this.renderer.playDrinkPotion();
       this.log(TEXT.logs.chestPotion(restored.totalRestored));
+      outcome = { type: "potion", healed: restored.totalRestored };
+    } else if (roll < shieldCutoff) {
+      // 10 % de probabilidad: Exactamente 1 segmento de escudo (máximo 1 por cofre)
+      const currentSegs = Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(this.player.shieldSegments || 0)));
+      if (currentSegs < MAX_SHIELD_SEGMENTS) {
+        const shieldRes = restoreShieldSegments(this.player, 1);
+        if (shieldRes.segmentsRestored > 0) {
+          if (this.stats) {
+            this.stats.bluePotionsDrunk++;
+            this.stats.shieldSegmentsRestored += shieldRes.segmentsRestored;
+          }
+          this.renderer.showFloatingNumber(this.player.x, this.player.y, "+1 🛡", "shield");
+        }
+        sounds.playPickup();
+        this.renderer.playDrinkPotion();
+        this.log(TEXT.logs.chestShieldSegment(this.player.shieldSegments, this.player.maxShieldSegments));
+        outcome = { type: "shield", segmentsAdded: shieldRes.segmentsRestored, currentSegments: this.player.shieldSegments };
+      } else {
+        // Comportamiento determinista sin re-tirada aleatoria cuando Lior ya tiene 10/10 segmentos:
+        // Si le falta vida, recibe curación; si tiene la vida completa, recibe munición fija de Pistola.
+        if (this.player.hp < this.player.maxHp) {
+          const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
+          if (restored.totalRestored > 0) {
+            if (this.stats) {
+              this.stats.potionsDrunk++;
+              this.stats.totalHealing += restored.totalRestored;
+            }
+            this.renderer.showFloatingNumber(this.player.x, this.player.y, `+${restored.totalRestored} HP`, "healing");
+          }
+          sounds.playHeal();
+          this.syncBiomeMusic();
+          this.renderer.playDrinkPotion();
+          this.log(TEXT.logs.chestPotion(restored.totalRestored));
+          outcome = { type: "shield_fallback_potion", healed: restored.totalRestored };
+        } else {
+          const fallbackWeapon = WEAPONS.PISTOL;
+          const fallbackAmmo = 3 + Math.floor((this.tier - 1) * 1.5);
+          this.player.unlockedWeapons.add(fallbackWeapon.id);
+          this.player[fallbackWeapon.ammoProperty] += fallbackAmmo;
+          sounds.playPickup();
+          this.log(TEXT.logs.chestShieldFallbackAmmo(fallbackWeapon.name, fallbackAmmo));
+          outcome = { type: "shield_fallback_ammo", weapon: fallbackWeapon.id, ammo: fallbackAmmo };
+        }
+      }
     } else {
+      // 50 % restante: Recompensas actuales de armas / munición
       const weaponOptions = [WEAPONS.PISTOL, WEAPONS.MUSKET, WEAPONS.BLUNDERBUSS];
       const weapon = weaponOptions[Math.floor(Math.random() * weaponOptions.length)];
       const ammoDice = { pistol: 6, musket: 4, blunderbuss: 2 }[weapon.id];
@@ -10228,9 +11407,12 @@ class GameController {
       } else {
         this.log(TEXT.logs.chestAmmo(weapon.name, ammo));
       }
+      outcome = { type: "weapon_or_ammo", weapon: weapon.id, ammo, isNewWeapon };
     }
 
     this.updateHUD();
+    if (this.isShopOpen()) this.updateShopHUD();
+    return outcome;
   }
 
   checkGoldenBunnyCapture() {
@@ -10301,6 +11483,20 @@ class GameController {
         return;
       }
 
+      if (pickup.type === "shield_potion") {
+        const shieldRes = restoreShieldSegments(this.player, SHIELD_POTION_SEGMENTS);
+        if (shieldRes.segmentsRestored === 0) return;
+        if (this.stats) {
+          this.stats.bluePotionsDrunk++;
+          this.stats.shieldSegmentsRestored += shieldRes.segmentsRestored;
+        }
+        this.renderer.showFloatingNumber(pickup.x, pickup.y, `+${shieldRes.segmentsRestored} 🛡`, "shield");
+        this.log(TEXT.logs.pickupShieldPotion(shieldRes.segmentsRestored, this.player.shieldSegments, this.player.maxShieldSegments));
+        healed = true;
+        consumed.add(pickup);
+        return;
+      }
+
       const restored = restoreHealth(this.player, rollPotionHealing(this.floor));
       if (restored.totalRestored === 0) return;
       if (this.stats) {
@@ -10317,7 +11513,10 @@ class GameController {
       sounds.playHeal();
       this.syncBiomeMusic();
     }
-    if (consumed.size > 0) this.updateHUD();
+    if (consumed.size > 0) {
+      this.updateHUD();
+      if (this.isShopOpen()) this.updateShopHUD();
+    }
   }
 
   bindEvents() {
@@ -10384,6 +11583,20 @@ class GameController {
     if (victoryRestartBtn) victoryRestartBtn.addEventListener("click", () => this.resetGame());
 
     window.addEventListener("keydown", (e) => {
+      if (this.endingCinematic && this.endingCinematic.isActive) {
+        if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen();
+          e.preventDefault();
+        } else if (e.key === "Escape") {
+          this.endingCinematic.finish(true);
+          e.preventDefault();
+        } else if (["Enter", " ", "ArrowRight"].includes(e.key)) {
+          if (!e.repeat) this.endingCinematic.advanceOrReveal();
+          e.preventDefault();
+        }
+        return;
+      }
+
       if (this.isVictory) return;
 
       if (this.isIntroActive()) {
@@ -10395,6 +11608,20 @@ class GameController {
           e.preventDefault();
         } else if (["Enter", " ", "ArrowRight"].includes(e.key)) {
           this.narrativeIntro.advanceOrReveal();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (this.isResumeModalOpen()) {
+        if (["Enter", " "].includes(e.key)) {
+          if (!e.repeat) this.resumeFromSavedGame();
+          e.preventDefault();
+        } else if (e.key === "Escape" && this.resumeModalMode === "suspend") {
+          if (!e.repeat) this.resumeFromSavedGame();
+          e.preventDefault();
+        } else if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen(true);
           e.preventDefault();
         }
         return;

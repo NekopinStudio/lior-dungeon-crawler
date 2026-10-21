@@ -159,9 +159,9 @@ body.is-portrait #app-wrapper {
   display: flex;
   align-items: center;
   gap: 5px;
-  min-width: 72px;
-  max-width: 165px;
-  flex: 1 1 115px;
+  min-width: 96px;
+  max-width: 190px;
+  flex: 1 1 138px;
 }
 
 .pixel-heart {
@@ -179,24 +179,82 @@ body.is-portrait #app-wrapper {
 
 .health-track {
   display: flex;
+  flex-direction: column;
   width: 100%;
-  height: 9px;
+  height: 13px;
   overflow: hidden;
-  background: #141824;
+  background: #0d1019;
   border: 1.5px solid #5c6484;
   image-rendering: pixelated;
+}
+
+.health-bar-row {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  background: #141824;
+  border-bottom: 1px solid #2b324a;
 }
 
 .health-fill {
   display: block;
   height: 100%;
   background: linear-gradient(180deg, #4df078 0%, #21b84c 100%);
+  transition: width 0.14s ease-out;
+}
+
+.shield-segment-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #0a0f1c;
+  overflow: hidden;
 }
 
 .extra-health-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   height: 100%;
-  background: linear-gradient(180deg, #5ec2ff 0%, #2484d6 100%);
+  background: linear-gradient(180deg, #60d5ff 0%, #1d7ed8 100%);
+  opacity: 0.25;
+  pointer-events: none;
+  transition: width 0.14s ease-out;
+}
+
+.shield-cells-overlay {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: #050811;
+}
+
+.shield-cell {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 25, 43, 0.92);
+  border-right: 1px solid rgba(72, 88, 128, 0.35);
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.shield-cell:last-child {
+  border-right: none;
+}
+
+.shield-cell.is-active {
+  background: linear-gradient(180deg, #7ce2ff 0%, #2484d6 100%);
+  box-shadow: inset 0 0 3px rgba(224, 242, 254, 0.75);
+}
+
+.shield-cell.is-empty {
+  background: rgba(14, 18, 30, 0.95);
 }
 
 .health-label {
@@ -1248,7 +1306,7 @@ body.is-portrait #app-wrapper {
   background: #292315;
 }
 
-.shop-view { display: grid; gap: 6px; }
+.shop-view { display: grid; gap: 6px; overflow-x: hidden; }
 .shop-tuneup-line { color: #ffd700; font-size: 9px; line-height: 1.3; }
 
 .shop-item {
@@ -1292,6 +1350,7 @@ body.is-portrait #app-wrapper {
   background: #292821;
   cursor: not-allowed;
 }
+
 
 .close-shop-btn {
   background-color: #1e2336;
@@ -1719,6 +1778,107 @@ body.pseudo-fullscreen #app-wrapper {
   color: #ffffff;
 }
 
+.menu-save-status {
+  color: #7cf59a;
+  font-family: monospace;
+  font-size: 10px;
+  text-align: center;
+  padding: 4px 8px;
+  background: rgba(16, 36, 28, 0.72);
+  border: 1px solid rgba(124, 245, 154, 0.45);
+}
+
+/* MODAL DE PARTIDA GUARDADA / SUSPENDIDA */
+.save-resume-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  background: rgba(2, 4, 10, 0.92);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding:
+    max(10px, var(--sat))
+    max(12px, var(--sar))
+    max(10px, var(--sab))
+    max(12px, var(--sal));
+}
+
+.save-resume-card {
+  width: min(460px, 100%);
+  max-width: min(94vw, 460px);
+  max-height: calc(var(--app-height, 100dvh) - max(20px, var(--sat) + var(--sab) + 16px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: monospace;
+  text-align: center;
+}
+
+.save-resume-title {
+  color: #ffd970;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.save-resume-desc {
+  color: #d8dff5;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.save-resume-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgba(14, 18, 34, 0.9);
+  border: 1px solid #4e5678;
+  text-align: left;
+}
+
+.save-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.save-summary-row strong {
+  color: #ffd970;
+  font-weight: 900;
+}
+
+.save-resume-note {
+  color: #fca5a5;
+  font-size: 10px;
+  line-height: 1.35;
+  padding: 5px 8px;
+  background: rgba(127, 29, 29, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+.save-resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.save-resume-btn,
+.save-discard-btn {
+  flex: 1 1 180px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+
 .hud-music-btn {
   color: #7cf59a;
   border-color: #7cf59a;
@@ -1743,7 +1903,9 @@ body.pseudo-fullscreen #app-wrapper {
   }
   .hud-floor { font-size: 10.5px; }
   .health-panel { min-width: 68px; max-width: 130px; flex-basis: 92px; }
-  .health-track { height: 6px; }
+  .health-track { height: 10px; }
+  .health-bar-row { height: 4px; }
+  .shield-segment-track { height: 4px; }
   .health-label { font-size: 8.5px; }
   .weapon-panel { padding: 1px 4px; gap: 4px; }
   .weapon-icon { width: 18px; height: 18px; flex-basis: 18px; }
