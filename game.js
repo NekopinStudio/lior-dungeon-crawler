@@ -70,10 +70,14 @@ const TEXT = {
     attackDefended: (total, ac, name) => `[${total} vs CA ${ac}] ${name} se defiende.`,
     criticalMiss: (name) => `${name} pifia y queda aturdido para su próximo ataque.`,
     stunned: (name) => `${name} pierde su turno de ataque por el aturdimiento.`,
-    enemyHit: (name, total, ac, dmg, mitigated = 0, remSeg = 0) =>
-      mitigated > 0
-        ? `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} HP (🛡 absorbió ${mitigated}, quedan ${remSeg}/10 seg.).`
-        : `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} de daño.`,
+    enemyHit: (name, total, ac, dmg, mitigated = 0, remSeg = 0, extraEffect = "") => {
+      const base = mitigated > 0
+        ? (dmg <= 0
+            ? `[${name}] IMPACTA [${total} vs CA ${ac}] 🛡 Escudo bloqueó el impacto completo (-${mitigated} DMG, quedan ${remSeg}/10 seg.).`
+            : `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} HP (🛡 absorbió ${mitigated}, quedan ${remSeg}/10 seg.).`)
+        : `[${name}] IMPACTA [${total} vs CA ${ac}] -${dmg} de daño.`;
+      return extraEffect ? `${base} ${extraEffect}` : base;
+    },
     goldDrop: (gold, name) => `+${gold} PO (${name})`,
     panic: "¡El líder cayó! Los esbirros cercanos entran en pánico y huyen.",
     deadPlayer: "Lior ha caído en combate. Fin de la partida.",
@@ -92,6 +96,8 @@ const TEXT = {
     boughtPotion: (heal, price) => `Bebiste una poción roja: +${heal} HP (-${price} PO).`,
     boughtShield: (count, price, cur, max) =>
       `Compraste +${count} ${count === 1 ? "segmento" : "segmentos"} de escudo (-${price} PO) · Escudo: ${cur}/${max}.`,
+    boughtBlessedAmmo: (price, charges) =>
+      `Pólvora Maldita adquirida (-${price} PO): +1d6 🔮 de daño maldito verdadero en tus próximos ${charges} disparos (${charges} cargas).`,
     shieldFullReject: "Escudo al máximo (10/10 segmentos). No puedes comprar más segmentos.",
     shieldSpaceReject: (req, avail) =>
       `Espacio insuficiente: solicitaste +${req} seg., pero solo caben +${avail} (máx. 10/10).`,
@@ -1809,7 +1815,7 @@ class SoundEngine {
     const hudBtn = document.getElementById("btn-music-toggle");
     if (hudBtn) {
       hudBtn.textContent = label;
-      hudBtn.title = this.musicMuted ? "Activar música (B)" : "Silenciar música (B)";
+      hudBtn.title = this.musicMuted ? "Activar música" : "Silenciar música";
       hudBtn.classList.toggle("is-muted", this.musicMuted);
     }
     const introBtn = document.getElementById("btn-intro-music");
@@ -2487,7 +2493,7 @@ const ENEMY_ROSTER = {
   ]
 };
 
-const ENEMY_ANIM_MS = { idle: 175, attack: 110, hurt: 100, death: 130 };
+const ENEMY_ANIM_MS = { idle: 160, move: 115, taunt: 135, attack: 105, hurt: 95, death: 125 };
 
 const PROJECTILE_SHEET = {
   src: "Assets/Enemy/disparos.jpg",
@@ -2516,6 +2522,12 @@ const PROJECTILE_IMPACT_MS = 180;
 
 const BUNNY_SPRITES = {
   bunnyIdle: { x: 78, y: 84, w: 132, h: 214 },
+  bunnyIdleFrames: [
+    { x: 77,  y: 84,  w: 132, h: 212 },
+    { x: 349, y: 84,  w: 147, h: 212 },
+    { x: 589, y: 96,  w: 212, h: 201 },
+    { x: 876, y: 101, w: 206, h: 196 }
+  ],
   bunnyFlee: [
     { x: 1678, y: 946, w: 276, h: 216 },
     { x: 2003, y: 946, w: 382, h: 220 },
@@ -2590,8 +2602,8 @@ const WEAPONS = {
 const WEAPON_DAMAGE_BY_UPGRADE = {
   sword: [[1, 4], [2, 4], [3, 4], [4, 4]],
   pistol: [[1, 6], [2, 6], [3, 6], [4, 6]],
-  musket: [[1, 8], [2, 8], [3, 8], [4, 8]],
-  blunderbuss: [[1, 8], [2, 8], [3, 8], [4, 8]]
+  musket: [[1, 8], [2, 8], [2, 8], [2, 8]],
+  blunderbuss: [[1, 8], [2, 8], [2, 8], [2, 8]]
 };
 
 const AMMO_BASE_PRICES = { pistol: 1, musket: 1, blunderbuss: 1 };
@@ -2653,6 +2665,24 @@ function calculateLiorAC(floor) {
 const MAX_SHIELD_SEGMENTS = 10;
 const SAVE_STORAGE_KEY = "lior_dungeon_save_v1";
 const SHIELD_POTION_SEGMENTS = 1;
+
+const ENEMY_FLEE_DURATION_TURNS = 3;
+const ENEMY_ALLY_DETECTION_RADIUS = 3;
+const MINION_VISION_RANGE = 2;
+const MINION_PATROL_RADIUS = 3;
+
+const STUN_STATUS_BADGE_STYLE = {
+  icon: "💫",
+  tag: "STUN",
+  borderColor: "#fde047",
+  bgColor: "rgba(20, 14, 4, 0.92)",
+  textColor: "#fef08a"
+};
+
+function calculateBlessedAmmoPrice(floor = 1) {
+  const tier = getTierForFloor(floor);
+  return 8 + tier;
+}
 const CHEST_REWARD_PROBABILITIES = {
   potion: 0.40,
   shield: 0.10,
@@ -2661,19 +2691,17 @@ const CHEST_REWARD_PROBABILITIES = {
 
 /**
  * Precio del siguiente segmento de escudo según la cantidad real de segmentos que Lior ya tenga:
- * Precio del siguiente segmento = cantidad actual de segmentos + 1.
- * Si Lior ya tiene 10 segmentos, no puede comprar más (Infinity).
+ * Escalado suave por pares de segmentos: 1 + Math.floor(segmentosActuales / 2)
+ * (Segmentos 1-2: 1 PO, 3-4: 2 PO, 5-6: 3 PO, 7-8: 4 PO, 9-10: 5 PO; total 0->10 = 30 PO).
  */
 function calculateNextShieldSegmentPrice(currentSegments = 0) {
   const current = Math.floor(Number(currentSegments) || 0);
   if (!Number.isInteger(current) || current < 0 || current >= MAX_SHIELD_SEGMENTS) return Infinity;
-  return current + 1;
+  return 1 + Math.floor(current / 2);
 }
 
 /**
- * Precio progresivo de comprar `segmentCount` segmentos en la tienda a partir de `currentSegments`:
- * Cada segmento adquirido cuesta (segmentos actuales en ese instante + 1).
- * Ejemplo: si Lior tiene 2 segmentos y compra 3, paga 3 + 4 + 5 = 12 de oro y termina con 5 segmentos.
+ * Precio progresivo de comprar `segmentCount` segmentos en la tienda a partir de `currentSegments`.
  */
 function calculateShieldPurchaseCost(segmentCount, currentSegments = 0) {
   const count = Math.floor(Number(segmentCount));
@@ -2681,7 +2709,11 @@ function calculateShieldPurchaseCost(segmentCount, currentSegments = 0) {
   if (!Number.isInteger(count) || count < 1) return Infinity;
   if (!Number.isInteger(current) || current < 0 || current >= MAX_SHIELD_SEGMENTS) return Infinity;
   if (current + count > MAX_SHIELD_SEGMENTS) return Infinity;
-  return count * current + (count * (count + 1)) / 2;
+  let total = 0;
+  for (let i = 0; i < count; i++) {
+    total += calculateNextShieldSegmentPrice(current + i);
+  }
+  return total;
 }
 
 function restoreShieldSegments(player, segments = SHIELD_POTION_SEGMENTS) {
@@ -2724,7 +2756,7 @@ function calculatePotionDice(floor) {
 }
 
 function calculatePotionPrice(floor) {
-  return calculatePotionDice(floor) + 1;
+  return Math.min(14, calculatePotionDice(floor) + 1);
 }
 
 function rollPotionHealing(floor) {
@@ -2750,9 +2782,9 @@ function calculateEldritchBlastLevel(floor) {
 }
 
 function calculateEldritchBlastDamage(floor) {
-  // Daño fijo fijado en 22: permite eliminar de 1 solo impacto a los enemigos 2x2 hasta nivel 20
-  // (Trol tier 2 tiene 22 HP), pero desde nivel 21 (Minotauro tier 3 tiene 32 HP) ya no los elimina de un solo golpe.
-  return 22;
+  // Del Tier 1 al Tier 5 (pisos 1 al 50) se mantiene en 22 de daño fijo;
+  // a partir del Tier 6 (pisos 51 al 100) mejora a 44 de daño fijo.
+  return getTierForFloor(floor) >= 6 ? 44 : 22;
 }
 
 function calculateMinionMaxHP(originTier) {
@@ -2790,10 +2822,10 @@ function pickCumulativeEntry(list, tier) {
 }
 
 function getBossRoomMinionLimit(tier) {
-  return 10 + (tier - 1);
+  return 6 + Math.floor((Math.max(1, tier) - 1) / 2);
 }
 
-function createMinion(floor, x, y, visionRange = 2, isSummoned = false) {
+function createMinion(floor, x, y, visionRange = MINION_VISION_RANGE, isSummoned = false) {
   const spawnTier = getTierForFloor(floor);
   const entry = pickCumulativeEntry(ENEMY_ROSTER.minion, spawnTier);
   const maxHp = calculateMinionMaxHP(entry.tier);
@@ -2811,12 +2843,19 @@ function createMinion(floor, x, y, visionRange = 2, isSummoned = false) {
     ac: 6 + calculateEnemyAttackBonus(floor),
     visionRange,
     attackRange: 1,
+    attackCadence: 1,
+    attackCooldown: 0,
+    lastAttackTurn: null,
     ranged: !!entry.ranged,
     isMegaBoss: false,
     isBoss: false,
     isSummoned: !!isSummoned,
     size: 1,
     cells: [{ x, y }],
+    state: "patrol",
+    patrolDir: 1,
+    patrolDirY: 1,
+    patrolRadius: MINION_PATROL_RADIUS,
     fearCooldown: 0,
     stunned: false,
     facingLeft: false,
@@ -2903,6 +2942,8 @@ class Dungeon {
     this.isMerchantRoom = false;
     this.isBossRoom = false;
     this.turnCount = 0;
+    this.lastProcessedPlayerAction = -1;
+    this.lastDisplacementTurn = -1;
     this.dyingEnemies = [];
 
     this.entrance = { x: 1, y: height - 1 };
@@ -2968,7 +3009,11 @@ class Player {
     this.mistyStepActionCounter = 0;
     this.blastMaxCharges = 10;
     this.blastCurrentCharges = 10;
+    this.blessedAmmoCharges = 0;
+    this.antimagicCritLock = false;
     this.hasRetrievedQuestItem = false;
+    this.actionTurnCount = 0;
+    this.moveInterp = null;
   }
 
   turnLeft() {
@@ -3019,8 +3064,9 @@ class Player {
     }
   }
 
-  advanceAction() {
-    if (this.blastCurrentCharges < this.blastMaxCharges) {
+  advanceAction(options = {}) {
+    this.actionTurnCount = (this.actionTurnCount || 0) + 1;
+    if (!options?.skipBlastCharge && this.blastCurrentCharges < this.blastMaxCharges) {
       this.blastCurrentCharges++;
     }
     const maxMisty = this.mistyStepMaxCharges || 2;
@@ -3034,6 +3080,7 @@ class Player {
     } else {
       this.mistyStepActionCounter = 0;
     }
+    return this.actionTurnCount;
   }
 
   isBlastReady() {
@@ -3162,12 +3209,17 @@ class DungeonGenerator {
       category: entry.category,
       ac: 14 + calculateEnemyAttackBonus(this.floorNumber),
       visionRange: 4,
-      attackRange: 8,
+      attackRange: 4,
+      attackCadence: 4,
+      attackCooldown: 0,
+      lastAttackTurn: null,
       bossAttackReady: true,
+      solarPhase2Triggered: false,
       isMegaBoss: true,
       isBoss: true,
       size: 4,
       cells: bossCells,
+      state: "patrol",
       fearCooldown: 0,
       stunned: false,
       facingLeft: false,
@@ -3221,12 +3273,17 @@ class DungeonGenerator {
             spawnTier: this.tier,
             category: entry.category,
             ac: 8 + calculateEnemyAttackBonus(this.floorNumber),
-            visionRange: 3,
-            attackRange: 1.5,
+            visionRange: (entry.tier === 5 || entry.tier === 10) ? 4 : 3,
+            attackRange: 2,
+            attackCadence: 2,
+            attackCooldown: 0,
+            lastAttackTurn: null,
+            movedLastTurn: false,
             isMegaBoss: false,
             isBoss: true,
             size: 2,
             cells: candidateCells,
+            state: "patrol",
             fearCooldown: 0,
             stunned: false,
             facingLeft: false,
@@ -3748,7 +3805,7 @@ class Renderer {
     setInterval(() => {
       if (this.game?.isIntroActive()) return;
       if (!this.playerAnimation && !this.chestOpening) this.draw();
-    }, 100);
+    }, 50);
   }
 
   static detectCameraMode() {
@@ -4756,15 +4813,19 @@ class Renderer {
     if (rows && rows.length > 0) {
       const splitRowBySectionGap = (rowFrames) => {
         if (!rowFrames || rowFrames.length < 4) return null;
-        const gaps = [];
+        const allGaps = [];
         for (let i = 1; i < rowFrames.length; i++) {
           const prevEnd = rowFrames[i - 1].sheetX1 ?? 0;
           const curStart = rowFrames[i].sheetX0 ?? 0;
-          gaps.push({ index: i, gap: Math.max(1, curStart - prevEnd) });
+          allGaps.push({ index: i, gap: Math.max(1, curStart - prevEnd) });
         }
-        const sortedGaps = [...gaps].map(g => g.gap).sort((a, b) => a - b);
+        // Exigir al menos 2 fotogramas por sección (i >= 2 y i <= rowFrames.length - 2)
+        // para que un último fotograma aislado (ej. Fila 0 de 1. kobold.jpg) no mezcle IDLE con WALK.
+        const validGaps = allGaps.filter(g => g.index >= 2 && g.index <= rowFrames.length - 2);
+        if (validGaps.length === 0) return null;
+        const sortedGaps = allGaps.map(g => g.gap).sort((a, b) => a - b);
         const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 1;
-        const maxGapObj = gaps.reduce((best, cur) => (cur.gap > best.gap ? cur : best), gaps[0]);
+        const maxGapObj = validGaps.reduce((best, cur) => (cur.gap > best.gap ? cur : best), validGaps[0]);
         if (maxGapObj && maxGapObj.gap >= Math.max(90, medianGap * 1.9)) {
           return {
             left: rowFrames.slice(0, maxGapObj.index),
@@ -4774,18 +4835,41 @@ class Renderer {
         return null;
       };
 
+      // Construye un ciclo ping-pong suave (ej. [0, 1, 2] -> [0, 1, 2, 1]) para que las animaciones
+      // de respiración, batido de alas, tentáculos y caminata no salten bruscamente del último al primer fotograma.
+      const buildPingPongFrames = (frames) => {
+        if (!frames || frames.length !== 3) return frames;
+        return [frames[0], frames[1], frames[2], frames[1]];
+      };
+
       const rawIdleRow = rows[0];
       const idleSplit = splitRowBySectionGap(rawIdleRow);
       const idle = idleSplit
         ? idleSplit.left
         : (rawIdleRow.length >= 6 ? rawIdleRow.slice(0, 3) : rawIdleRow);
+      const idleExtra = idleSplit
+        ? idleSplit.right
+        : (rawIdleRow.length >= 6 ? rawIdleRow.slice(3) : null);
 
+      let move = idle;
+      let taunt = idleExtra || idle;
+      let hasDedicatedMove = false;
+      let hasDedicatedTaunt = !!(idleExtra && idleExtra.length > 0);
       let attack = idle;
       let hurt = idle;
       let death = idle;
 
       if (rows.length >= 4) {
-        // Hojas de 4 filas (ej. 1. roc.jpg: Fila 0=Idle, Fila 1=Movement, Fila 2=Attack+Hurt, Fila 3=Death)
+        // Hojas de 4 filas (ej. 1. roc.jpg y megajefes 4x4: Fila 0=Idle, Fila 1=Movement/Alas/Tentáculos, Fila 2=Attack+Hurt, Fila 3=Death)
+        if (rows[1] && rows[1].length > 0) {
+          const row1Split = splitRowBySectionGap(rows[1]);
+          move = row1Split ? row1Split.left : rows[1];
+          hasDedicatedMove = true;
+          if (row1Split && row1Split.right?.length > 0 && !hasDedicatedTaunt) {
+            taunt = row1Split.right;
+            hasDedicatedTaunt = true;
+          }
+        }
         const row2 = rows[2];
         const row2Split = splitRowBySectionGap(row2);
         if (row2Split) {
@@ -4803,7 +4887,21 @@ class Renderer {
       } else {
         const rawAttackRow = rows.length > 1 ? rows[1] : rawIdleRow;
         const attackSplit = splitRowBySectionGap(rawAttackRow);
-        attack = attackSplit ? attackSplit.right : rawAttackRow;
+        if (attackSplit) {
+          // En hojas de 3 filas con 2 bloques en Fila 1 (ej. 1. ogre.png), la izquierda es WALK/MOVEMENT y la derecha es ATTACK
+          if (attackSplit.left && attackSplit.left.length > 0) {
+            move = attackSplit.left;
+            hasDedicatedMove = true;
+          }
+          attack = attackSplit.right;
+        } else {
+          attack = rawAttackRow;
+          if (idleExtra && idleExtra.length > 0) {
+            // En hojas de 3 filas donde Fila 0 derecha es WALK (ej. 1. kobold.jpg)
+            move = idleExtra;
+            hasDedicatedMove = true;
+          }
+        }
 
         const last = rows.length > 2 ? rows[rows.length - 1] : attack;
         const lastSplit = splitRowBySectionGap(last);
@@ -4817,13 +4915,23 @@ class Renderer {
         }
       }
 
+      const refPool = hasDedicatedMove ? [...idle, ...move] : idle;
+      const smoothIdle = buildPingPongFrames(idle);
+      const smoothMove = buildPingPongFrames(move);
+      const smoothTaunt = buildPingPongFrames(taunt);
       animation = {
-        idle,
+        idle: smoothIdle,
+        rawIdle: idle,
+        move: smoothMove,
+        rawMove: move,
+        taunt: smoothTaunt,
+        hasDedicatedMove,
+        hasDedicatedTaunt,
         attack,
         hurt,
         death,
-        refWidth: Math.max(...idle.map(f => f.width)),
-        refHeight: Math.max(...idle.map(f => f.height))
+        refWidth: Math.max(...refPool.map(f => f.width)),
+        refHeight: Math.max(...refPool.map(f => f.height))
       };
     }
     this.enemyAnimCache.set(src, animation);
@@ -4900,11 +5008,15 @@ class Renderer {
 
   playEnemyAnim(enemy, state) {
     if (!enemy || enemy.anim?.state === "death") return;
+    if (state === "move" && enemy.anim && (enemy.anim.state === "attack" || enemy.anim.state === "hurt")) {
+      return;
+    }
     if (state === "attack" || state === "hurt") {
       this.orientEnemyTowardsPlayer(enemy, this.player);
     }
+    const frameMs = ENEMY_ANIM_MS[state] || ENEMY_ANIM_MS.idle;
     enemy.anim = { state, startedAt: performance.now() };
-    this.keepAnimating(ENEMY_ANIM_MS[state] * 8);
+    this.keepAnimating(frameMs * 8);
   }
 
   startEnemyDeath(enemy) {
@@ -5032,14 +5144,43 @@ class Renderer {
   getEnemyFrame(enemy, animation, now) {
     const state = enemy.anim;
     if (state) {
-      const frames = animation[state.state];
-      const index = Math.floor((now - state.startedAt) / ENEMY_ANIM_MS[state.state]);
+      const frames = animation[state.state] || animation.idle;
+      const frameMs = ENEMY_ANIM_MS[state.state] || ENEMY_ANIM_MS.idle;
+      const index = Math.floor((now - state.startedAt) / frameMs);
       if (index < frames.length) return frames[index];
       if (state.state === "death") return frames[frames.length - 1];
       enemy.anim = null;
     }
     enemy.animOffset ??= Math.random() * 1000;
-    return animation.idle[Math.floor((now + enemy.animOffset) / ENEMY_ANIM_MS.idle) % animation.idle.length];
+    const elapsed = now + enemy.animOffset;
+
+    // Los Mega-Jefes 4x4 (especialmente alados o con tentáculos: Roc, Kraken, Beholder, Gusano, Balor y Dragones)
+    // intercalan su fila de MOVEMENT (batir de alas / ondulación de tentáculos) dentro de su ciclo base
+    // y la intensifican cuando están cargando su próximo ataque (bossAttackReady).
+    if (enemy.isMegaBoss && animation.hasDedicatedMove && animation.move?.length > 0) {
+      const isWingedOrTentacled = [1, 4, 6, 7, 8, 9, 10].includes(enemy.originTier || 1);
+      const idleLen = Math.max(1, animation.idle.length);
+      const moveLen = Math.max(1, animation.move.length);
+      const cycleRepeats = (isWingedOrTentacled && enemy.bossAttackReady) ? 1 : 2;
+      const totalCycleSteps = idleLen * cycleRepeats + moveLen;
+      const stepIndex = Math.floor(elapsed / ENEMY_ANIM_MS.idle) % totalCycleSteps;
+      if (stepIndex >= idleLen * cycleRepeats) {
+        return animation.move[(stepIndex - idleLen * cycleRepeats) % moveLen];
+      }
+      return animation.idle[stepIndex % idleLen];
+    }
+
+    if (enemy.isBoss && animation.hasDedicatedTaunt && animation.taunt?.length > 0) {
+      const idleLen = Math.max(1, animation.idle.length);
+      const tauntLen = Math.max(1, animation.taunt.length);
+      const totalCycleSteps = idleLen * 4 + tauntLen;
+      const stepIndex = Math.floor(elapsed / ENEMY_ANIM_MS.idle) % totalCycleSteps;
+      if (stepIndex >= idleLen * 4) {
+        return animation.taunt[(stepIndex - idleLen * 4) % tauntLen];
+      }
+    }
+
+    return animation.idle[Math.floor(elapsed / ENEMY_ANIM_MS.idle) % animation.idle.length];
   }
 
   getProjectileSprite(caliber, phase) {
@@ -5202,8 +5343,142 @@ class Renderer {
     const drawY = isWideBoss
       ? Math.round(py + (drawSize - height) * 0.55)
       : Math.round(py + drawSize - height);
+    const refScaledH = Math.round(animation.refHeight * scale);
+    const refTopY = isWideBoss
+      ? Math.round(py + (drawSize - refScaledH) * 0.55)
+      : Math.round(py + drawSize - refScaledH);
+    const headTopY = Math.min(py, drawY, refTopY);
     targetCtx.drawImage(sprite, drawX, drawY, width, height);
     targetCtx.restore();
+
+    this.drawEnemyStatusAndHealthOverlay(targetCtx, enemy, px, py, drawSize, tileSize, headTopY);
+  }
+
+  drawEnemyStatusAndHealthOverlay(targetCtx, enemy, px, py, drawSize, tileSize, spriteTopY = py) {
+    if (!enemy || enemy.hp <= 0 || enemy.anim?.state === "death") return;
+    targetCtx.save();
+
+    const safeHeadY = Math.min(py, spriteTopY ?? py);
+    const barH = enemy.isMegaBoss ? 7 : 5;
+    const barY = Math.round(safeHeadY - barH - 8);
+
+    // Barra de vida elevada por encima de la cabeza para Mini-Jefes (2x2) y Mega-Jefes (4x4)
+    if (enemy.isBoss && enemy.maxHp > 0) {
+      const ratio = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
+      const barW = Math.max(36, Math.round(drawSize * (enemy.isMegaBoss ? 0.86 : 0.78)));
+      const barX = Math.round(px + (drawSize - barW) / 2);
+
+      targetCtx.fillStyle = "rgba(5, 7, 15, 0.88)";
+      targetCtx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+      const isPhase2OrEnrage = (enemy.isMegaBoss && enemy.originTier === 10 && (enemy.solarPhase2Triggered || ratio <= 0.5))
+        || (enemy.isMegaBoss && enemy.originTier === 8 && ratio <= 0.30);
+      targetCtx.fillStyle = isPhase2OrEnrage
+        ? "#fb923c"
+        : (enemy.isMegaBoss ? "#e11d48" : "#ef4444");
+      targetCtx.fillRect(barX, barY, Math.max(2, Math.round(barW * ratio)), barH);
+
+      targetCtx.strokeStyle = isPhase2OrEnrage ? "#fde047" : "#fca5a5";
+      targetCtx.lineWidth = 1;
+      targetCtx.strokeRect(barX - 0.5, barY - 0.5, barW + 1, barH + 1);
+
+      if (enemy.isMegaBoss) {
+        targetCtx.font = "bold 9px monospace";
+        targetCtx.textAlign = "center";
+        targetCtx.textBaseline = "bottom";
+        targetCtx.lineWidth = 2.5;
+        targetCtx.strokeStyle = "#05070f";
+        const phaseTag = isPhase2OrEnrage ? " 🔥FASE II" : (enemy.bossAttackReady ? " ⚡" : "");
+        const hpLabel = `${enemy.hp}/${enemy.maxHp}${phaseTag}`;
+        targetCtx.strokeText(hpLabel, px + drawSize / 2, barY - 2);
+        targetCtx.fillStyle = isPhase2OrEnrage ? "#fde047" : "#ffe4e6";
+        targetCtx.fillText(hpLabel, px + drawSize / 2, barY - 2);
+      }
+    }
+
+    // Iconos de estado flotantes de alta visibilidad por encima de la cabeza/barra (Aturdimiento 💫 y Huida 😱)
+    const statusBadges = [];
+    if (enemy.stunned) {
+      statusBadges.push({ ...STUN_STATUS_BADGE_STYLE });
+    }
+    if ((enemy.fearCooldown || 0) > 0) {
+      statusBadges.push({
+        icon: "😱",
+        tag: `${enemy.fearCooldown}`,
+        borderColor: "#38bdf8",
+        bgColor: "rgba(6, 16, 30, 0.92)",
+        textColor: "#bae6fd"
+      });
+    }
+    if (statusBadges.length > 0) {
+      const baseIconPx = Math.max(15, Math.round(tileSize * (enemy.isMegaBoss ? 0.48 : (enemy.isBoss ? 0.44 : 0.40))));
+      const baseBottomY = enemy.isBoss
+        ? (enemy.isMegaBoss ? barY - 14 : barY - 6)
+        : (safeHeadY - 6);
+      this.drawStatusBadgesRow(targetCtx, statusBadges, px + drawSize / 2, baseBottomY, baseIconPx);
+    }
+
+    targetCtx.restore();
+  }
+
+  drawStatusBadgesRow(targetCtx, statusBadges, centerX, baseBottomY, baseIconPx) {
+    if (!statusBadges || statusBadges.length === 0) return;
+    const nowMs = performance.now();
+    const bob = Math.sin(nowMs / 140) * 2.5;
+    const pulse = 1 + 0.06 * Math.sin(nowMs / 140);
+    const badgeH = Math.round(baseIconPx + 6);
+    const badgeGap = 4;
+    const badgeWidths = statusBadges.map(b => Math.round(baseIconPx * (b.tag ? 1.75 : 1.35)));
+    const totalRowW = badgeWidths.reduce((acc, w) => acc + w, 0) + badgeGap * (statusBadges.length - 1);
+    const badgeTopY = Math.round(baseBottomY - badgeH + bob);
+    let curX = Math.round(centerX - totalRowW / 2);
+
+    statusBadges.forEach((badge, idx) => {
+      const bw = badgeWidths[idx];
+      const cx = curX + bw / 2;
+      const cy = badgeTopY + badgeH / 2;
+
+      targetCtx.save();
+      targetCtx.translate(cx, cy);
+      targetCtx.scale(pulse, pulse);
+
+      // Placa gótica unificada de alto contraste para distinguir el estado sobre cualquier bioma o entidad
+      targetCtx.fillStyle = badge.bgColor;
+      targetCtx.strokeStyle = badge.borderColor;
+      targetCtx.lineWidth = 1.8;
+      targetCtx.beginPath();
+      if (typeof targetCtx.roundRect === "function") {
+        targetCtx.roundRect(-bw / 2, -badgeH / 2, bw, badgeH, 5);
+      } else {
+        targetCtx.rect(-bw / 2, -badgeH / 2, bw, badgeH);
+      }
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      // Icono grande y nítido + contador/etiqueta compacta
+      targetCtx.font = `bold ${baseIconPx}px monospace`;
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.lineWidth = 3;
+      targetCtx.strokeStyle = "#04060e";
+      const displayStr = badge.icon;
+      const iconOffsetX = badge.tag ? -Math.round(bw * 0.14) : 0;
+      targetCtx.strokeText(displayStr, iconOffsetX, 0);
+      targetCtx.fillStyle = "#ffffff";
+      targetCtx.fillText(displayStr, iconOffsetX, 0);
+
+      if (badge.tag) {
+        const tagFontPx = Math.max(9, Math.round(baseIconPx * 0.56));
+        targetCtx.font = `bold ${tagFontPx}px monospace`;
+        const tagX = Math.round(bw * 0.24);
+        targetCtx.strokeText(badge.tag, tagX, 1);
+        targetCtx.fillStyle = badge.textColor;
+        targetCtx.fillText(badge.tag, tagX, 1);
+      }
+
+      targetCtx.restore();
+      curX += bw + badgeGap;
+    });
   }
 
   drawGoldenBunny(targetCtx, bunny, screenX, screenY) {
@@ -5211,9 +5486,10 @@ class Renderer {
       this.goldenBunnySheet = this.loadTerrainTexture("Assets/Enemy/Golden-bunny.jpg");
     }
     const fleeing = bunny.isFleeing;
+    const idleFrames = BUNNY_SPRITES.bunnyIdleFrames || [BUNNY_SPRITES.bunnyIdle];
     const frame = fleeing
       ? BUNNY_SPRITES.bunnyFlee[Math.floor((performance.now() - bunny.fleeStartedAt) / 120) % BUNNY_SPRITES.bunnyFlee.length]
-      : BUNNY_SPRITES.bunnyIdle;
+      : idleFrames[Math.floor(performance.now() / 240) % idleFrames.length];
     const sprite = this.getKeyedSprite(this.goldenBunnySheet, frame, "black", { trim: true });
     if (!sprite) return;
 
@@ -5728,7 +6004,90 @@ class Renderer {
     }
     targetCtx.restore();
 
+    // Iconos de estado activos sobre Lior: Stun unificado con los monstruos (💫 STUN) y estados arcanos (👁, 🔮) intactos
+    if (this.player.hp > 0) {
+      const liorHeadTopY = Math.round(py - tileSize * 0.34);
+      const liorStatuses = [];
+      if (this.player.antimagicCritLock) liorStatuses.push("👁");
+      if ((this.player.blessedAmmoCharges || 0) > 0) liorStatuses.push("🔮");
+
+      if (liorStatuses.length > 0) {
+        const bob = Math.sin(now / 150) * 2;
+        targetCtx.save();
+        targetCtx.font = "bold 11px monospace";
+        targetCtx.textAlign = "center";
+        targetCtx.textBaseline = "bottom";
+        targetCtx.lineWidth = 2.5;
+        targetCtx.strokeStyle = "#05070f";
+        const statusText = liorStatuses.join("");
+        targetCtx.strokeText(statusText, px + tileSize / 2, liorHeadTopY + bob);
+        targetCtx.fillStyle = "#d8b4fe";
+        targetCtx.fillText(statusText, px + tileSize / 2, liorHeadTopY + bob);
+        targetCtx.restore();
+      }
+
+      if (this.player.stunned) {
+        const baseIconPx = Math.max(15, Math.round(tileSize * 0.40));
+        const stunBottomY = liorStatuses.length > 0 ? (liorHeadTopY - 14) : (liorHeadTopY - 2);
+        this.drawStatusBadgesRow(
+          targetCtx,
+          [{ ...STUN_STATUS_BADGE_STYLE }],
+          px + tileSize / 2,
+          stunBottomY,
+          baseIconPx
+        );
+      }
+    }
+
     if (actionFrame?.effects) this.drawEffects(targetCtx, actionFrame.effects, this.playerAnimation.origin);
+  }
+
+  drawActiveMegaBossBanner(targetCtx) {
+    if (!this.dungeon || !this.dungeon.enemies) return;
+    const boss = this.dungeon.enemies.find(e => e.isMegaBoss && e.hp > 0);
+    if (!boss) return;
+
+    const W = this.canvas.width;
+    const barW = Math.min(280, Math.max(160, Math.round(W * 0.44)));
+    const barH = 9;
+    const x = Math.round((W - barW) / 2);
+    const y = 10;
+    const ratio = Math.max(0, Math.min(1, boss.hp / Math.max(1, boss.maxHp)));
+    const isEnraged = (boss.originTier === 10 && (boss.solarPhase2Triggered || ratio <= 0.5))
+      || (boss.originTier === 8 && ratio <= 0.30);
+
+    targetCtx.save();
+    targetCtx.fillStyle = "rgba(6, 8, 18, 0.88)";
+    targetCtx.strokeStyle = isEnraged ? "#fbbf24" : "#9ea6c8";
+    targetCtx.lineWidth = 1.5;
+    targetCtx.fillRect(x - 8, y - 4, barW + 16, barH + 22);
+    targetCtx.strokeRect(x - 8, y - 4, barW + 16, barH + 22);
+
+    targetCtx.fillStyle = "#1a1025";
+    targetCtx.fillRect(x, y + 11, barW, barH);
+
+    const grad = targetCtx.createLinearGradient(x, y + 11, x + barW, y + 11);
+    if (isEnraged) {
+      grad.addColorStop(0, "#f59e0b");
+      grad.addColorStop(1, "#ef4444");
+    } else {
+      grad.addColorStop(0, "#be123c");
+      grad.addColorStop(1, "#fb7185");
+    }
+    targetCtx.fillStyle = grad;
+    targetCtx.fillRect(x, y + 11, Math.max(2, Math.round(barW * ratio)), barH);
+
+    targetCtx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    targetCtx.lineWidth = 1;
+    targetCtx.strokeRect(x + 0.5, y + 11.5, barW - 1, barH - 1);
+
+    targetCtx.font = "bold 9.5px monospace";
+    targetCtx.textAlign = "center";
+    targetCtx.textBaseline = "top";
+    targetCtx.fillStyle = isEnraged ? "#fde047" : "#f8fafc";
+    const titleText = `👑 ${boss.name.toUpperCase()} — ${boss.hp}/${boss.maxHp} HP${isEnraged ? " [FURIA]" : ""}`;
+    targetCtx.fillText(titleText, W / 2, y - 1);
+    targetCtx.restore();
   }
 
   drawEffects(targetCtx, effects, origin) {
@@ -6391,7 +6750,21 @@ class Renderer {
       if (!hasVisibleCell) return;
       if (minScreenX + enemy.size <= 0 || minScreenX >= cols || minScreenY + enemy.size <= 0 || minScreenY >= rows) return;
 
-      this.drawEnemySprite(targetCtx, enemy, minScreenX * tileSize, minScreenY * tileSize);
+      let interpOffsetX = 0;
+      let interpOffsetY = 0;
+      if (enemy.moveInterp && frameNow < enemy.moveInterp.until) {
+        const t = Math.max(0, Math.min(1, (frameNow - enemy.moveInterp.startedAt) / enemy.moveInterp.duration));
+        const ease = 1 - Math.pow(1 - t, 2);
+        interpOffsetX = (enemy.moveInterp.fromX - enemy.x) * (1 - ease) * tileSize;
+        interpOffsetY = (enemy.moveInterp.fromY - enemy.y) * (1 - ease) * tileSize;
+      }
+
+      this.drawEnemySprite(
+        targetCtx,
+        enemy,
+        minScreenX * tileSize + interpOffsetX,
+        minScreenY * tileSize + interpOffsetY
+      );
     });
 
     this.drawRoarEffects(targetCtx, frameNow);
@@ -6411,31 +6784,132 @@ class Renderer {
       }
     });
 
-    const liorCellPx = playerScreenX * tileSize;
-    const liorCellPy = playerScreenY * tileSize;
+    let liorInterpX = 0;
+    let liorInterpY = 0;
+    if (this.player.moveInterp && frameNow < this.player.moveInterp.until) {
+      const t = Math.max(0, Math.min(1, (frameNow - this.player.moveInterp.startedAt) / this.player.moveInterp.duration));
+      const ease = 1 - Math.pow(1 - t, 2);
+      liorInterpX = (this.player.moveInterp.fromX - this.player.x) * (1 - ease) * tileSize;
+      liorInterpY = (this.player.moveInterp.fromY - this.player.y) * (1 - ease) * tileSize;
+    }
+    const liorCellPx = playerScreenX * tileSize + liorInterpX;
+    const liorCellPy = playerScreenY * tileSize + liorInterpY;
     this.drawLiorSprite(targetCtx, liorCellPx, liorCellPy, tileSize);
     this.drawEnemyProjectiles(targetCtx, frameNow);
     targetCtx.restore();
     this.drawFloatingNumbers(targetCtx, frameNow);
+    this.drawActiveMegaBossBanner(targetCtx);
     this.drawDamageFlash(targetCtx);
   }
 }
 
 class CombatSystem {
+  static getEnemyAttackRange(enemy) {
+    const size = Math.max(1, Math.floor(enemy?.size || 1));
+    if (size >= 4 || enemy?.isMegaBoss) return 4;
+    if (size === 2 || enemy?.isBoss) return 2;
+    return 1;
+  }
+
+  static getEnemyAttackCadence(enemy) {
+    const size = Math.max(1, Math.floor(enemy?.size || 1));
+    if (size >= 4 || enemy?.isMegaBoss) return 4;
+    if (size === 2 || enemy?.isBoss) return 2;
+    return 1;
+  }
+
+  static syncEnemyCells(enemy) {
+    if (!enemy) return [];
+    const size = Math.max(1, Math.floor(enemy.size || 1));
+    if (!Array.isArray(enemy.cells) || enemy.cells.length !== size * size ||
+        enemy.cells[0]?.x !== enemy.x || enemy.cells[0]?.y !== enemy.y) {
+      const cells = [];
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          cells.push({ x: enemy.x + dx, y: enemy.y + dy });
+        }
+      }
+      enemy.cells = cells;
+    }
+    enemy.attackRange = CombatSystem.getEnemyAttackRange(enemy);
+    enemy.attackCadence = CombatSystem.getEnemyAttackCadence(enemy);
+    return enemy.cells;
+  }
+
+  static getEnemyBlockBounds(enemy) {
+    const cells = CombatSystem.syncEnemyCells(enemy);
+    if (!cells || cells.length === 0) {
+      const x = enemy?.x ?? 0;
+      const y = enemy?.y ?? 0;
+      const s = Math.max(1, enemy?.size || 1);
+      return { minX: x, maxX: x + s - 1, minY: y, maxY: y + s - 1 };
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i];
+      if (c.x < minX) minX = c.x;
+      if (c.x > maxX) maxX = c.x;
+      if (c.y < minY) minY = c.y;
+      if (c.y > maxY) maxY = c.y;
+    }
+    return { minX, maxX, minY, maxY };
+  }
+
   static getMinDistToPlayer(player, enemy) {
-    if (!enemy.cells || enemy.cells.length === 0) return 999;
-    let minDist = 999;
-    enemy.cells.forEach(cell => {
-      const d = Math.hypot(cell.x - player.x, cell.y - player.y);
-      if (d < minDist) minDist = d;
+    if (!player || !enemy) return 999;
+    const { minX, maxX, minY, maxY } = CombatSystem.getEnemyBlockBounds(enemy);
+    const dx = Math.max(0, minX - player.x, player.x - maxX);
+    const dy = Math.max(0, minY - player.y, player.y - maxY);
+    return Math.hypot(dx, dy);
+  }
+
+  static getMinDistBetweenEnemies(enemyA, enemyB) {
+    if (!enemyA || !enemyB) return 999;
+    const a = CombatSystem.getEnemyBlockBounds(enemyA);
+    const b = CombatSystem.getEnemyBlockBounds(enemyB);
+    const dx = Math.max(0, a.minX - b.maxX, b.minX - a.maxX);
+    const dy = Math.max(0, a.minY - b.maxY, b.minY - a.maxY);
+    return Math.hypot(dx, dy);
+  }
+
+  static hasNearbyAlly(dungeon, enemy, radius = ENEMY_ALLY_DETECTION_RADIUS) {
+    if (!dungeon?.enemies || !enemy) return false;
+    return dungeon.enemies.some(other =>
+      other !== enemy
+      && (other.hp === undefined || other.hp > 0)
+      && !other.stunned
+      && (other.fearCooldown || 0) <= 0
+      && CombatSystem.getMinDistBetweenEnemies(enemy, other) <= radius
+    );
+  }
+
+  static hasAlertedNearbyAlly(player, dungeon, enemy, radius = ENEMY_ALLY_DETECTION_RADIUS) {
+    if (!player || !dungeon?.enemies || !enemy) return false;
+    return dungeon.enemies.some(other => {
+      if (other === enemy || (other.hp !== undefined && other.hp <= 0)) return false;
+      if ((other.fearCooldown || 0) > 0 || other.stunned) return false;
+      if (CombatSystem.getMinDistBetweenEnemies(enemy, other) > radius) return false;
+      const distOtherToPlayer = CombatSystem.getMinDistToPlayer(player, other);
+      return distOtherToPlayer <= (other.visionRange || MINION_VISION_RANGE)
+        && CombatSystem.canEnemySeePlayer(player, dungeon, other);
     });
-    return minDist;
   }
 
   static canEnemySeePlayer(player, dungeon, enemy) {
-    if (!enemy.cells) return false;
-    return enemy.cells.some(cell =>
+    const cells = CombatSystem.syncEnemyCells(enemy);
+    if (!cells || cells.length === 0) return false;
+    return cells.some(cell =>
       VisibilitySystem.hasWorldLineOfSight(cell.x, cell.y, player.x, player.y, dungeon)
+    );
+  }
+
+  static canEnemySeeEnemy(dungeon, observer, target) {
+    if (!dungeon || !observer || !target) return false;
+    const observerCells = CombatSystem.syncEnemyCells(observer);
+    const targetCells = CombatSystem.syncEnemyCells(target);
+    if (!observerCells?.length || !targetCells?.length) return false;
+    return observerCells.some(oc =>
+      targetCells.some(tc => VisibilitySystem.hasWorldLineOfSight(oc.x, oc.y, tc.x, tc.y, dungeon))
     );
   }
 
@@ -6514,8 +6988,37 @@ class CombatSystem {
     });
     candidates.sort((a, b) => a.dist - b.dist);
 
-    const clear = candidates.find(c => !c.blocker);
-    if (clear) return { targets: [clear.enemy], impact: clear.cell, area: null, hitWall: false };
+    const clearCandidates = candidates.filter(c => !c.blocker);
+    if (clearCandidates.length > 0) {
+      const musketLevel = weapon.id === "musket" ? (player.weaponUpgrades?.musket || 0) : 0;
+      if (weapon.id === "musket" && musketLevel >= 2) {
+        const maxTargets = musketLevel >= 3 ? Infinity : 2;
+        const primary = clearCandidates[0];
+        const basis = CameraTransformer.getBasis(player.direction);
+        const primaryLat = (primary.cell.x - player.x) * basis.right.x + (primary.cell.y - player.y) * basis.right.y;
+        const lineCandidates = clearCandidates
+          .filter(cand => {
+            const candLat = (cand.cell.x - player.x) * basis.right.x + (cand.cell.y - player.y) * basis.right.y;
+            return candLat === primaryLat;
+          })
+          .sort((a, b) => {
+            const fwdA = (a.cell.x - player.x) * basis.forward.x + (a.cell.y - player.y) * basis.forward.y;
+            const fwdB = (b.cell.x - player.x) * basis.forward.x + (b.cell.y - player.y) * basis.forward.y;
+            return fwdA - fwdB;
+          });
+        const uniqueTargets = [];
+        let lastCell = primary.cell;
+        for (const cand of lineCandidates) {
+          if (!uniqueTargets.includes(cand.enemy)) {
+            uniqueTargets.push(cand.enemy);
+            lastCell = cand.cell;
+            if (uniqueTargets.length >= maxTargets) break;
+          }
+        }
+        return { targets: uniqueTargets, impact: lastCell, area: null, hitWall: false };
+      }
+      return { targets: [clearCandidates[0].enemy], impact: clearCandidates[0].cell, area: null, hitWall: false };
+    }
     if (candidates.length > 0) return { targets: [], impact: candidates[0].blocker, area: null, hitWall: true };
 
     let impact = { x: player.x, y: player.y };
@@ -6565,10 +7068,9 @@ class CombatSystem {
     if ((player.shieldSegments || 0) > 0) {
       player.shieldSegments = Math.max(0, player.shieldSegments - 1);
       shieldConsumed = 1;
-      // Redondeo coherente hacia arriba del daño reducido para evitar que impactos de 1 de daño se anulen a 0:
-      // 20 -> 10, 42 -> 21, 3 -> 2, 1 -> 1.
-      effectiveDamage = Math.max(1, Math.ceil(rawDamage / 2));
-      mitigatedDamage = rawDamage - effectiveDamage;
+      // Cada segmento de escudo activo bloquea el 100% del impacto recibido:
+      effectiveDamage = 0;
+      mitigatedDamage = rawDamage;
       if (game?.stats) {
         game.stats.shieldSegmentsConsumed++;
         game.stats.shieldDamageMitigated += mitigatedDamage;
@@ -6589,9 +7091,10 @@ class CombatSystem {
         game.stats.totalDamageTaken += totalDamage;
       }
       const floatLabel = shieldConsumed > 0
-        ? `-${totalDamage} HP (🛡-${mitigatedDamage})`
+        ? (totalDamage > 0 ? `-${totalDamage} HP (🛡-${mitigatedDamage})` : `🛡 BLOQUEADO (-${mitigatedDamage})`)
         : `-${totalDamage} HP`;
-      game?.renderer?.showFloatingNumber(player.x, player.y, floatLabel, "damage");
+      const floatType = (shieldConsumed > 0 && totalDamage === 0) ? "shield" : "damage";
+      game?.renderer?.showFloatingNumber(player.x, player.y, floatLabel, floatType);
       if (player.hp <= 0) {
         game?.clearSavedGame?.();
       } else {
@@ -6618,26 +7121,72 @@ class CombatSystem {
     }
     const damage = Math.min(target.hp, Math.max(0, Math.floor(incomingDamage)));
     target.hp = Math.max(0, target.hp - damage);
+    if (
+      target.isMegaBoss
+      && target.originTier === 10
+      && target.hp > 0
+      && target.hp <= target.maxHp / 2
+      && !target.solarPhase2Triggered
+    ) {
+      target.solarPhase2Triggered = true;
+      game?.renderer?.triggerRoarVisualEffect?.(target.x + 1.5, target.y + 1.5, true);
+      game?.log?.("☀️ ¡SUPERNOVA SOLAR! El Dragón Solar entra en Fase II.");
+    }
     if (animate && target.hp > 0) game.renderer?.playEnemyAnim(target, "hurt");
     return damage;
   }
 
-  static applyBlunderbussKnockback(game, target, maxPushSteps = 2) {
-    if (target.size !== 1 || target.hp <= 0) return { moved: false, stepsMoved: 0, hitWall: false };
+  static applyTrueDamageToPlayer(game, player, trueDamage, icon = "🔥") {
+    const dmg = Math.max(0, Math.floor(trueDamage));
+    if (!player || dmg <= 0 || player.hp <= 0) return 0;
+    const actual = Math.min(player.hp, dmg);
+    player.hp = Math.max(0, player.hp - actual);
+    if (actual > 0) {
+      if (game?.stats) {
+        game.stats.totalDamageTaken += actual;
+      }
+      game?.renderer?.showFloatingNumber?.(player.x, player.y, `-${actual} HP ${icon}`, "damage");
+      if (player.hp <= 0) {
+        game?.clearSavedGame?.();
+      } else {
+        game?.syncBiomeMusic?.();
+      }
+      game?.updateHUD?.();
+    }
+    return actual;
+  }
 
-    const dx = Math.sign(target.x - game.player.x);
-    const dy = Math.sign(target.y - game.player.y);
-    if (dx === 0 && dy === 0) return { moved: false, stepsMoved: 0, hitWall: false };
+  static consumeExtraShieldSegments(game, player, extraCount = 1) {
+    if (!player || (player.shieldSegments || 0) <= 0 || extraCount <= 0) return 0;
+    const consumed = Math.min(player.shieldSegments, Math.floor(extraCount));
+    player.shieldSegments = Math.max(0, player.shieldSegments - consumed);
+    if (consumed > 0) {
+      if (game?.stats) {
+        game.stats.shieldSegmentsConsumed += consumed;
+      }
+      game?.updateHUD?.();
+    }
+    return consumed;
+  }
 
+  static displacePlayer(game, dx, dy, maxSteps = 1) {
+    const stepX = Math.sign(dx);
+    const stepY = Math.sign(dy);
+    if ((stepX === 0 && stepY === 0) || !game?.player || !game?.dungeon) {
+      return { moved: false, stepsMoved: 0, hitWall: false };
+    }
     const { dungeon, player } = game;
-    let curX = target.x;
-    let curY = target.y;
+    if (dungeon.turnCount > 0 && dungeon.lastDisplacementTurn === dungeon.turnCount) {
+      return { moved: false, stepsMoved: 0, hitWall: false };
+    }
+    let curX = player.x;
+    let curY = player.y;
     let stepsMoved = 0;
     let hitWall = false;
 
-    for (let step = 1; step <= maxPushSteps; step++) {
-      const nextX = curX + dx;
-      const nextY = curY + dy;
+    for (let step = 1; step <= maxSteps; step++) {
+      const nextX = curX + stepX;
+      const nextY = curY + stepY;
 
       if (!dungeon.isInsideBounds(nextX, nextY)) {
         hitWall = true;
@@ -6645,19 +7194,15 @@ class CombatSystem {
       }
 
       const tile = dungeon.getTile(nextX, nextY);
-      const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(enemy => enemy.hp > 0);
+      const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(e => e.hp > 0);
       if (tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS || lockedExit) {
         hitWall = true;
         break;
       }
 
-      if (nextX === player.x && nextY === player.y) {
-        break;
-      }
-
-      const occupied = dungeon.enemies.some(enemy => enemy !== target && enemy.hp > 0
-        && enemy.cells?.some(cell => cell.x === nextX && cell.y === nextY));
-      if (occupied) {
+      const occupiedByEnemy = dungeon.enemies.some(e => e.hp > 0 && e.cells?.some(c => c.x === nextX && c.y === nextY));
+      const occupiedByMerchant = game.isMerchantAt?.(nextX, nextY);
+      if (occupiedByEnemy || occupiedByMerchant) {
         break;
       }
 
@@ -6667,12 +7212,195 @@ class CombatSystem {
     }
 
     if (stepsMoved > 0) {
-      target.x = curX;
-      target.y = curY;
-      target.cells = [{ x: curX, y: curY }];
+      if (dungeon.turnCount > 0) {
+        dungeon.lastDisplacementTurn = dungeon.turnCount;
+      }
+      player.x = curX;
+      player.y = curY;
+      dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, player));
+      game.renderer?.commitCameraFacing?.();
     }
 
     return { moved: stepsMoved > 0, stepsMoved, hitWall };
+  }
+
+  static applyMegaBossOnHitEffects(game, enemy, attack, dmgRes, distToPlayer, hadShieldBeforeHit) {
+    if (!enemy || !enemy.isMegaBoss || !game?.player || game.player.hp <= 0) return "";
+    const player = game.player;
+    const tier = enemy.originTier || 1;
+    const centerX = enemy.x + (enemy.size - 1) / 2;
+    const centerY = enemy.y + (enemy.size - 1) / 2;
+
+    switch (tier) {
+      case 1: {
+        // Roc: empuja a Lior hasta 2 casillas hacia atrás (1 si el golpe fue absorbido por escudo);
+        // solo inflige +2 DMG contra muro si el impacto no fue absorbido por un segmento de escudo.
+        const pushDx = Math.sign(player.x - centerX);
+        const pushDy = Math.sign(player.y - centerY);
+        const pushSteps = hadShieldBeforeHit ? 1 : 2;
+        const pushRes = CombatSystem.displacePlayer(game, pushDx, pushDy, pushSteps);
+        if (pushRes.hitWall && !hadShieldBeforeHit) {
+          CombatSystem.applyTrueDamageToPlayer(game, player, 2, "🌪");
+          return "🌪 ¡Estampado contra el muro (-2 HP)!";
+        }
+        return pushRes.moved ? `🌪 ¡Vendaval te empuja ${pushRes.stepsMoved} ${pushRes.stepsMoved === 1 ? "casilla" : "casillas"}!` : "";
+      }
+      case 2: {
+        // Tarrasca: a corta distancia (<= 2 casillas) destruye +1 segmento de escudo adicional
+        if (distToPlayer <= 2 && player.shieldSegments > 0) {
+          const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+          if (extra > 0) return "🦷 ¡Fauces colosales destruyen +1🛡 extra!";
+        }
+        return "";
+      }
+      case 4: {
+        // Kraken: atrae a Lior hasta 2 casillas hacia sus tentáculos y retrasa Misty Step en 4 acciones
+        const pullDx = Math.sign(centerX - player.x);
+        const pullDy = Math.sign(centerY - player.y);
+        const pullRes = CombatSystem.displacePlayer(game, pullDx, pullDy, 2);
+        player.mistyStepActionCounter = Math.max(0, (player.mistyStepActionCounter || 0) - 4);
+        return pullRes.moved
+          ? "🐙 ¡Tentáculos te arrastran y retrasan Bruma (-4 acc.)!"
+          : "🐙 ¡Tentáculos retrasan la recarga de Bruma (-4 acc.)!";
+      }
+      case 5: {
+        // Gigante de tormenta: sobrecarga el escudo (-1🛡 extra) o 35% de aturdir si no tenías escudo
+        if (hadShieldBeforeHit) {
+          const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+          if (extra > 0) return "⚡ ¡Relámpago sobrecarga tu escudo (-1🛡 extra)!";
+        } else if (attack?.critical || Math.random() < 0.35) {
+          player.stunned = true;
+          return "⚡ ¡El relámpago te aturde por 1 turno!";
+        }
+        return "";
+      }
+      case 6: {
+        // Beholder: drena hasta 3 cargas de Eldritch Blast y bloquea críticos en el próximo ataque
+        const before = player.blastCurrentCharges || 0;
+        player.blastCurrentCharges = Math.max(0, before - 3);
+        player.antimagicCritLock = true;
+        game.updateHUD?.();
+        return "👁 ¡Mirada Antimagia drena EB y anula tu próximo crítico!";
+      }
+      case 8: {
+        // Balor: atrae 1 casilla con su látigo e inflige +2 de daño de fuego verdadero (+4 en Furia <=30% HP)
+        const pullDx = Math.sign(centerX - player.x);
+        const pullDy = Math.sign(centerY - player.y);
+        CombatSystem.displacePlayer(game, pullDx, pullDy, 1);
+        const fireDmg = enemy.hp <= Math.floor(enemy.maxHp * 0.30) ? 4 : 2;
+        CombatSystem.applyTrueDamageToPlayer(game, player, fireDmg, "🔥");
+        return `🔥 ¡Látigo abisal te atrae (+${fireDmg} DMG de fuego verdadero)!`;
+      }
+      case 9: {
+        // Dragón rojo ancestral: funde +1 segmento de escudo extra y quema 1 bala al azar
+        const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+        const ammoPools = ["ammoPistol", "ammoMusket", "ammoBlunderbuss"].filter(k => (player[k] || 0) > 0);
+        let burnedAmmo = false;
+        if (ammoPools.length > 0) {
+          const chosen = ammoPools[Math.floor(Math.random() * ammoPools.length)];
+          player[chosen] = Math.max(0, player[chosen] - 1);
+          player.ensureEquippedWeaponAvailable?.();
+          burnedAmmo = true;
+        }
+        game.updateHUD?.();
+        if (extra > 0 && burnedAmmo) return "🔥 ¡Aliento funde +1🛡 extra y quema 1 bala!";
+        if (extra > 0) return "🔥 ¡Aliento calcinante funde +1🛡 extra!";
+        if (burnedAmmo) return "🔥 ¡Aliento calcinante incinera 1 bala!";
+        return "";
+      }
+      case 10: {
+        // Dragón solar: Fase 1 empuja 1 casilla y rompe +1🛡 extra; Fase 2 (<=50% HP) empuja 1 casilla y mete +4 DMG radiante verdadero
+        const pushDx = Math.sign(player.x - centerX);
+        const pushDy = Math.sign(player.y - centerY);
+        CombatSystem.displacePlayer(game, pushDx, pushDy, 1);
+        const inPhase2 = enemy.solarPhase2Triggered || enemy.hp <= enemy.maxHp / 2;
+        if (inPhase2) {
+          CombatSystem.applyTrueDamageToPlayer(game, player, 4, "☀️");
+          return "☀️ ¡Supernova Solar inflige +4 DMG radiante verdadero!";
+        }
+        const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+        return extra > 0 ? "☀️ ¡Fulgor solar rompe +1🛡 extra!" : "☀️ ¡Onda solar te empuja hacia atrás!";
+      }
+      default:
+        return "";
+    }
+  }
+
+  static isWallCollisionForEnemyBlock(dungeon, cells) {
+    if (!dungeon || !cells || cells.length === 0) return false;
+    return cells.some(c => {
+      if (!dungeon.isInsideBounds(c.x, c.y)) return true;
+      const tile = dungeon.getTile(c.x, c.y);
+      const lockedExit = tile === TILE_EXIT && dungeon.enemies.some(enemy => enemy.hp > 0);
+      return tile === TILE_WALL || tile === TILE_OUT_OF_BOUNDS || lockedExit;
+    });
+  }
+
+  static applyBlunderbussKnockback(game, target, maxPushSteps = 0, canWallCrit = false) {
+    if (!target || target.hp <= 0 || !game?.player || !game?.dungeon) {
+      return { moved: false, stepsMoved: 0, hitWall: false };
+    }
+
+    const { dungeon, player } = game;
+    const size = Math.max(1, Math.floor(target.size || 1));
+    const centerX = target.x + (size - 1) / 2;
+    const centerY = target.y + (size - 1) / 2;
+    let dx = Math.sign(centerX - player.x);
+    let dy = Math.sign(centerY - player.y);
+    if (dx === 0 && dy === 0) {
+      const dirVec = DIR_VECTORS[((player.direction % 4) + 4) % 4] || DIR_VECTORS[0];
+      dx = dirVec.x;
+      dy = dirVec.y;
+    }
+    if (dx === 0 && dy === 0) return { moved: false, stepsMoved: 0, hitWall: false };
+
+    CombatSystem.syncEnemyCells(target);
+    let curX = target.x;
+    let curY = target.y;
+    let curCells = target.cells.map(c => ({ x: c.x, y: c.y }));
+    let stepsMoved = 0;
+    let hitWall = false;
+
+    if (maxPushSteps <= 0) {
+      if (canWallCrit) {
+        const nextCells = curCells.map(c => ({ x: c.x + dx, y: c.y + dy }));
+        hitWall = CombatSystem.isWallCollisionForEnemyBlock(dungeon, nextCells);
+      }
+      return { moved: false, stepsMoved: 0, hitWall };
+    }
+
+    for (let step = 1; step <= maxPushSteps; step++) {
+      const nextCells = curCells.map(c => ({ x: c.x + dx, y: c.y + dy }));
+
+      if (CombatSystem.isWallCollisionForEnemyBlock(dungeon, nextCells)) {
+        hitWall = true;
+        break;
+      }
+
+      if (nextCells.some(c => c.x === player.x && c.y === player.y)) {
+        break;
+      }
+
+      const occupied = dungeon.enemies.some(enemy => enemy !== target && enemy.hp > 0
+        && enemy.cells?.some(cell => nextCells.some(nc => nc.x === cell.x && nc.y === cell.y)));
+      if (occupied || nextCells.some(nc => game.isMerchantAt?.(nc.x, nc.y))) {
+        break;
+      }
+
+      curX += dx;
+      curY += dy;
+      curCells = nextCells;
+      stepsMoved++;
+    }
+
+    if (stepsMoved > 0) {
+      target.x = curX;
+      target.y = curY;
+      target.cells = curCells;
+      CombatSystem.syncEnemyCells(target);
+    }
+
+    return { moved: stepsMoved > 0, stepsMoved, hitWall: canWallCrit && hitWall };
   }
 
   static rollWeaponDamageBreakdown(player, weapon = player.equippedWeapon) {
@@ -6698,7 +7426,65 @@ class CombatSystem {
     };
   }
 
-  static rollAttack(game, target, weapon = game.player.equippedWeapon) {
+  static applyMiniBossOnHitEffects(game, enemy, distToPlayer, hadShieldBeforeHit) {
+    if (!enemy || !enemy.isBoss || enemy.isMegaBoss || !game?.player || game.player.hp <= 0) return "";
+    const player = game.player;
+    const tier = enemy.originTier || 1;
+    const centerX = enemy.x + (enemy.size - 1) / 2;
+    const centerY = enemy.y + (enemy.size - 1) / 2;
+
+    switch (tier) {
+      case 1: {
+        // Ogro: Garrotazo que empuja 1 casilla
+        const pushRes = CombatSystem.displacePlayer(game, Math.sign(player.x - centerX), Math.sign(player.y - centerY), 1);
+        return pushRes.moved ? "🪵 ¡Garrotazo te empuja 1 casilla!" : "";
+      }
+      case 3: {
+        // Minotauro: Embiste (+2 DMG si se movió en el turno anterior)
+        if (enemy.movedLastTurn) {
+          CombatSystem.applyTrueDamageToPlayer(game, player, 2, "🐂");
+          return "🐂 ¡Embiste laberíntico (+2 DMG)!";
+        }
+        return "";
+      }
+      case 4: {
+        // Osobúho: 30% de romper +1 segmento de escudo adicional
+        if (distToPlayer <= 2 && player.shieldSegments > 0 && Math.random() < 0.30) {
+          const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+          if (extra > 0) return "🦉 ¡Abrazo feroz rompe +1🛡 extra!";
+        }
+        return "";
+      }
+      case 6: {
+        // Basilisco: 25% de aturdir si golpeas sin escudo
+        if (!hadShieldBeforeHit && Math.random() < 0.25) {
+          player.stunned = true;
+          return "🐍 ¡Mirada petrificante te aturde 1 turno!";
+        }
+        return "";
+      }
+      case 7: {
+        // Quimera: +1 DMG de fuego verdadero
+        CombatSystem.applyTrueDamageToPlayer(game, player, 1, "🔥");
+        return "🔥 ¡Aliento de Quimera (+1 DMG)!";
+      }
+      case 9: {
+        // Gigante de las colinas: rompe +1 escudo extra y empuja 1 casilla
+        const extra = CombatSystem.consumeExtraShieldSegments(game, player, 1);
+        CombatSystem.displacePlayer(game, Math.sign(player.x - centerX), Math.sign(player.y - centerY), 1);
+        return extra > 0 ? "🪨 ¡Aplastamiento rompe +1🛡 extra!" : "🪨 ¡Golpe colosal te hace retroceder!";
+      }
+      case 10: {
+        // Dragón joven: +2 DMG de fuego verdadero
+        CombatSystem.applyTrueDamageToPlayer(game, player, 2, "🔥");
+        return "🔥 ¡Fuego dracónico (+2 DMG verdadero)!";
+      }
+      default:
+        return "";
+    }
+  }
+
+  static rollAttack(game, target, weapon = game.player.equippedWeapon, consumeBlessing = false) {
     if (target && game?.player) {
       Renderer.orientEnemyTowardsPlayer(target, game.player);
     }
@@ -6710,11 +7496,26 @@ class CombatSystem {
       return true;
     }
 
+    const critBlockedByAntimagic = !!game.player.antimagicCritLock;
+    if (critBlockedByAntimagic) {
+      game.player.antimagicCritLock = false;
+    }
+
     const dmgBreakdown = CombatSystem.rollWeaponDamageBreakdown(game.player, weapon);
+    if (consumeBlessing && !weapon.isMelee && (game.player.blessedAmmoCharges || 0) > 0) {
+      const blessedRoll = rollDie(6);
+      dmgBreakdown.trueDamage += blessedRoll;
+      dmgBreakdown.totalDamage += blessedRoll;
+    }
+    const isIronGolem = !!(target.isMegaBoss && target.originTier === 3);
+    const isBulette = !!(target.isBoss && !target.isMegaBoss && target.originTier === 8);
 
     if (!result.hit) {
       if (dmgBreakdown.trueDamage > 0) {
-        const damage = CombatSystem.applyDamageToEnemy(game, target, dmgBreakdown.trueDamage);
+        const effectiveTrue = isIronGolem
+          ? Math.ceil(dmgBreakdown.trueDamage * 1.5)
+          : dmgBreakdown.trueDamage;
+        const damage = CombatSystem.applyDamageToEnemy(game, target, effectiveTrue);
         if (game?.stats && weapon.id === "pistol") {
           game.stats.pistolHits++;
         }
@@ -6730,12 +7531,41 @@ class CombatSystem {
 
     let knockbackResult = null;
     if (weapon.id === "blunderbuss") {
-      knockbackResult = CombatSystem.applyBlunderbussKnockback(game, target, 2);
+      const blunderbussLevel = Math.max(0, Math.min(3, game.player.weaponUpgrades?.blunderbuss || 0));
+      const pushSteps = blunderbussLevel >= 3 ? 2 : (blunderbussLevel === 2 ? 1 : 0);
+      const canWallCrit = blunderbussLevel >= 1;
+      knockbackResult = CombatSystem.applyBlunderbussKnockback(game, target, pushSteps, canWallCrit);
     }
 
-    const isCriticalHit = !!(result.critical || (weapon.id === "blunderbuss" && knockbackResult?.hitWall));
-    const baseDamage = dmgBreakdown.totalDamage;
-    const rolledDamage = isCriticalHit ? Math.ceil(baseDamage * 1.5) : baseDamage;
+    const isCriticalHit = !critBlockedByAntimagic
+      && !!(result.critical || (weapon.id === "blunderbuss" && knockbackResult?.hitWall));
+    let rolledDamage;
+    if (isIronGolem) {
+      // Blindaje Forjado (Gólem de hierro): mitiga -2 de daño físico convencional (mín. 1)
+      // pero recibe +50% de daño verdadero perforante.
+      const critNormal = isCriticalHit
+        ? Math.ceil(dmgBreakdown.normalDamage * 1.5)
+        : dmgBreakdown.normalDamage;
+      const mitigatedNormal = critNormal > 0 ? Math.max(1, critNormal - 2) : 0;
+      const critTrue = isCriticalHit
+        ? Math.ceil(dmgBreakdown.trueDamage * 1.5)
+        : dmgBreakdown.trueDamage;
+      const boostedTrue = Math.ceil(critTrue * 1.5);
+      rolledDamage = mitigatedNormal + boostedTrue;
+    } else if (isBulette) {
+      // Coraza Terrestre (Bulette 2x2): mitiga -1 de daño físico convencional (mín. 1)
+      const critNormal = isCriticalHit
+        ? Math.ceil(dmgBreakdown.normalDamage * 1.5)
+        : dmgBreakdown.normalDamage;
+      const mitigatedNormal = critNormal > 0 ? Math.max(1, critNormal - 1) : 0;
+      const critTrue = isCriticalHit
+        ? Math.ceil(dmgBreakdown.trueDamage * 1.5)
+        : dmgBreakdown.trueDamage;
+      rolledDamage = mitigatedNormal + critTrue;
+    } else {
+      const baseDamage = dmgBreakdown.totalDamage;
+      rolledDamage = isCriticalHit ? Math.ceil(baseDamage * 1.5) : baseDamage;
+    }
     const damage = CombatSystem.applyDamageToEnemy(game, target, rolledDamage);
     if (game?.stats) {
       if (weapon.isMelee) game.stats.swordHits++;
@@ -6786,9 +7616,14 @@ class CombatSystem {
       // Los esbirros invocados repetidamente por megajefes (isSummoned === true) no sueltan oro ni pociones
       // para impedir el farmeo infinito de escudo o recursos en salas de jefe.
       if (!enemy.isSummoned) {
-        const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.5 : 0.25);
+        const tier = getTierForFloor(game.floor || 1);
+        const dropChance = enemy.isMegaBoss ? 1 : (enemy.isBoss ? 0.55 : 0.30);
         if (enemy.isMegaBoss || Math.random() < dropChance) {
-          const goldDrop = enemy.isMegaBoss ? 10 : (enemy.isBoss ? rollDie(3) : rollDie(2));
+          const goldDrop = enemy.isMegaBoss
+            ? (10 + tier * 2)
+            : (enemy.isBoss
+                ? (rollDie(3) + Math.floor(tier / 2))
+                : (rollDie(2) + Math.floor((tier - 1) / 4)));
           game.spawnPickup("gold", enemy.x, enemy.y, goldDrop);
         }
         if (enemy.size === 1 && !enemy.isBoss) {
@@ -6807,19 +7642,35 @@ class CombatSystem {
       game.renderer?.startEnemyDeath(enemy);
     });
     game?.syncBiomeMusic?.();
-    return dead.filter(enemy => enemy.isBoss && !enemy.isMegaBoss);
+    return dead.filter(enemy => enemy.isBoss || enemy.isMegaBoss || (enemy.size || 1) >= 2);
   }
 
-  static applyPanic(game, deadMiniBosses) {
-    if (deadMiniBosses.length === 0) return;
-    deadMiniBosses.forEach(miniBoss => {
+  static applyPanic(game, deadLargeEnemies) {
+    if (!deadLargeEnemies || deadLargeEnemies.length === 0 || !game?.dungeon?.enemies) return;
+    let anyPanicked = false;
+    deadLargeEnemies.forEach(fallenBoss => {
       game.dungeon.enemies.forEach(other => {
-        if (!other.isBoss && Math.hypot(other.x - miniBoss.x, other.y - miniBoss.y) <= 2.2) {
-          other.fearCooldown = 2;
+        if (other.isBoss || other.isMegaBoss || (other.size || 1) !== 1) return;
+        if (other.hp !== undefined && other.hp <= 0) return;
+        const perceptionRange = Math.max(ENEMY_ALLY_DETECTION_RADIUS, other.visionRange || MINION_VISION_RANGE);
+        const distToFallen = CombatSystem.getMinDistBetweenEnemies(other, fallenBoss);
+        const witnessedDeath = distToFallen <= perceptionRange
+          && CombatSystem.canEnemySeeEnemy(game.dungeon, other, fallenBoss);
+        if (!witnessedDeath) return;
+
+        // Si tiene otro aliado activo dentro de su radio de 3 casillas, el pánico se cancela o no se activa
+        if (CombatSystem.hasNearbyAlly(game.dungeon, other, ENEMY_ALLY_DETECTION_RADIUS)) {
+          other.fearCooldown = 0;
+          return;
         }
+        other.fearCooldown = ENEMY_FLEE_DURATION_TURNS;
+        other.state = "panic";
+        anyPanicked = true;
       });
     });
-    game.log(TEXT.logs.panic);
+    if (anyPanicked) {
+      game.log(TEXT.logs.panic);
+    }
   }
 
   static executeAttack(game) {
@@ -6892,9 +7743,14 @@ class CombatSystem {
       }
     }
 
+    const hasBlessingForThisShot = !weapon.isMelee && (player.blessedAmmoCharges || 0) > 0;
+    if (hasBlessingForThisShot) {
+      player.blessedAmmoCharges = Math.max(0, player.blessedAmmoCharges - 1);
+    }
+
     let playerFumbled = false;
     for (const target of targets) {
-      if (CombatSystem.rollAttack(game, target, weapon)) {
+      if (CombatSystem.rollAttack(game, target, weapon, hasBlessingForThisShot)) {
         playerFumbled = true;
         break;
       }
@@ -7792,7 +8648,7 @@ class NarrativeIntroController {
     this.confirmationReadyAt = performance.now();
     this.updateProgressDots();
     if (this.textEl) {
-      this.textEl.innerHTML = `<strong>«El descenso comienza. Cuando estés listo, continúa.»</strong> <span style="color:#ffd700;font-size:11px;">[ TOCA O PULSA ESPACIO PARA COMENZAR ]</span>`;
+      this.textEl.innerHTML = `<strong>«El descenso comienza. Cuando estés listo, continúa.»</strong>`;
     }
   }
 
@@ -7967,6 +8823,143 @@ class NarrativeIntroController {
  * - Paso 4: Lado izquierdo (Mantener presionado y soltar) -> Apuntar y ejecutar Misty Step.
  * - Paso 5: Presionar ambas zonas (izquierda y derecha) al mismo tiempo -> Cambiar de arma.
  */
+/**
+ * MANUALES UNIFICADOS Y TUTORIAL POR MODALIDAD DE DISPOSITIVO (Secciones 2 y 3):
+ * - "touch":    Teléfono móvil / Pantalla táctil
+ * - "keyboard": Computadora con teclado y ratón
+ * - "gamepad":  Computadora con mando de Xbox (prioritario si hay mando conectado/activo)
+ * Ambos tutoriales (el inicial de partida nueva y el accesible desde el menú) comparten
+ * exactamente la misma fuente de datos (CONTROL_MANUALS) y documentan únicamente controles reales.
+ */
+const CONTROL_MANUALS = {
+  touch: {
+    deviceTitle: "📱 CONTROLES TÁCTILES (TELÉFONO MÓVIL)",
+    buttonLabel: "🎓 Tutorial: Pantalla Táctil",
+    steps: [
+      {
+        title: "1. Moverse y Mirar (Lado Izquierdo — Deslizar)",
+        shortTitle: "Paso 1: Moverse (Deslizar en Lado Izquierdo)",
+        desc: "Desliza el dedo hacia cualquier dirección en la mitad izquierda de la pantalla para mover a Lior en las 8 direcciones (N, S, E, O y diagonales).",
+        progress: "Objetivo: Desliza en el lado izquierdo para mover a Lior."
+      },
+      {
+        title: "2. Ataque Básico (Lado Derecho — Un Toque)",
+        shortTitle: "Paso 2: Ataque Básico (Toque en Lado Derecho)",
+        desc: "Toca una vez (tap) la mitad derecha de la pantalla para atacar o disparar inmediatamente con el arma equipada hacia donde mira Lior.",
+        progress: "Objetivo: Toca una vez en el lado derecho para atacar."
+      },
+      {
+        title: "3. Eldritch Blast (Lado Derecho — Mantener y Soltar)",
+        shortTitle: "Paso 3: Eldritch Blast (Mantener en Lado Derecho)",
+        desc: "Mantén presionado el lado derecho para desplegar el haz guía violeta, apunta y suelta para disparar. Lleva el marcador sobre Lior para cancelar.",
+        progress: "Objetivo: Mantén presionado el lado derecho, apunta y suelta."
+      },
+      {
+        title: "4. Misty Step / Bruma (Lado Izquierdo — Mantener y Soltar)",
+        shortTitle: "Paso 4: Misty Step (Mantener en Lado Izquierdo)",
+        desc: "Mantén presionado el lado izquierdo para apuntar en las 8 direcciones hasta a 8 casillas y suelta para teletransportarte. Coloca el marcador sobre Lior para cancelar.",
+        progress: "Objetivo: Mantén presionado el lado izquierdo, apunta y suelta."
+      },
+      {
+        title: "5. Cambiar Arma (Ambas Zonas a la Vez)",
+        shortTitle: "Paso 5: Cambio de Arma (Ambas Zonas a la Vez)",
+        desc: "Presiona la mitad izquierda y la mitad derecha de la pantalla al mismo tiempo para alternar entre tu Espada y tus armas de fuego con munición.",
+        progress: "Objetivo: Presiona ambas zonas de la pantalla al mismo tiempo."
+      },
+      {
+        title: "6. Interacción, Tienda y Menú",
+        shortTitle: "Interacción y Menú",
+        desc: "Camina sobre cofres, monedas, pociones o la puerta de salida para interactuar; acércate al Mercader para abrir la tienda y toca el botón ☰ MENÚ para pausar o consultar el manual de controles.",
+        progress: ""
+      }
+    ]
+  },
+  keyboard: {
+    deviceTitle: "⌨️ CONTROLES DE COMPUTADORA (TECLADO)",
+    buttonLabel: "🎓 Tutorial: Teclado",
+    steps: [
+      {
+        title: "1. Movimiento Cardinal y Diagonal (WASD / Flechas / QEZC)",
+        shortTitle: "Paso 1: Movimiento (WASD / Flechas / QEZC)",
+        desc: "Usa W, A, S, D o las Flechas (↑ ← ↓ →) para moverte y orientar a Lior en las 4 direcciones cardinales, y Q, E, Z, C para pasos diagonales.",
+        progress: "Objetivo: Pulsa WASD, Flechas o QEZC para mover a Lior (o Enter para continuar)."
+      },
+      {
+        title: "2. Ataque Básico y Apuntado Automático (K / Espacio / Enter)",
+        shortTitle: "Paso 2: Ataque Básico (K / Espacio / Enter)",
+        desc: "Pulsa K, Espacio o Enter para atacar con la Espada o disparar tu arma de fuego hacia la dirección cardinal a la que mira Lior.",
+        progress: "Objetivo: Pulsa K, Espacio o Enter para atacar."
+      },
+      {
+        title: "3. Habilidad Arcana: Eldritch Blast (Tecla J)",
+        shortTitle: "Paso 3: Eldritch Blast (Tecla J)",
+        desc: "Cuando el indicador EB esté cargado (10/10), pulsa J para liberar un rayo arcano en línea recta hacia donde mira Lior.",
+        progress: "Objetivo: Pulsa J para lanzar Eldritch Blast."
+      },
+      {
+        title: "4. Habilidad Arcana: Misty Step / Bruma (Tecla L)",
+        shortTitle: "Paso 4: Misty Step (Tecla L)",
+        desc: "Pulsa L para teletransportarte a través de enemigos o peligros en la dirección cardinal actual de Lior (hasta 8 casillas).",
+        progress: "Objetivo: Pulsa L para ejecutar Misty Step."
+      },
+      {
+        title: "5. Cambiar Arma Equipada (Tecla I)",
+        shortTitle: "Paso 5: Cambiar Arma (Tecla I)",
+        desc: "Pulsa I para alternar entre las armas desbloqueadas que tengan munición disponible (Espada, Pistola, Mosquete y Trabuco).",
+        progress: "Objetivo: Pulsa I para cambiar de arma."
+      },
+      {
+        title: "6. Menús, Tienda y Pantalla Completa (M / F / B / Esc)",
+        shortTitle: "Menús, Tienda y Pantalla Completa",
+        desc: "Pulsa M para abrir o cerrar el Menú del Juego; en los menús y en la tienda usa WASD o Flechas para elegir opción (incluido CERRAR TIENDA) y Enter para confirmar. F alterna pantalla completa, Esc sale de pantalla completa y B silencia la música.",
+        progress: ""
+      }
+    ]
+  },
+  gamepad: {
+    deviceTitle: "🎮 CONTROLES DE MANDO DE XBOX",
+    buttonLabel: "🎓 Tutorial: Mando Xbox",
+    steps: [
+      {
+        title: "1. Movimiento y Orientación (D-Pad / Stick Izquierdo)",
+        shortTitle: "Paso 1: Movimiento (D-Pad / Stick Izquierdo)",
+        desc: "Usa la Cruceta (D-Pad) o el Stick Izquierdo (LS) para mover y orientar a Lior en las 4 direcciones cardinales o en diagonal (inclinando el stick en diagonal).",
+        progress: "Objetivo: Mueve el D-Pad o el Stick Izquierdo (o pulsa A para continuar)."
+      },
+      {
+        title: "2. Ataque Básico y Confirmar (Botón A)",
+        shortTitle: "Paso 2: Ataque Básico (Botón A)",
+        desc: "Pulsa el botón A para atacar con tu arma equipada hacia donde mira Lior, y para confirmar o comprar opciones dentro de cualquier menú o tienda.",
+        progress: "Objetivo: Pulsa el botón A para atacar."
+      },
+      {
+        title: "3. Habilidad Arcana: Eldritch Blast (Botón X)",
+        shortTitle: "Paso 3: Eldritch Blast (Botón X)",
+        desc: "Cuando el indicador EB esté cargado (10/10), pulsa el botón X para disparar un rayo arcano en la dirección cardinal en la que mira Lior.",
+        progress: "Objetivo: Pulsa el botón X para lanzar Eldritch Blast."
+      },
+      {
+        title: "4. Misty Step / Bruma y Cancelar (Botón B)",
+        shortTitle: "Paso 4: Misty Step (Botón B)",
+        desc: "En combate, pulsa el botón B para teletransportarte con Misty Step hacia adelante. Dentro de menús, tienda o diálogos, el botón B sirve para cancelar o retroceder.",
+        progress: "Objetivo: Pulsa el botón B para ejecutar Misty Step."
+      },
+      {
+        title: "5. Cambiar Arma Equipada (Botón Y / LB / RB)",
+        shortTitle: "Paso 5: Cambiar Arma (Botón Y / LB / RB)",
+        desc: "Pulsa el botón Y (o los botones superiores LB / RB) para alternar entre tu Espada y tus armas de fuego con munición disponible.",
+        progress: "Objetivo: Pulsa Y, LB o RB para cambiar de arma."
+      },
+      {
+        title: "6. Menú del Juego y Tienda (☰ Menu / A / B)",
+        shortTitle: "Menús y Tienda",
+        desc: "Pulsa ☰ Menu (Start) para abrir el Menú de Pausa. En la tienda usa D-Pad/Stick para desplazarte hasta cualquier objeto o hasta CERRAR TIENDA, LB/RB para cambiar de pestaña, A para confirmar y B para salir.",
+        progress: ""
+      }
+    ]
+  }
+};
+
 class TutorialController {
   constructor(game) {
     this.game = game;
@@ -7979,13 +8972,16 @@ class TutorialController {
     this.leftZone = document.getElementById("touch-zone-left");
     this.rightZone = document.getElementById("touch-zone-right");
     this.helpModal = document.getElementById("tutorial-help-modal");
+    this.manualGridEl = document.getElementById("tutorial-manual-grid");
 
     this.isActive = false;
     this.step = 1;
     this.practiceTarget = null;
     this.tempGrantedWeapon = null;
+    this.renderedDevice = null;
 
     this.bindEvents();
+    this.renderDeviceManual();
   }
 
   static isCompletedInStorage() {
@@ -8002,6 +8998,46 @@ class TutorialController {
       localStorage.setItem("lior_tutorial_done", "true");
       sessionStorage.setItem("lior_tutorial_done", "true");
     } catch {}
+  }
+
+  getActiveManualKey() {
+    const dev = this.game?.getEffectiveTutorialDevice?.() || this.game?.controlDevice || "keyboard";
+    if (dev === "gamepad") return "gamepad";
+    if (dev === "touch") return "touch";
+    return "keyboard";
+  }
+
+  getActiveManual() {
+    return CONTROL_MANUALS[this.getActiveManualKey()] || CONTROL_MANUALS.keyboard;
+  }
+
+  /**
+   * Renderiza en el contenedor del menú (#tutorial-manual-grid) ÚNICAMENTE el manual correspondiente
+   * al dispositivo activo (Teléfono táctil, Teclado o Mando de Xbox), nunca los tres a la vez.
+   */
+  renderDeviceManual() {
+    const manualKey = this.getActiveManualKey();
+    const manual = CONTROL_MANUALS[manualKey] || CONTROL_MANUALS.keyboard;
+    this.renderedDevice = manualKey;
+
+    const restartBtn = document.getElementById("btn-tutorial-restart");
+    if (restartBtn) {
+      restartBtn.textContent = manual.buttonLabel;
+    }
+
+    if (this.manualGridEl) {
+      this.manualGridEl.setAttribute("data-manual-device", manualKey);
+      this.manualGridEl.innerHTML = manual.steps.map(item => `
+        <div class="tutorial-help-item">
+          <strong>${item.title}</strong>
+          <p>${item.desc}</p>
+        </div>
+      `).join("");
+    }
+
+    if (this.isActive) {
+      this.refreshCurrentStepUI();
+    }
   }
 
   bindEvents() {
@@ -8041,29 +9077,84 @@ class TutorialController {
         this.game.resetGame();
       });
     }
+    const allMenuBtns = this.helpModal?.querySelectorAll(".game-menu-quick-actions .tutorial-btn") || [];
+    allMenuBtns.forEach((btn, idx) => {
+      btn.addEventListener("pointerenter", () => {
+        this.menuSelection = idx;
+        this.updateHelpMenuSelection(false);
+      });
+      btn.addEventListener("focus", () => {
+        this.menuSelection = idx;
+        this.updateHelpMenuSelection(false);
+      });
+    });
+  }
+
+  getHelpMenuButtons() {
+    if (!this.helpModal) return [];
+    return [...this.helpModal.querySelectorAll(".game-menu-quick-actions .tutorial-btn:not(.hidden)")];
+  }
+
+  updateHelpMenuSelection(focusElement = true) {
+    const buttons = this.getHelpMenuButtons();
+    if (buttons.length === 0) return;
+    this.menuSelection = (((this.menuSelection ?? 0) % buttons.length) + buttons.length) % buttons.length;
+    buttons.forEach((btn, idx) => {
+      const selected = idx === this.menuSelection;
+      btn.classList.toggle("is-selected", selected);
+      btn.setAttribute("aria-selected", String(selected));
+      if (selected && focusElement) {
+        try { btn.focus({ preventScroll: true }); } catch {}
+      }
+    });
+  }
+
+  moveHelpMenuSelection(delta) {
+    const buttons = this.getHelpMenuButtons();
+    if (buttons.length === 0) return;
+    this.menuSelection = (((this.menuSelection ?? 0) + delta) % buttons.length + buttons.length) % buttons.length;
+    this.updateHelpMenuSelection(true);
+  }
+
+  activateSelectedHelpMenuButton() {
+    const buttons = this.getHelpMenuButtons();
+    const target = buttons[this.menuSelection ?? 0] || buttons[0];
+    if (target) target.click();
   }
 
   openHelpModal() {
     if (!this.helpModal) return;
     this.game.touchController?.cancelAllGestures();
     this.game.updateMenuSaveStatus?.();
+    this.renderDeviceManual();
+    this.game.updateButtonLabels?.();
+    this.menuSelection = 0;
     this.helpModal.classList.remove("hidden");
+    this.updateHelpMenuSelection(true);
   }
 
   closeHelpModal() {
     if (!this.helpModal) return;
+    const wasOpen = !this.helpModal.classList.contains("hidden");
     this.helpModal.classList.add("hidden");
+    if (wasOpen) {
+      this.game.shopClosingCooldown = performance.now() + 220;
+      this.game.restoreGameplayFocus?.();
+    }
   }
 
   isHelpModalOpen() {
     return !!(this.helpModal && !this.helpModal.classList.contains("hidden"));
   }
 
-  startIfEligible() {
+  /**
+   * Al iniciar una partida nueva (Piso 1), presenta automáticamente el tutorial correspondiente
+   * al dispositivo detectado (Móvil táctil, Computadora con teclado o Computadora con mando Xbox).
+   */
+  startIfEligible(forceOnNewGame = false) {
     if (this.game.floor !== 1 || this.game.inMerchantFloor) return;
-    if (TutorialController.isCompletedInStorage()) return;
-    if (this.game.controlDevice !== "touch") return;
-    this.start(false);
+    if (!forceOnNewGame && TutorialController.isCompletedInStorage()) return;
+    this.start(true);
   }
 
   start(force = false) {
@@ -8073,6 +9164,7 @@ class TutorialController {
     if (fb) fb.classList.add("hidden");
     this.step = 1;
     this.cleanupTempWeapon();
+    this.renderDeviceManual();
     if (this.overlay) this.overlay.classList.remove("hidden");
     this.setupStep(1);
   }
@@ -8095,7 +9187,19 @@ class TutorialController {
     return { x: player.x, y: Math.max(1, player.y - 1) };
   }
 
-  getGestureSVG(step) {
+  getGestureSVG(step, manualKey = this.getActiveManualKey()) {
+    if (manualKey === "gamepad") {
+      const labels = ["D-PAD / LS", "BOTÓN A", "BOTÓN X", "BOTÓN B", "Y / LB / RB"];
+      const colors = ["#38bdf8", "#34d399", "#60a5fa", "#f87171", "#fbbf24"];
+      const idx = Math.max(0, Math.min(4, step - 1));
+      return `<svg viewBox="0 0 90 46"><rect x="4" y="4" width="82" height="38" rx="6" fill="rgba(15,23,42,0.85)" stroke="${colors[idx]}" stroke-width="1.8"/><text x="45" y="19" fill="#94a3b8" font-size="6.2" text-anchor="middle">MANDO XBOX</text><text x="45" y="33" fill="${colors[idx]}" font-size="8.5" font-weight="bold" text-anchor="middle">${labels[idx]}</text></svg>`;
+    }
+    if (manualKey === "keyboard") {
+      const labels = ["WASD / ↑↓←→", "K / ESPACIO", "TECLA J", "TECLA L", "TECLA I"];
+      const colors = ["#ffd970", "#f87171", "#c084fc", "#38bdf8", "#7cf59a"];
+      const idx = Math.max(0, Math.min(4, step - 1));
+      return `<svg viewBox="0 0 90 46"><rect x="4" y="4" width="82" height="38" rx="4" fill="rgba(15,23,42,0.85)" stroke="${colors[idx]}" stroke-width="1.8"/><text x="45" y="19" fill="#94a3b8" font-size="6.2" text-anchor="middle">TECLADO PC</text><text x="45" y="33" fill="${colors[idx]}" font-size="8.2" font-weight="bold" text-anchor="middle">${labels[idx]}</text></svg>`;
+    }
     switch (step) {
       case 1:
         return `<svg viewBox="0 0 90 46"><rect x="2" y="2" width="42" height="42" fill="rgba(56,189,248,0.18)" stroke="#38bdf8"/><circle cx="23" cy="28" r="5" fill="#ffd970"/><path d="M23 28 L23 8 M23 28 L36 12" stroke="#7cf59a" stroke-width="2"/><text x="66" y="26" fill="#94a3b8" font-size="6.5" text-anchor="middle">DESLIZAR</text></svg>`;
@@ -8113,80 +9217,58 @@ class TutorialController {
   }
 
   setZoneHighlights(leftVisible, rightVisible) {
-    if (this.leftZone) this.leftZone.classList.toggle("hidden", !leftVisible);
-    if (this.rightZone) this.rightZone.classList.toggle("hidden", !rightVisible);
+    const isTouch = this.getActiveManualKey() === "touch";
+    if (this.leftZone) this.leftZone.classList.toggle("hidden", !(isTouch && leftVisible));
+    if (this.rightZone) this.rightZone.classList.toggle("hidden", !(isTouch && rightVisible));
+  }
+
+  refreshCurrentStepUI() {
+    if (!this.isActive) return;
+    const manualKey = this.getActiveManualKey();
+    const manual = CONTROL_MANUALS[manualKey] || CONTROL_MANUALS.keyboard;
+    const stepData = manual.steps[this.step - 1];
+    if (!stepData) return;
+
+    if (this.diagramEl) this.diagramEl.innerHTML = this.getGestureSVG(this.step, manualKey);
+    const modeLabel = manualKey === "gamepad" ? "MANDO XBOX" : (manualKey === "touch" ? "TÁCTIL" : "TECLADO");
+    if (this.badgeEl) this.badgeEl.textContent = `TUTORIAL ${modeLabel} · PASO ${this.step}/5`;
+    if (this.titleEl) this.titleEl.textContent = stepData.shortTitle;
+    if (this.descEl) this.descEl.textContent = stepData.desc;
+    if (this.progressEl) this.progressEl.textContent = stepData.progress;
+
+    if (this.step === 1) this.setZoneHighlights(true, false);
+    else if (this.step === 2 || this.step === 3) this.setZoneHighlights(false, true);
+    else if (this.step === 4) this.setZoneHighlights(true, false);
+    else if (this.step === 5) this.setZoneHighlights(true, true);
   }
 
   setupStep(stepNumber) {
     this.step = stepNumber;
     this.cleanupTempWeapon();
 
-    if (this.diagramEl) this.diagramEl.innerHTML = this.getGestureSVG(stepNumber);
-    if (this.badgeEl) this.badgeEl.textContent = `TUTORIAL · PASO ${stepNumber}/5`;
-
-    switch (stepNumber) {
-      case 1:
-        this.practiceTarget = this.findPracticeTargetTile();
-        this.setZoneHighlights(true, false);
-        if (this.titleEl) this.titleEl.textContent = "Paso 1: Moverse (Deslizar en Lado Izquierdo)";
-        if (this.descEl) {
-          this.descEl.textContent = "Desliza el dedo hacia cualquier dirección en el LADO IZQUIERDO de la pantalla para mover a Lior en los 8 puntos cardinales.";
-        }
-        if (this.progressEl) this.progressEl.textContent = "Objetivo: Desliza en el lado izquierdo para mover a Lior.";
-        break;
-
-      case 2:
-        this.practiceTarget = null;
-        this.setZoneHighlights(false, true);
-        if (this.titleEl) this.titleEl.textContent = "Paso 2: Ataque Básico (Toque en Lado Derecho)";
-        if (this.descEl) {
-          this.descEl.textContent = "Toca una vez (tap) el LADO DERECHO de la pantalla para ejecutar tu ataque básico hacia donde mira Lior.";
-        }
-        if (this.progressEl) this.progressEl.textContent = "Objetivo: Toca una vez en el lado derecho para atacar.";
-        break;
-
-      case 3:
-        this.setZoneHighlights(false, true);
-        if (this.titleEl) this.titleEl.textContent = "Paso 3: Eldritch Blast (Mantener en Lado Derecho)";
-        if (this.descEl) {
-          this.descEl.textContent = "Mantén presionado el LADO DERECHO para que aparezca el apuntador violeta, dirígelo hacia tu objetivo y suelta el dedo para lanzar el Eldritch Blast.";
-        }
-        if (this.progressEl) this.progressEl.textContent = "Objetivo: Mantén presionado el lado derecho, apunta y suelta.";
-        break;
-
-      case 4:
-        this.setZoneHighlights(true, false);
-        if (this.titleEl) this.titleEl.textContent = "Paso 4: Misty Step (Mantener en Lado Izquierdo)";
-        if (this.descEl) {
-          this.descEl.textContent = "Mantén presionado el dedo en el LADO IZQUIERDO para apuntar el Misty Step, inclina hacia la dirección deseada y suelta para teletransportarte.";
-        }
-        if (this.progressEl) this.progressEl.textContent = "Objetivo: Mantén presionado el lado izquierdo, apunta y suelta.";
-        break;
-
-      case 5:
-        this.setZoneHighlights(true, true);
-        if (this.game.player.getAvailableWeapons().length < 2) {
-          this.tempGrantedWeapon = {
-            hadPistolUnlocked: this.game.player.unlockedWeapons.has(WEAPONS.PISTOL.id),
-            prevAmmoPistol: this.game.player.ammoPistol,
-            prevEquipped: this.game.player.equippedWeapon
-          };
-          this.game.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
-          if (this.game.player.ammoPistol <= 0) this.game.player.ammoPistol = 6;
-          this.game.updateHUD();
-        }
-        if (this.titleEl) this.titleEl.textContent = "Paso 5: Cambio de Arma (Ambas Zonas a la Vez)";
-        if (this.descEl) {
-          this.descEl.textContent = "Presiona el LADO IZQUIERDO y el LADO DERECHO de la pantalla al mismo tiempo para cambiar tu arma equipada.";
-        }
-        if (this.progressEl) this.progressEl.textContent = "Objetivo: Presiona ambas zonas de la pantalla al mismo tiempo.";
-        break;
-
-      default:
-        this.completeTutorial();
-        break;
+    if (stepNumber < 1 || stepNumber > 5) {
+      this.completeTutorial();
+      return;
     }
 
+    if (stepNumber === 1) {
+      this.practiceTarget = this.findPracticeTargetTile();
+    } else {
+      this.practiceTarget = null;
+    }
+
+    if (stepNumber === 5 && this.game.player.getAvailableWeapons().length < 2) {
+      this.tempGrantedWeapon = {
+        hadPistolUnlocked: this.game.player.unlockedWeapons.has(WEAPONS.PISTOL.id),
+        prevAmmoPistol: this.game.player.ammoPistol,
+        prevEquipped: this.game.player.equippedWeapon
+      };
+      this.game.player.unlockedWeapons.add(WEAPONS.PISTOL.id);
+      if (this.game.player.ammoPistol <= 0) this.game.player.ammoPistol = 6;
+      this.game.updateHUD();
+    }
+
+    this.refreshCurrentStepUI();
     this.game.renderer?.draw();
   }
 
@@ -8199,6 +9281,15 @@ class TutorialController {
     this.game.player.equippedWeapon = this.tempGrantedWeapon.prevEquipped;
     this.tempGrantedWeapon = null;
     this.game.updateHUD();
+  }
+
+  advanceStepOrComplete() {
+    if (!this.isActive) return;
+    if (this.step < 5) {
+      this.setupStep(this.step + 1);
+    } else {
+      this.completeTutorial();
+    }
   }
 
   onPlayerAction(actionType) {
@@ -8232,7 +9323,7 @@ class TutorialController {
     this.setZoneHighlights(false, false);
     if (this.overlay) this.overlay.classList.add("hidden");
     TutorialController.markCompletedInStorage();
-    this.game.log("Tutorial omitido. Puedes abrir el botón ☰ MENÚ en el HUD cuando quieras.");
+    this.game.log("Tutorial cerrado. Puedes consultarlo en ☰ MENÚ cuando quieras.");
     this.game.renderer?.draw();
   }
 
@@ -8814,7 +9905,12 @@ class GameController {
     this.stats = new RunStats();
     this.isAutoWalking = false;
 
-    this.initDungeonFloor(false);
+    if (existingSave) {
+      this.loadSavedGame(existingSave, { silent: true });
+      this.hasPendingResumePrompt = true;
+    } else {
+      this.initDungeonFloor(false);
+    }
     this.touchController = new TouchGestureController(this, document.getElementById("game-container"));
     this.bindEvents();
     this.initShopEvents();
@@ -8969,49 +10065,71 @@ class GameController {
   }
 
   /**
-   * Guarda automáticamente el progreso en localStorage al momento de entrar a un piso
-   * (NUNCA al entrar a la tienda, ya que la tienda pertenece al piso anterior).
+   * Guarda automáticamente el punto de control del piso en localStorage al entrar a cada piso
+   * (situando siempre a Lior en la entrada del piso actual mirando al Norte) y permite actualizar
+   * el inventario/compras realizadas en la tienda para el próximo piso.
    */
+  buildPlayerSavePayload(overrideX = null, overrideY = null, overrideFloor = this.floor) {
+    const targetFloor = Math.max(1, Math.min(100, Math.floor(Number(overrideFloor) || this.floor || 1)));
+    const targetMaxHp = calculateLiorMaxHP(targetFloor);
+    const prevMaxHp = Math.max(1, this.player.maxHp || targetMaxHp);
+    const hpRatioCleared = this.player.hp >= prevMaxHp;
+    const savedHp = hpRatioCleared
+      ? targetMaxHp
+      : Math.max(1, Math.min(targetMaxHp, Math.floor(Number(this.player.hp) || targetMaxHp)));
+
+    return {
+      x: Number.isInteger(overrideX) ? overrideX : (this.dungeon?.entrance?.x ?? this.player.x),
+      y: Number.isInteger(overrideY) ? overrideY : (this.dungeon?.entrance?.y ?? this.player.y),
+      direction: 0,
+      maxHp: targetMaxHp,
+      hp: savedHp,
+      ac: calculateLiorAC(targetFloor),
+      maxExtraHp: calculateMaxExtraHP(targetMaxHp),
+      extraHp: 0,
+      maxShieldSegments: MAX_SHIELD_SEGMENTS,
+      shieldSegments: Math.max(0, Math.min(MAX_SHIELD_SEGMENTS, Math.floor(this.player.shieldSegments || 0))),
+      stunned: false,
+      gold: Math.max(0, Math.floor(this.player.gold || 0)),
+      kills: Math.max(0, Math.floor(this.player.kills || 0)),
+      minionKillsSincePotion: Math.max(0, Math.floor(this.player.minionKillsSincePotion || 0)),
+      ammoPistol: Math.max(0, Math.floor(this.player.ammoPistol || 0)),
+      ammoMusket: Math.max(0, Math.floor(this.player.ammoMusket || 0)),
+      ammoBlunderbuss: Math.max(0, Math.floor(this.player.ammoBlunderbuss || 0)),
+      unlockedWeapons: [...this.player.unlockedWeapons],
+      equippedWeaponId: this.player.equippedWeapon?.id || WEAPONS.SWORD.id,
+      weaponUpgrades: { ...this.player.weaponUpgrades },
+      highestMegaBossTierDefeated: Math.max(0, Math.floor(this.player.highestMegaBossTierDefeated || 0)),
+      mistyStepMaxCharges: this.player.mistyStepMaxCharges || 2,
+      mistyStepCharges: this.player.mistyStepMaxCharges || 2,
+      mistyStepRechargeMax: this.player.mistyStepRechargeMax || 20,
+      mistyStepActionCounter: 0,
+      blastMaxCharges: this.player.blastMaxCharges || 10,
+      blastCurrentCharges: Math.max(0, Math.min(this.player.blastMaxCharges || 10, Math.floor(this.player.blastCurrentCharges ?? 10))),
+      blessedAmmoCharges: Math.max(0, Math.floor(this.player.blessedAmmoCharges || 0)),
+      antimagicCritLock: false,
+      hasRetrievedQuestItem: !!this.player.hasRetrievedQuestItem,
+      actionTurnCount: 0
+    };
+  }
+
   saveFloorCheckpoint() {
-    if (this.inMerchantFloor || this.dungeon?.isMerchantRoom) return false;
     if (this.isVictory || this.isGameOverTriggered) return false;
     if (!this.player || this.player.hp <= 0 || !this.dungeon) return false;
+
+    if (this.inMerchantFloor || this.dungeon?.isMerchantRoom) {
+      return this.savePlayerProgressCheckpoint();
+    }
+
+    const startX = Number.isInteger(this.dungeon.entrance?.x) ? this.dungeon.entrance.x : this.player.x;
+    const startY = Number.isInteger(this.dungeon.entrance?.y) ? this.dungeon.entrance.y : this.player.y;
 
     const payload = {
       version: 1,
       savedAt: Date.now(),
       floor: this.floor,
       inMerchantFloor: false,
-      player: {
-        x: this.player.x,
-        y: this.player.y,
-        direction: this.player.direction,
-        maxHp: this.player.maxHp,
-        hp: this.player.hp,
-        ac: this.player.ac,
-        maxExtraHp: this.player.maxExtraHp,
-        extraHp: this.player.extraHp,
-        maxShieldSegments: this.player.maxShieldSegments,
-        shieldSegments: this.player.shieldSegments,
-        stunned: false,
-        gold: this.player.gold,
-        kills: this.player.kills,
-        minionKillsSincePotion: this.player.minionKillsSincePotion,
-        ammoPistol: this.player.ammoPistol,
-        ammoMusket: this.player.ammoMusket,
-        ammoBlunderbuss: this.player.ammoBlunderbuss,
-        unlockedWeapons: [...this.player.unlockedWeapons],
-        equippedWeaponId: this.player.equippedWeapon?.id || WEAPONS.SWORD.id,
-        weaponUpgrades: { ...this.player.weaponUpgrades },
-        highestMegaBossTierDefeated: this.player.highestMegaBossTierDefeated,
-        mistyStepMaxCharges: this.player.mistyStepMaxCharges,
-        mistyStepCharges: this.player.mistyStepCharges,
-        mistyStepRechargeMax: this.player.mistyStepRechargeMax,
-        mistyStepActionCounter: this.player.mistyStepActionCounter,
-        blastMaxCharges: this.player.blastMaxCharges,
-        blastCurrentCharges: this.player.blastCurrentCharges,
-        hasRetrievedQuestItem: !!this.player.hasRetrievedQuestItem
-      },
+      player: this.buildPlayerSavePayload(startX, startY, this.floor),
       stats: {
         ...(this.stats || new RunStats()),
         killsByName: { ...(this.stats?.killsByName || {}) }
@@ -9021,7 +10139,7 @@ class GameController {
         height: this.dungeon.height,
         isMerchantRoom: false,
         isBossRoom: !!this.dungeon.isBossRoom,
-        turnCount: this.dungeon.turnCount || 0,
+        turnCount: 0,
         entrance: { ...this.dungeon.entrance },
         exit: { ...this.dungeon.exit },
         tiles: [...this.dungeon.tiles.entries()],
@@ -9029,17 +10147,84 @@ class GameController {
         chests: [...this.dungeon.chests],
         npcs: (this.dungeon.npcs || []).map(n => ({
           ...n,
+          isFleeing: false,
           fleeDirection: n.fleeDirection ? { ...n.fleeDirection } : { dx: 1, dy: 0 }
         })),
         pickups: (this.dungeon.pickups || []).map(p => ({ ...p })),
-        enemies: (this.dungeon.enemies || []).map(e => ({
-          ...e,
-          cells: (e.cells || []).map(c => ({ ...c })),
-          anim: null,
-          introPresented: false,
-          roarPlayed: false
-        }))
+        enemies: (this.dungeon.enemies || []).map(e => {
+          const sx = Number.isInteger(e.startX) ? e.startX : e.x;
+          const sy = Number.isInteger(e.startY) ? e.startY : e.y;
+          const size = Math.max(1, Math.floor(e.size || 1));
+          const resetCells = [];
+          for (let dy = 0; dy < size; dy++) {
+            for (let dx = 0; dx < size; dx++) {
+              resetCells.push({ x: sx + dx, y: sy + dy });
+            }
+          }
+          return {
+            ...e,
+            x: sx,
+            y: sy,
+            startX: sx,
+            startY: sy,
+            hp: e.maxHp || e.hp,
+            cells: resetCells,
+            state: "patrol",
+            patrolDir: 1,
+            patrolDirY: 1,
+            patrolRadius: e.patrolRadius || MINION_PATROL_RADIUS,
+            stunned: false,
+            fearCooldown: 0,
+            attackCooldown: 0,
+            lastAttackTurn: null,
+            anim: null,
+            introPresented: false,
+            roarPlayed: false
+          };
+        })
       }
+    };
+
+    try {
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      return false;
+    }
+    this.updateMenuSaveStatus();
+    return true;
+  }
+
+  /**
+   * Actualiza en localStorage el progreso del jugador (oro, armas desbloqueadas, mejoras,
+   * munición, pociones, pólvora maldita y estadísticas). Si Lior está en la sala del Mercader
+   * (tras haber limpiado el piso actual), el guardado apunta directamente al inicio del siguiente
+   * piso (floor + 1) para que al recargar conserve todo lo comprado y empiece en el nuevo piso.
+   */
+  savePlayerProgressCheckpoint(options = {}) {
+    if (this.isVictory || this.isGameOverTriggered) return false;
+    if (!this.player || this.player.hp <= 0) return false;
+
+    const existing = this.readSavedGame();
+    const isMerchant = !!(this.inMerchantFloor || this.dungeon?.isMerchantRoom);
+    const targetFloor = isMerchant
+      ? Math.min(100, this.floor + 1)
+      : Math.max(1, Math.min(100, this.floor));
+
+    const keepExistingDungeon = !isMerchant && !options?.forceNewFloorDungeon && existing && existing.floor === targetFloor && existing.dungeon;
+    const entranceX = keepExistingDungeon ? existing.dungeon?.entrance?.x : null;
+    const entranceY = keepExistingDungeon ? existing.dungeon?.entrance?.y : null;
+
+    const payload = {
+      version: 1,
+      savedAt: Date.now(),
+      floor: targetFloor,
+      inMerchantFloor: false,
+      player: this.buildPlayerSavePayload(entranceX, entranceY, targetFloor),
+      stats: {
+        ...(this.stats || new RunStats()),
+        killsByName: { ...(this.stats?.killsByName || {}) }
+      },
+      dungeon: keepExistingDungeon ? existing.dungeon : null
     };
 
     try {
@@ -9098,10 +10283,11 @@ class GameController {
     }
   }
 
-  loadSavedGame(saveData = null) {
+  loadSavedGame(saveData = null, options = {}) {
     const data = saveData || this.readSavedGame();
     if (!data || !data.player || !(Number(data.player.hp) > 0)) return false;
 
+    const silent = !!options?.silent;
     this.hasPendingResumePrompt = false;
     this.pendingNarrativeIntro = false;
     this.isGameOverTriggered = false;
@@ -9135,6 +10321,7 @@ class GameController {
       });
     }
 
+    let generatedNewDungeonForFloor = false;
     if (
       data.dungeon
       && Number.isInteger(data.dungeon.width)
@@ -9144,7 +10331,7 @@ class GameController {
       this.dungeon = new Dungeon(data.dungeon.width, data.dungeon.height);
       this.dungeon.isMerchantRoom = false;
       this.dungeon.isBossRoom = !!data.dungeon.isBossRoom;
-      this.dungeon.turnCount = Number(data.dungeon.turnCount) || 0;
+      this.dungeon.turnCount = 0;
       if (data.dungeon.entrance) this.dungeon.entrance = { ...data.dungeon.entrance };
       if (data.dungeon.exit) this.dungeon.exit = { ...data.dungeon.exit };
       this.dungeon.tiles = new Map(data.dungeon.tiles);
@@ -9155,29 +10342,54 @@ class GameController {
         fleeDirection: n.fleeDirection ? { ...n.fleeDirection } : { dx: 1, dy: 0 }
       }));
       this.dungeon.pickups = (data.dungeon.pickups || []).map(p => ({ ...p }));
-      this.dungeon.enemies = (data.dungeon.enemies || []).map(e => ({
-        ...e,
-        cells: (e.cells || []).map(c => ({ ...c })),
-        anim: null,
-        introPresented: false,
-        roarPlayed: false
-      }));
+      this.dungeon.enemies = (data.dungeon.enemies || []).map(e => {
+        const sx = Number.isInteger(e.startX) ? e.startX : e.x;
+        const sy = Number.isInteger(e.startY) ? e.startY : e.y;
+        const restored = {
+          ...e,
+          x: sx,
+          y: sy,
+          startX: sx,
+          startY: sy,
+          hp: e.maxHp || e.hp,
+          cells: (e.cells || []).map(c => ({ ...c })),
+          state: "patrol",
+          patrolDir: 1,
+          patrolDirY: 1,
+          patrolRadius: e.patrolRadius || MINION_PATROL_RADIUS,
+          stunned: false,
+          fearCooldown: 0,
+          anim: null,
+          introPresented: false,
+          roarPlayed: false
+        };
+        CombatSystem.syncEnemyCells(restored);
+        restored.attackCooldown = 0;
+        restored.lastAttackTurn = null;
+        return restored;
+      });
       this.generator = {
         dungeon: this.dungeon,
         floorNumber: this.floor,
         tier: this.tier
       };
     } else {
+      generatedNewDungeonForFloor = true;
       const { width, height } = getRandomDungeonDimensions(10, 30, this.floor);
       this.dungeon = new Dungeon(width, height);
       this.dungeon.isMerchantRoom = false;
       this.generator = new DungeonGenerator(this.dungeon, this.floor);
     }
 
-    const startX = Number.isInteger(data.player.x) ? data.player.x : this.dungeon.entrance.x;
-    const startY = Number.isInteger(data.player.y) ? data.player.y : this.dungeon.entrance.y;
+    // Al recargar o reanudar desde guardado, Lior siempre aparece al inicio del piso (entrance) mirando al Norte (0)
+    const startX = Number.isInteger(this.dungeon.entrance?.x)
+      ? this.dungeon.entrance.x
+      : (Number.isInteger(data.player.x) ? data.player.x : 1);
+    const startY = Number.isInteger(this.dungeon.entrance?.y)
+      ? this.dungeon.entrance.y
+      : (Number.isInteger(data.player.y) ? data.player.y : 1);
     this.player = new Player(startX, startY);
-    this.player.direction = Number.isInteger(data.player.direction) ? ((data.player.direction % 4) + 4) % 4 : 0;
+    this.player.direction = 0;
     this.player.maxHp = calculateLiorMaxHP(this.floor);
     this.player.hp = Math.max(1, Math.min(this.player.maxHp, Math.floor(Number(data.player.hp) || this.player.maxHp)));
     this.player.ac = this.playerAC;
@@ -9212,10 +10424,16 @@ class GameController {
     this.player.mistyStepMaxCharges = Math.max(1, Math.floor(Number(data.player.mistyStepMaxCharges) || 2));
     this.player.mistyStepCharges = Math.max(0, Math.min(this.player.mistyStepMaxCharges, Math.floor(Number(data.player.mistyStepCharges ?? 2))));
     this.player.mistyStepRechargeMax = Math.max(1, Math.floor(Number(data.player.mistyStepRechargeMax) || 20));
-    this.player.mistyStepActionCounter = Math.max(0, Math.floor(Number(data.player.mistyStepActionCounter) || 0));
+    this.player.mistyStepActionCounter = 0;
     this.player.blastMaxCharges = Math.max(1, Math.floor(Number(data.player.blastMaxCharges) || 10));
     this.player.blastCurrentCharges = Math.max(0, Math.min(this.player.blastMaxCharges, Math.floor(Number(data.player.blastCurrentCharges ?? 10))));
+    this.player.blessedAmmoCharges = Math.max(0, Math.floor(Number(data.player.blessedAmmoCharges || 0)));
+    this.player.antimagicCritLock = false;
     this.player.hasRetrievedQuestItem = !!data.player.hasRetrievedQuestItem;
+    this.player.actionTurnCount = 0;
+    if (this.dungeon) {
+      this.dungeon.lastProcessedPlayerAction = 0;
+    }
 
     if (!this.renderer) {
       this.renderer = new Renderer(this.canvas, this.dungeon, this.player, this.generator);
@@ -9230,15 +10448,26 @@ class GameController {
     });
     this.preloader?.preloadForFloor(this.floor);
 
-    this.closeResumeModal();
-    this.updateHUD();
-    this.updateButtonLabels();
-    this.updateMenuSaveStatus();
-    this.syncBiomeMusic();
-    this.triggerFloorInitialPresentation();
-    this.showFloorBanner(this.floor, "Partida reanudada.");
-    this.log(`💾 Partida reanudada en el Piso ${this.floor}.`);
-    this.renderer.draw();
+    if (generatedNewDungeonForFloor) {
+      this.saveFloorCheckpoint();
+    }
+
+    if (!silent) {
+      this.closeResumeModal();
+      this.updateHUD();
+      this.updateButtonLabels();
+      this.updateMenuSaveStatus();
+      this.syncBiomeMusic();
+      this.triggerFloorInitialPresentation();
+      this.showFloorBanner(this.floor, "Partida reanudada.");
+      this.log(`💾 Partida reanudada en el Piso ${this.floor}.`);
+      this.renderer.draw();
+    } else {
+      this.updateHUD();
+      this.updateButtonLabels();
+      this.updateMenuSaveStatus();
+      this.renderer.draw();
+    }
     return true;
   }
 
@@ -9287,19 +10516,64 @@ class GameController {
         : `▶ CONTINUAR EN PISO ${flStr}`;
     }
 
+    this.resumeModalSelection = 0;
+    this.updateButtonLabels?.();
     this.resumeModal.classList.remove("hidden");
+    this.updateResumeModalSelection(true);
     return true;
+  }
+
+  getResumeModalButtons() {
+    return [
+      document.getElementById("btn-resume-saved-game"),
+      document.getElementById("btn-discard-saved-game")
+    ].filter(Boolean);
+  }
+
+  updateResumeModalSelection(focusElement = true) {
+    const buttons = this.getResumeModalButtons();
+    if (buttons.length === 0) return;
+    this.resumeModalSelection = (((this.resumeModalSelection ?? 0) % buttons.length) + buttons.length) % buttons.length;
+    buttons.forEach((btn, idx) => {
+      const selected = idx === this.resumeModalSelection;
+      btn.classList.toggle("is-selected", selected);
+      btn.setAttribute("aria-selected", String(selected));
+      if (selected && focusElement) {
+        try { btn.focus({ preventScroll: true }); } catch {}
+      }
+    });
+  }
+
+  moveResumeModalSelection(delta = 1) {
+    const buttons = this.getResumeModalButtons();
+    if (buttons.length === 0) return;
+    this.resumeModalSelection = (((this.resumeModalSelection ?? 0) + delta) % buttons.length + buttons.length) % buttons.length;
+    this.updateResumeModalSelection(true);
+  }
+
+  activateSelectedResumeModalOption() {
+    const buttons = this.getResumeModalButtons();
+    const target = buttons[this.resumeModalSelection ?? 0] || buttons[0];
+    if (target) target.click();
+    else this.resumeFromSavedGame();
   }
 
   closeResumeModal() {
     if (!this.resumeModal) return;
+    const wasOpen = !this.resumeModal.classList.contains("hidden");
     this.resumeModal.classList.add("hidden");
     this.resumeModalMode = null;
+    if (wasOpen) {
+      this.shopClosingCooldown = performance.now() + 220;
+      this.restoreGameplayFocus();
+    }
   }
 
   suspendGame() {
     if (this.isVictory || !this.player || this.player.hp <= 0) return false;
-    if (!this.inMerchantFloor && !this.hasSavedGame()) {
+    if (this.inMerchantFloor || this.dungeon?.isMerchantRoom) {
+      this.savePlayerProgressCheckpoint();
+    } else if (!this.hasSavedGame()) {
       this.saveFloorCheckpoint();
     }
     const saved = this.readSavedGame();
@@ -9331,11 +10605,27 @@ class GameController {
         e.stopPropagation();
         this.resumeFromSavedGame();
       });
+      resumeBtn.addEventListener("pointerenter", () => {
+        this.resumeModalSelection = 0;
+        this.updateResumeModalSelection(false);
+      });
+      resumeBtn.addEventListener("focus", () => {
+        this.resumeModalSelection = 0;
+        this.updateResumeModalSelection(false);
+      });
     }
     if (discardBtn) {
       discardBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.startFreshNewGame();
+      });
+      discardBtn.addEventListener("pointerenter", () => {
+        this.resumeModalSelection = 1;
+        this.updateResumeModalSelection(false);
+      });
+      discardBtn.addEventListener("focus", () => {
+        this.resumeModalSelection = 1;
+        this.updateResumeModalSelection(false);
       });
     }
   }
@@ -9346,7 +10636,7 @@ class GameController {
       this.saveFloorCheckpoint();
       this.syncBiomeMusic();
       this.triggerFloorInitialPresentation();
-      this.tutorial?.startIfEligible();
+      this.tutorial?.startIfEligible(true);
       return;
     }
     sounds.playMusic("intro");
@@ -9355,7 +10645,7 @@ class GameController {
       this.syncBiomeMusic();
       this.triggerFloorInitialPresentation();
       this.showFloorBanner(this.floor, "El descenso.");
-      this.tutorial?.startIfEligible();
+      this.tutorial?.startIfEligible(true);
       this.renderer?.draw();
     });
   }
@@ -9470,20 +10760,77 @@ class GameController {
     this.renderer?.draw();
   }
 
+  restoreGameplayFocus() {
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== this.canvas && typeof active.blur === "function") {
+      try { active.blur(); } catch {}
+    }
+    if (this.canvas) {
+      if (!this.canvas.hasAttribute("tabindex")) this.canvas.setAttribute("tabindex", "-1");
+      try { this.canvas.focus({ preventScroll: true }); } catch {}
+    }
+  }
+
+  hasConnectedGamepad() {
+    try {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (let i = 0; i < pads.length; i++) {
+        if (pads[i] && pads[i].connected !== false) return pads[i];
+      }
+    } catch {}
+    return null;
+  }
+
+  /**
+   * Determina qué modalidad de tutorial corresponde al jugador (Sección 2):
+   * - Si el dispositivo activo es táctil ("touch"), devuelve "touch".
+   * - En computadora, si el dispositivo activo es "gamepad" (o hay un mando conectado y el jugador
+   *   no ha cambiado explícitamente a teclado durante la partida), el mando de Xbox tiene prioridad sobre teclado.
+   */
+  getEffectiveTutorialDevice() {
+    if (this.controlDevice === "touch") return "touch";
+    if (this.controlDevice === "gamepad") return "gamepad";
+    if (this.hasConnectedGamepad() && !this.userExplicitlyUsedKeyboard) {
+      return "gamepad";
+    }
+    return "keyboard";
+  }
+
   initDeviceDetection() {
-    this.setControlDevice(this.controlDevice);
-    window.addEventListener("keydown", () => this.setControlDevice("keyboard"));
-    window.addEventListener("touchstart", () => this.setControlDevice("touch"), { passive: true });
+    this.userExplicitlyUsedKeyboard = false;
+    const initialPad = this.hasConnectedGamepad();
+    if (initialPad && this.controlDevice !== "touch") {
+      this.gamepadMapping = initialPad.mapping || "standard";
+      this.controlDevice = "gamepad";
+    }
+    this.setControlDevice(this.controlDevice, true);
+
+    window.addEventListener("keydown", (e) => {
+      if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+      this.lastKeyboardInputAt = performance.now();
+      this.userExplicitlyUsedKeyboard = true;
+      this.setControlDevice("keyboard");
+    });
+    window.addEventListener("touchstart", () => {
+      this.setControlDevice("touch");
+    }, { passive: true });
     window.addEventListener("gamepadconnected", (event) => {
-      this.gamepadMapping = event.gamepad?.mapping || "";
+      this.gamepadMapping = event.gamepad?.mapping || "standard";
       this.lastGamepadButtons = [];
       this.lastGamepadAxes = { x: 0, y: 0 };
+      this.userExplicitlyUsedKeyboard = false;
+      this.setControlDevice("gamepad", true);
     });
     window.addEventListener("gamepaddisconnected", () => {
+      const remainingPad = this.hasConnectedGamepad();
+      if (remainingPad) {
+        this.gamepadMapping = remainingPad.mapping || "standard";
+        return;
+      }
       this.gamepadMapping = "standard";
       this.lastGamepadButtons = [];
       this.lastGamepadAxes = { x: 0, y: 0 };
-      this.setControlDevice(this.getPreferredControlDevice());
+      this.setControlDevice(this.getPreferredControlDevice(), true);
     });
   }
 
@@ -9531,7 +10878,7 @@ class GameController {
     const hudBtn = document.getElementById("btn-fullscreen");
     if (hudBtn) {
       hudBtn.textContent = active ? "🗗" : "⛶";
-      hudBtn.title = active ? "Salir de pantalla completa (F)" : "Pantalla completa (F)";
+      hudBtn.title = active ? "Salir de pantalla completa" : "Pantalla completa";
       hudBtn.setAttribute("aria-pressed", String(active));
     }
     const introBtn = document.getElementById("btn-intro-fullscreen");
@@ -9709,16 +11056,28 @@ class GameController {
     return navigator.maxTouchPoints > 0 || coarsePointer || compactScreen ? "touch" : "keyboard";
   }
 
-  setControlDevice(device) {
+  setControlDevice(device, forceUpdate = false) {
+    if (device === "gamepad") {
+      this.userExplicitlyUsedKeyboard = false;
+    }
     const changed = this.controlDevice !== device;
     this.controlDevice = device;
     document.body.classList.toggle("pad-hidden", device !== "touch");
-    if (!changed) return;
+    document.body.classList.toggle("is-gamepad", device === "gamepad");
+    document.body.setAttribute("data-control-device", device);
+    if (!changed && !forceUpdate) return;
+    this.updateControlLegend();
     this.updateButtonLabels();
+    this.tutorial?.renderDeviceManual();
   }
 
   updateControlLegend() {
-    // El panel lateral #pc-legend conserva su diseño estructurado con etiquetas <kbd>
+    // Sección 1: Interfaz limpia sin paneles laterales permanentes de comandos (#pc-legend permanece oculto).
+    const legend = document.getElementById("pc-legend");
+    if (legend) {
+      legend.innerHTML = "";
+      legend.classList.add("hidden");
+    }
   }
 
   updateButtonLabels() {
@@ -9727,6 +11086,33 @@ class GameController {
       const level = calculateEldritchBlastLevel(this.floor || 1);
       capC.textContent = `E. BLAST ${level}`;
     }
+
+    // Mantener etiquetas limpias sin combinaciones de teclas ni botones de mando fuera de los tutoriales (Sección 1)
+    const menuBtn = document.getElementById("btn-tutorial-help");
+    if (menuBtn) menuBtn.title = "Abrir Menú del Juego";
+    const blastBadge = document.getElementById("hud-blast-badge");
+    if (blastBadge) blastBadge.title = "Eldritch Blast";
+    const mistyBadge = document.getElementById("hud-misty-badge");
+    if (mistyBadge) mistyBadge.title = "Misty Step (Paso Brumoso)";
+    const weaponPanel = document.getElementById("hud-weapon-panel");
+    if (weaponPanel) weaponPanel.title = "Arma equipada";
+
+    const dialogPrompt = document.querySelector("#merchant-dialog-modal .dialog-prompt");
+    if (dialogPrompt) dialogPrompt.textContent = "▼ Continuar";
+
+    const closeShopBtn = document.getElementById("close-shop");
+    if (closeShopBtn) closeShopBtn.textContent = "CERRAR TIENDA";
+
+    const skipIntroBtn = document.getElementById("btn-skip-intro");
+    if (skipIntroBtn) skipIntroBtn.textContent = "OMITIR INTRO ⏭";
+    const skipEndingBtn = document.getElementById("btn-skip-ending");
+    if (skipEndingBtn) skipEndingBtn.textContent = "OMITIR ⏭";
+    const deathRestartBtn = document.getElementById("btn-restart-game");
+    if (deathRestartBtn) deathRestartBtn.textContent = TEXT.death.btn;
+    const victoryRestartBtn = document.getElementById("btn-victory-restart");
+    if (victoryRestartBtn) victoryRestartBtn.textContent = "REINICIAR VIAJE";
+
+    this.tutorial?.renderDeviceManual();
   }
 
   initDungeonFloor(isMerchantTransition = false) {
@@ -9768,6 +11154,7 @@ class GameController {
       this.player.mistyStepCharges = 2;
       this.player.mistyStepRechargeMax = 20;
       this.player.mistyStepActionCounter = 0;
+      this.player.actionTurnCount = 0;
     }
 
     this.player.maxHp = calculateLiorMaxHP(this.floor);
@@ -9796,8 +11183,12 @@ class GameController {
 
     this.updateHUD();
     this.updateButtonLabels();
-    if (!isMerchantTransition && !this.isIntroActive() && !this.hasPendingResumePrompt) {
-      this.saveFloorCheckpoint();
+    if (!this.isIntroActive() && !this.hasPendingResumePrompt) {
+      if (isMerchantTransition) {
+        this.savePlayerProgressCheckpoint();
+      } else {
+        this.saveFloorCheckpoint();
+      }
     }
     if (!this.isIntroActive() && !this.hasPendingResumePrompt) {
       this.syncBiomeMusic();
@@ -9940,9 +11331,11 @@ class GameController {
     if (typeof this.stopDpadHold === "function") this.stopDpadHold();
     this.touchController?.cancelAllGestures();
 
-    this.setShopView("supplies");
+    this.updateButtonLabels();
+    this.setShopView("supplies", false);
     this.updateShopHUD();
     this.shopModal.classList.remove("hidden");
+    this.updateShopSelection(true);
     this.syncBiomeMusic();
   }
 
@@ -9953,13 +11346,15 @@ class GameController {
       const selected = tab.dataset.shopView === view;
       tab.classList.toggle("is-active", selected);
       tab.setAttribute("aria-selected", String(selected));
-      if (selected && focusTab) tab.focus();
+      if (selected && focusTab) {
+        try { tab.focus({ preventScroll: true }); } catch {}
+      }
     });
     document.querySelectorAll("[data-shop-panel]").forEach(panel => {
       panel.classList.toggle("hidden", panel.dataset.shopPanel !== view);
     });
     this.shopSelection = 0;
-    this.updateShopSelection();
+    this.updateShopSelection(!focusTab);
   }
 
   closeShop() {
@@ -9969,32 +11364,57 @@ class GameController {
     if (typeof this.stopDpadHold === "function") this.stopDpadHold();
     this.touchController?.cancelAllGestures();
     if (wasOpen) {
-      this.shopClosingCooldown = performance.now() + 250;
+      this.savePlayerProgressCheckpoint();
+      this.shopClosingCooldown = performance.now() + 260;
+      this.restoreGameplayFocus();
       this.syncBiomeMusic();
     }
   }
 
-  updateShopSelection() {
+  getShopSelectableItems() {
     const activePanel = this.shopModal?.querySelector(`[data-shop-panel="${this.activeShopView}"]`);
     const items = [...(activePanel?.querySelectorAll(".shop-item:not(.hidden)") || [])];
+    const closeBtn = document.getElementById("close-shop");
+    if (closeBtn && !closeBtn.classList.contains("hidden")) {
+      items.push(closeBtn);
+    }
+    return items;
+  }
+
+  updateShopSelection(scrollIntoView = false) {
+    const items = this.getShopSelectableItems();
     if (items.length === 0) return;
     this.shopSelection = ((this.shopSelection % items.length) + items.length) % items.length;
     items.forEach((item, index) => {
       const selected = index === this.shopSelection;
       item.classList.toggle("is-selected", selected);
       item.setAttribute("aria-selected", String(selected));
+      if (selected && scrollIntoView && typeof item.scrollIntoView === "function") {
+        try { item.scrollIntoView({ block: "nearest" }); } catch {}
+      }
     });
   }
 
   moveShopSelection(delta) {
     this.shopSelection += delta;
-    this.updateShopSelection();
+    this.updateShopSelection(true);
   }
 
   purchaseSelectedShopItem() {
-    const activePanel = this.shopModal?.querySelector(`[data-shop-panel="${this.activeShopView}"]`);
-    const item = activePanel?.querySelectorAll(".shop-item:not(.hidden)")[this.shopSelection];
-    item?.querySelector("button")?.click();
+    const items = this.getShopSelectableItems();
+    if (items.length === 0) return;
+    const item = items[this.shopSelection];
+    if (!item) return;
+    if (item.id === "close-shop" || item.classList.contains("close-shop-btn")) {
+      this.closeShop();
+      return;
+    }
+    const btn = item.querySelector("button");
+    if (btn && !btn.disabled) {
+      btn.click();
+    } else if (btn && btn.disabled) {
+      this.log("No cumples los requisitos o no tienes suficiente oro para esta opción.");
+    }
   }
 
   updateShopHUD() {
@@ -10015,6 +11435,21 @@ class GameController {
     }
     const potionLabel = document.getElementById("potion-shop-label");
     if (potionLabel) potionLabel.textContent = `Poción Roja (${calculatePotionDice(this.floor)}d4 + 4)`;
+
+    const blessedBtn = document.getElementById("buy-blessed-ammo");
+    const blessedLabel = document.getElementById("blessed-shop-label");
+    const blessedPrice = calculateBlessedAmmoPrice(this.floor);
+    const curBlessed = this.player.blessedAmmoCharges || 0;
+    if (blessedLabel) {
+      blessedLabel.textContent = curBlessed > 0
+        ? `Pólvora Maldita (+1d6 🔮 · ${curBlessed} disp.)`
+        : "Pólvora Maldita (+1d6 🔮 ×5 disp.)";
+    }
+    if (blessedBtn) {
+      blessedBtn.textContent = curBlessed >= 15 ? "MÁX" : `${blessedPrice} PO`;
+      blessedBtn.disabled = curBlessed >= 15 || this.player.gold < blessedPrice;
+    }
+
     this.updateShopShieldHUD();
     this.updateShopUpgrades();
   }
@@ -10074,6 +11509,7 @@ class GameController {
 
     this.updateHUD();
     this.updateShopHUD();
+    this.savePlayerProgressCheckpoint();
     return true;
   }
 
@@ -10140,6 +11576,7 @@ class GameController {
     sounds.playPickup();
     this.updateShopHUD();
     this.updateHUD();
+    this.savePlayerProgressCheckpoint();
     return true;
   }
 
@@ -10193,21 +11630,26 @@ class GameController {
       });
     }
 
-    this.shopModal?.querySelectorAll(".shop-item").forEach((item, index) => {
-      item.addEventListener("pointerenter", () => {
-        this.shopSelection = index;
-        this.updateShopSelection();
-      });
-      item.addEventListener("focusin", () => {
-        this.shopSelection = index;
-        this.updateShopSelection();
-      });
+    const syncItemSelection = (targetEl) => {
+      const items = this.getShopSelectableItems();
+      const idx = items.indexOf(targetEl);
+      if (idx !== -1) {
+        this.shopSelection = idx;
+        this.updateShopSelection(false);
+      }
+    };
+    this.shopModal?.querySelectorAll(".shop-item").forEach((item) => {
+      item.addEventListener("pointerenter", () => syncItemSelection(item));
+      item.addEventListener("focusin", () => syncItemSelection(item));
       item.addEventListener("click", event => {
         if (event.target.closest("button")) return;
-        this.shopSelection = index;
-        this.updateShopSelection();
+        syncItemSelection(item);
       });
     });
+    if (btnClose) {
+      btnClose.addEventListener("pointerenter", () => syncItemSelection(btnClose));
+      btnClose.addEventListener("focus", () => syncItemSelection(btnClose));
+    }
 
     const buyPistol = document.getElementById("buy-pistol-ammo");
     if (buyPistol) {
@@ -10220,6 +11662,7 @@ class GameController {
           sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
+          this.savePlayerProgressCheckpoint();
           this.log(TEXT.logs.boughtPistol(price));
         }
       });
@@ -10236,6 +11679,7 @@ class GameController {
           sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
+          this.savePlayerProgressCheckpoint();
           this.log(TEXT.logs.boughtMusket(price));
         }
       });
@@ -10252,6 +11696,7 @@ class GameController {
           sounds.playPickup();
           this.updateHUD();
           this.updateShopHUD();
+          this.savePlayerProgressCheckpoint();
           this.log(TEXT.logs.boughtBlunderbuss(price));
         }
       });
@@ -10279,6 +11724,7 @@ class GameController {
             this.syncBiomeMusic();
             this.updateHUD();
             this.updateShopHUD();
+            this.savePlayerProgressCheckpoint();
             this.log(TEXT.logs.boughtPotion(restored.totalRestored, price));
           }
         }
@@ -10292,6 +11738,33 @@ class GameController {
         this.purchaseShieldSegments();
       });
     }
+
+    const buyBlessedBtn = document.getElementById("buy-blessed-ammo");
+    if (buyBlessedBtn) {
+      buyBlessedBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.purchaseBlessedAmmo();
+      });
+    }
+  }
+
+  purchaseBlessedAmmo() {
+    if (!this.player) return false;
+    const cur = this.player.blessedAmmoCharges || 0;
+    const price = calculateBlessedAmmoPrice(this.floor);
+    if (cur >= 15 || this.player.gold < price) {
+      this.updateShopHUD();
+      return false;
+    }
+    this.player.gold -= price;
+    this.player.blessedAmmoCharges = Math.min(15, cur + 5);
+    sounds.playPickup();
+    this.renderer?.showFloatingNumber(this.player.x, this.player.y, `+5 🔮 MALDICIÓN`, "shield");
+    this.log(TEXT.logs.boughtBlessedAmmo(price, this.player.blessedAmmoCharges));
+    this.updateHUD();
+    this.updateShopHUD();
+    this.savePlayerProgressCheckpoint();
+    return true;
   }
 
   log(message) {
@@ -10360,7 +11833,12 @@ class GameController {
     const weapon = this.player.equippedWeapon;
     if (elAmmo) elAmmo.textContent = weapon.ammoProperty ? this.player[weapon.ammoProperty] : "∞";
     if (elAmmoDisplay) elAmmoDisplay.classList.toggle("weapon-ammo-infinite", !weapon.ammoProperty);
-    if (elWeapon) elWeapon.textContent = this.player.equippedWeapon.name;
+    if (elWeapon) {
+      const blessedSuffix = (!weapon.isMelee && (this.player.blessedAmmoCharges || 0) > 0)
+        ? ` 🔮${this.player.blessedAmmoCharges}`
+        : "";
+      elWeapon.textContent = `${this.player.equippedWeapon.name}${blessedSuffix}`;
+    }
     if (elWeaponIcon) {
       const upgradeClass = ["", "weapon-tier-bronze", "weapon-tier-silver", "weapon-tier-gold"]
         [this.player.weaponUpgrades[weapon.id] || 0];
@@ -10411,7 +11889,7 @@ class GameController {
     const distant = freeCells.filter(c => Math.hypot(c.x - this.player.x, c.y - this.player.y) >= 3);
     const pool = distant.length > 0 ? distant : freeCells;
     const spot = pool[Math.floor(Math.random() * pool.length)];
-    this.dungeon.enemies.push(createMinion(this.floor, spot.x, spot.y, 3, true));
+    this.dungeon.enemies.push(createMinion(this.floor, spot.x, spot.y, MINION_VISION_RANGE, true));
   }
 
   triggerGameOver() {
@@ -10432,8 +11910,13 @@ class GameController {
       if (btn) btn.textContent = TEXT.death.btn;
       if (stats) stats.innerHTML = TEXT.death.stats(this.floor, this.player.kills, this.player.gold);
 
+      this.updateButtonLabels();
       this.deathScreen.classList.remove("hidden");
       this.deathScreen.classList.add("visible");
+      if (btn) {
+        btn.classList.add("is-selected");
+        try { btn.focus({ preventScroll: true }); } catch {}
+      }
     }, 1200);
   }
 
@@ -10617,9 +12100,15 @@ class GameController {
     setTxt("vstat-hits-taken", stats.damageTakenInstances);
     setTxt("vstat-damage-taken", `-${stats.totalDamageTaken} HP`);
 
+    this.updateButtonLabels();
     if (this.victoryScreen) {
       this.victoryScreen.classList.remove("hidden");
       this.victoryScreen.classList.add("visible");
+      const vBtn = document.getElementById("btn-victory-restart");
+      if (vBtn) {
+        vBtn.classList.add("is-selected");
+        try { vBtn.focus({ preventScroll: true }); } catch {}
+      }
     }
   }
 
@@ -10824,6 +12313,7 @@ class GameController {
 
     sounds.playEldritchBlast();
     this.player.blastCurrentCharges = 0;
+    this.player.advanceAction({ skipBlastCharge: true });
     if (this.stats) this.stats.eldritchBlastCasts++;
     this.renderer.commitCameraFacing();
     const rayCount = calculateEldritchBlastRayCount(this.floor);
@@ -10834,8 +12324,10 @@ class GameController {
       if (this.stats) this.stats.eldritchBlastHits++;
       Renderer.orientEnemyTowardsPlayer(hitEnemy, this.player);
       let blastDamage = 0;
+      const isIronGolem = !!(hitEnemy.isMegaBoss && hitEnemy.originTier === 3);
       damageByRay.forEach(rayDamage => {
-        blastDamage += CombatSystem.applyDamageToEnemy(this, hitEnemy, rayDamage, false);
+        const effRayDamage = isIronGolem ? Math.ceil(rayDamage * 1.5) : rayDamage;
+        blastDamage += CombatSystem.applyDamageToEnemy(this, hitEnemy, effRayDamage, false);
       });
       if (blastDamage > 0) this.renderer.showFloatingNumber(hitEnemy.x, hitEnemy.y, `-${blastDamage} HP`, "damage");
       if (hitEnemy.hp > 0) this.renderer.playEnemyAnim(hitEnemy, "hurt");
@@ -10957,14 +12449,30 @@ class GameController {
   processEnemiesTurn() {
     if (this.player.hp <= 0 || this.isVictory || this.inMerchantFloor) return;
 
-    const miniBosses = this.dungeon.enemies.filter(e => e.isBoss && !e.isMegaBoss);
+    // Garantizar que el contador global de turnos avance exclusivamente una vez por acción válida de Lior
+    if (!this.player.actionTurnCount || this.player.actionTurnCount <= (this.dungeon.lastProcessedPlayerAction || 0)) {
+      if (this.dungeon.lastProcessedPlayerAction === this.player.actionTurnCount && this.player.actionTurnCount > 0) {
+        return;
+      }
+      this.player.actionTurnCount = (this.dungeon.turnCount || 0) + 1;
+    }
+    this.dungeon.lastProcessedPlayerAction = this.player.actionTurnCount;
+    this.dungeon.turnCount++;
+
     const enemySnapshot = [...this.dungeon.enemies];
     let tookDamage = false;
-    this.dungeon.turnCount++;
 
     enemySnapshot.forEach(enemy => {
       if (this.player.hp <= 0) return;
-      if (!this.dungeon.enemies.includes(enemy) || !enemy.cells || enemy.cells.length === 0) return;
+      if (!this.dungeon.enemies.includes(enemy)) return;
+      CombatSystem.syncEnemyCells(enemy);
+      if (!enemy.cells || enemy.cells.length === 0) return;
+
+      const attackRange = CombatSystem.getEnemyAttackRange(enemy);
+      const attackCadence = CombatSystem.getEnemyAttackCadence(enemy);
+      if ((enemy.attackCooldown || 0) > 0) {
+        enemy.attackCooldown = Math.max(0, enemy.attackCooldown - 1);
+      }
 
       if (enemy.stunned) {
         enemy.stunned = false;
@@ -10972,21 +12480,99 @@ class GameController {
         return;
       }
 
-      if (this.dungeon.isBossRoom) enemy.fearCooldown = 0;
-      if (enemy.fearCooldown > 0) enemy.fearCooldown--;
+      // Regeneración de Trol (Mini-Jefe Tier 2): recupera +2 HP al inicio de su turno si está herido
+      if (enemy.isBoss && !enemy.isMegaBoss && enemy.originTier === 2 && enemy.hp > 0 && enemy.hp < enemy.maxHp) {
+        const healAmt = Math.min(2, enemy.maxHp - enemy.hp);
+        enemy.hp += healAmt;
+        this.renderer?.showFloatingNumber?.(enemy.x, enemy.y, `+${healAmt} HP`, "healing");
+      }
+
+      // Inmersión Sísmica del Gusano Púrpura (Tier 7, cada 8 turnos): reubicación e invocación sin daño fuera de cadencia
+      if (enemy.isMegaBoss && enemy.originTier === 7 && this.dungeon.turnCount > 0 && this.dungeon.turnCount % 8 === 0) {
+        const burrowSpots = [
+          { x: 1, y: 2 }, { x: 10, y: 2 }, { x: 1, y: 10 },
+          { x: 10, y: 10 }, { x: 6, y: 2 }, { x: 6, y: 9 }
+        ].filter(spot => {
+          if (spot.x === enemy.x && spot.y === enemy.y) return false;
+          for (let dy = 0; dy < 4; dy++) {
+            for (let dx = 0; dx < 4; dx++) {
+              const cx = spot.x + dx;
+              const cy = spot.y + dy;
+              if (!this.dungeon.isInsideBounds(cx, cy) || this.dungeon.getTile(cx, cy) === TILE_WALL) return false;
+              if (cx === this.player.x && cy === this.player.y) return false;
+              if (this.dungeon.enemies.some(o => o !== enemy && o.hp > 0 && o.cells?.some(c => c.x === cx && c.y === cy))) return false;
+            }
+          }
+          return true;
+        });
+        if (burrowSpots.length > 0) {
+          const nextSpot = burrowSpots[Math.floor(Math.random() * burrowSpots.length)];
+          enemy.x = nextSpot.x;
+          enemy.y = nextSpot.y;
+          CombatSystem.syncEnemyCells(enemy);
+          this.renderer?.playEnemyAnim?.(enemy, "move");
+          this.summonBossRoomMinion();
+          this.log("🪱 ¡El Gusano Púrpura se sumerge bajo tierra y emerge en otra esquina!");
+        }
+      }
 
       const distToPlayer = CombatSystem.getMinDistToPlayer(this.player, enemy);
       const hasLOS = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+      const effectiveVisionRange = enemy.visionRange || (enemy.isBoss ? 3 : MINION_VISION_RANGE);
+      const detectsLior = hasLOS && distToPlayer <= effectiveVisionRange;
 
-      let canAttack = hasLOS && distToPlayer <= enemy.attackRange && enemy.fearCooldown === 0;
-      if (canAttack && enemy.isMegaBoss) {
-        if (enemy.bossAttackReady) enemy.bossAttackReady = false;
-        else { enemy.bossAttackReady = true; canAttack = false; }
+      const hasAllyNearby = CombatSystem.hasNearbyAlly(this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS);
+      const hasAlertedAllyNearby = CombatSystem.hasAlertedNearbyAlly(this.player, this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS);
+
+      if (!enemy.isBoss) {
+        // Si un aliado entra dentro del radio de 3 casillas mientras el enemigo 1x1 está asustado, el pánico termina de inmediato
+        if ((enemy.fearCooldown || 0) > 0 && hasAllyNearby) {
+          enemy.fearCooldown = 0;
+        }
+
+        // Evaluación cuando no está en pánico activo (sin reiniciar el contador si ya está asustado)
+        if ((enemy.fearCooldown || 0) <= 0) {
+          if (detectsLior) {
+            if (!hasAllyNearby) {
+              enemy.fearCooldown = ENEMY_FLEE_DURATION_TURNS;
+              enemy.state = "panic";
+            } else {
+              enemy.state = "chase";
+            }
+          } else if (hasAlertedAllyNearby) {
+            enemy.state = "chase";
+          } else {
+            enemy.state = "patrol";
+          }
+        } else {
+          enemy.state = "panic";
+        }
+      } else {
+        enemy.state = (detectsLior || hasAlertedAllyNearby) ? "chase" : "patrol";
       }
+
+      const isFleeing = !enemy.isBoss && (enemy.fearCooldown || 0) > 0;
+      const isCadenceReady = (enemy.attackCooldown || 0) <= 0
+        && (enemy.lastAttackTurn === null
+            || enemy.lastAttackTurn === undefined
+            || (this.dungeon.turnCount - enemy.lastAttackTurn) >= attackCadence);
+
+      if (enemy.isMegaBoss) {
+        enemy.bossAttackReady = isCadenceReady;
+      }
+
+      const canAttack = hasLOS && distToPlayer <= attackRange && !isFleeing && isCadenceReady;
 
       Renderer.recordEnemyRelativePlayerX(enemy, this.player);
 
       if (canAttack) {
+        enemy.state = "attack";
+        enemy.lastAttackTurn = this.dungeon.turnCount;
+        enemy.attackCooldown = attackCadence;
+        if (enemy.isMegaBoss) {
+          enemy.bossAttackReady = false;
+        }
+
         Renderer.orientEnemyTowardsPlayer(enemy, this.player);
         const attack = CombatSystem.resolveD20Attack(
           enemy,
@@ -10997,41 +12583,8 @@ class GameController {
 
         this.renderer.playEnemyAnim(enemy, "attack");
         const isRanged = enemy.isBoss || enemy.ranged || distToPlayer > 1;
-        const impactDelay = isRanged ? this.renderer.fireEnemyProjectile(enemy, attack.hit) : 0;
-        let totalDmg = 0;
-        let hitMessage = "";
-
-        if (attack.hit) {
-          const [damageDice, damageSides, flatBonus] = getEnemyDamageProfile(enemy);
-          const baseDamage = CombatSystem.rollDamageDice(damageDice, damageSides) + flatBonus;
-          totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
-        }
-
         if (isRanged) {
-          const turnDungeon = this.dungeon;
-          this.pendingEnemyProjectiles++;
-          this.isAnimatingTurn = true;
-          setTimeout(() => {
-            try {
-              if (this.dungeon !== turnDungeon || this.player.hp <= 0 || this.isVictory || !attack.hit) return;
-              const dmgRes = CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
-              if (this.player.hp > 0) sounds.playHurt();
-              this.log(TEXT.logs.enemyHit(
-                enemy.name,
-                attack.total,
-                this.player.ac,
-                dmgRes.totalDamage,
-                dmgRes.mitigatedDamage,
-                this.player.shieldSegments
-              ));
-              this.updateHUD();
-              this.renderer.playHurt(this.player.hp <= 0);
-              if (this.player.hp <= 0) this.triggerGameOver();
-            } finally {
-              this.pendingEnemyProjectiles = Math.max(0, this.pendingEnemyProjectiles - 1);
-              this.isAnimatingTurn = this.pendingEnemyProjectiles > 0;
-            }
-          }, impactDelay);
+          this.renderer.fireEnemyProjectile(enemy, attack.hit);
         }
 
         if (attack.fumble) {
@@ -11040,37 +12593,56 @@ class GameController {
           return;
         }
 
-        if (attack.hit && !isRanged) {
+        if (attack.hit) {
+          const [damageDice, damageSides, flatBonus] = getEnemyDamageProfile(enemy);
+          const baseDamage = CombatSystem.rollDamageDice(damageDice, damageSides) + flatBonus;
+          const totalDmg = attack.critical ? Math.ceil(baseDamage * 1.5) : baseDamage;
+          const hadShieldBeforeHit = (this.player.shieldSegments || 0) > 0;
           const dmgRes = CombatSystem.applyDamageToPlayer(this, this.player, totalDmg);
-          tookDamage = true;
+          const extraEffect = enemy.isMegaBoss
+            ? CombatSystem.applyMegaBossOnHitEffects(
+                this,
+                enemy,
+                attack,
+                dmgRes,
+                distToPlayer,
+                hadShieldBeforeHit
+              )
+            : CombatSystem.applyMiniBossOnHitEffects(
+                this,
+                enemy,
+                distToPlayer,
+                hadShieldBeforeHit
+              );
+          enemy.movedLastTurn = false;
+          if (dmgRes.totalDamage > 0 || this.player.hp <= 0) {
+            tookDamage = true;
+          }
           this.log(TEXT.logs.enemyHit(
             enemy.name,
             attack.total,
             this.player.ac,
             dmgRes.totalDamage,
             dmgRes.mitigatedDamage,
-            this.player.shieldSegments
+            this.player.shieldSegments,
+            extraEffect
           ));
         }
         return;
       }
 
       let mode = "patrol";
-      if (enemy.fearCooldown > 0) {
+      if (isFleeing) {
         mode = "flee";
       } else if (enemy.isBoss) {
-        if (distToPlayer <= enemy.visionRange) mode = "chase";
-      } else {
-        const escortingMiniBoss = miniBosses.find(mb => Math.hypot(mb.x - enemy.x, mb.y - enemy.y) <= 1.8);
-        if (escortingMiniBoss && Math.hypot(escortingMiniBoss.x - this.player.x, escortingMiniBoss.y - this.player.y) <= escortingMiniBoss.visionRange) {
+        if (detectsLior || hasAlertedAllyNearby) {
           mode = "chase";
-        } else if (distToPlayer <= enemy.visionRange) {
-          const hasAlly = this.dungeon.enemies.some(o => o !== enemy && o.cells && Math.hypot(o.x - enemy.x, o.y - enemy.y) <= 2.2);
-          mode = hasAlly ? "chase" : "flee";
+        }
+      } else {
+        if (detectsLior || hasAlertedAllyNearby) {
+          mode = "chase";
         }
       }
-
-      if (this.dungeon.isBossRoom) mode = "chase";
 
       let directions = [
         { dx: 0, dy: -1 },
@@ -11080,7 +12652,11 @@ class GameController {
       ];
 
       if (enemy.isMegaBoss) {
-        if (this.dungeon.turnCount % 4 !== 0) {
+        const isTarrasque = enemy.originTier === 2;
+        const isFastMover = enemy.originTier === 7
+          || (enemy.originTier === 10 && (enemy.solarPhase2Triggered || enemy.hp <= enemy.maxHp / 2));
+        const moveCadence = isTarrasque ? 2 : (isFastMover ? 3 : 4);
+        if (this.dungeon.turnCount % moveCadence !== 0) {
           directions = [];
         } else {
           const centerX = enemy.x + (enemy.size - 1) / 2;
@@ -11103,6 +12679,28 @@ class GameController {
           const dB = Math.hypot((enemy.x + b.dx) - this.player.x, (enemy.y + b.dy) - this.player.y);
           return dA - dB;
         });
+      } else if (!enemy.isBoss) {
+        // Patrullaje coherente de zona para enemigos 1x1: desplazamiento horizontal izquierda/derecha
+        // alrededor de su posición inicial (startX ± patrolRadius), con respaldo vertical si el eje X está bloqueado.
+        const anchorX = Number.isInteger(enemy.startX) ? enemy.startX : enemy.x;
+        const anchorY = Number.isInteger(enemy.startY) ? enemy.startY : enemy.y;
+        const patrolRadius = enemy.patrolRadius || MINION_PATROL_RADIUS;
+        let pDirX = (enemy.patrolDir === -1 || enemy.patrolDir === 1) ? enemy.patrolDir : 1;
+        if (Math.abs((enemy.x + pDirX) - anchorX) > patrolRadius) {
+          pDirX = -pDirX;
+          enemy.patrolDir = pDirX;
+        }
+        let pDirY = (enemy.patrolDirY === -1 || enemy.patrolDirY === 1) ? enemy.patrolDirY : 1;
+        if (Math.abs((enemy.y + pDirY) - anchorY) > patrolRadius) {
+          pDirY = -pDirY;
+          enemy.patrolDirY = pDirY;
+        }
+        directions = [
+          { dx: pDirX, dy: 0, isPatrolX: true },
+          { dx: -pDirX, dy: 0, isPatrolX: true, reversedX: true },
+          { dx: 0, dy: pDirY, isPatrolY: true },
+          { dx: 0, dy: -pDirY, isPatrolY: true, reversedY: true }
+        ];
       } else {
         directions.sort(() => Math.random() - 0.5);
       }
@@ -11124,18 +12722,63 @@ class GameController {
         });
 
         if (!collidesWithOther) {
+          const prevX = enemy.x;
+          const prevY = enemy.y;
           enemy.x += dir.dx;
           enemy.y += dir.dy;
           enemy.cells = candidateCells;
+          enemy.movedLastTurn = true;
+          if (mode === "patrol" && !enemy.isBoss) {
+            if (dir.isPatrolX) enemy.patrolDir = dir.dx;
+            if (dir.isPatrolY) enemy.patrolDirY = dir.dy;
+          }
+          const moveNow = performance.now();
+          enemy.moveInterp = { fromX: prevX, fromY: prevY, startedAt: moveNow, duration: 105, until: moveNow + 105 };
           if (dir.dx !== 0) {
             enemy.lastMoveDx = dir.dx;
             enemy.facingLeft = dir.dx < 0;
             enemy.flipX = enemy.facingLeft;
             enemy.facing = enemy.facingLeft ? "left" : "right";
           }
+          CombatSystem.syncEnemyCells(enemy);
           Renderer.recordEnemyRelativePlayerX(enemy, this.player);
+          this.renderer?.playEnemyAnim?.(enemy, "move");
+          this.renderer?.keepAnimating?.(120);
           break;
         }
+      }
+
+      if ((enemy.fearCooldown || 0) > 0) {
+        enemy.fearCooldown = Math.max(0, enemy.fearCooldown - 1);
+        const nowHasAlly = CombatSystem.hasNearbyAlly(this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS);
+        if (nowHasAlly) {
+          enemy.fearCooldown = 0;
+        }
+        if (enemy.fearCooldown === 0) {
+          const distNow = CombatSystem.getMinDistToPlayer(this.player, enemy);
+          const losNow = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+          const stillSeesLior = losNow && distNow <= effectiveVisionRange;
+          const alertedAllyNow = CombatSystem.hasAlertedNearbyAlly(this.player, this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS);
+          if (!stillSeesLior) {
+            enemy.state = alertedAllyNow ? "chase" : "patrol";
+          } else {
+            enemy.state = nowHasAlly ? "chase" : "panic";
+          }
+        }
+      }
+    });
+
+    // Comprobación final tras el movimiento de todos los enemigos: si un aliado entró en el radio de 3 casillas
+    // de un enemigo 1x1 asustado durante este mismo turno, su estado de pánico termina inmediatamente.
+    this.dungeon.enemies.forEach(enemy => {
+      if (enemy.isBoss || (enemy.fearCooldown || 0) <= 0) return;
+      if (CombatSystem.hasNearbyAlly(this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS)) {
+        enemy.fearCooldown = 0;
+        const distNow = CombatSystem.getMinDistToPlayer(this.player, enemy);
+        const losNow = CombatSystem.canEnemySeePlayer(this.player, this.dungeon, enemy);
+        const effVis = enemy.visionRange || MINION_VISION_RANGE;
+        const alertedNow = CombatSystem.hasAlertedNearbyAlly(this.player, this.dungeon, enemy, ENEMY_ALLY_DETECTION_RADIUS);
+        enemy.state = ((losNow && distNow <= effVis) || alertedNow) ? "chase" : "patrol";
       }
     });
 
@@ -11144,9 +12787,17 @@ class GameController {
       this.renderer.playHurt(this.player.hp <= 0);
     }
 
-    if (this.player.hp > 0 && this.dungeon.isBossRoom && this.dungeon.turnCount % 4 === 0
-      && this.dungeon.enemies.some(e => e.isMegaBoss)) {
-      this.summonBossRoomMinion();
+    const activeMegaBoss = this.dungeon.isBossRoom
+      ? this.dungeon.enemies.find(e => e.isMegaBoss && e.hp > 0)
+      : null;
+    if (this.player.hp > 0 && activeMegaBoss) {
+      const summonCadence = activeMegaBoss.originTier === 9 ? 4 : 6;
+      if (this.dungeon.turnCount % summonCadence === 0) {
+        this.summonBossRoomMinion();
+        if (activeMegaBoss.originTier === 10 && (activeMegaBoss.solarPhase2Triggered || activeMegaBoss.hp <= activeMegaBoss.maxHp / 2)) {
+          this.summonBossRoomMinion();
+        }
+      }
     }
 
     if (this.player.hp > 0) {
@@ -11244,9 +12895,14 @@ class GameController {
       this.player.advanceAction();
       if (this.stats) this.stats.totalSteps++;
     }
+    const prevPlayerX = this.player.x;
+    const prevPlayerY = this.player.y;
     this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.player.x = nextX;
     this.player.y = nextY;
+    const stepNow = performance.now();
+    this.player.moveInterp = { fromX: prevPlayerX, fromY: prevPlayerY, startedAt: stepNow, duration: 95, until: stepNow + 95 };
+    this.renderer?.keepAnimating?.(110);
     this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.renderer.settleLargeEnemyPresentationToPlayer?.();
     sounds.playStep();
@@ -11302,9 +12958,14 @@ class GameController {
       return false;
     }
 
+    const prevBackX = this.player.x;
+    const prevBackY = this.player.y;
     this.player.advanceAction();
     this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     this.player.moveBackward();
+    const backNow = performance.now();
+    this.player.moveInterp = { fromX: prevBackX, fromY: prevBackY, startedAt: backNow, duration: 95, until: backNow + 95 };
+    this.renderer?.keepAnimating?.(110);
     this.dungeon.enemies.forEach(e => Renderer.recordEnemyRelativePlayerX(e, this.player));
     sounds.playStep();
     this.renderer.commitCameraFacing();
@@ -11324,6 +12985,8 @@ class GameController {
     this.dungeon.chests.delete(chestKey);
     this.dungeon.setTile(this.player.x, this.player.y, TILE_FLOOR);
     this.renderer.playChestOpening(this.player.x, this.player.y);
+    const chestBonusGold = 1 + Math.floor((this.tier - 1) / 5);
+    this.addGold(chestBonusGold, this.player.x, this.player.y);
 
     const roll = (typeof rollOverride === "number" && Number.isFinite(rollOverride))
       ? Math.max(0, Math.min(0.999999, rollOverride))
@@ -11422,7 +13085,8 @@ class GameController {
 
     if (bunnyIndex !== -1) {
       this.dungeon.npcs.splice(bunnyIndex, 1);
-      this.addGold(5, this.player.x, this.player.y);
+      const bunnyGold = 5 + Math.floor(this.tier / 2);
+      this.addGold(bunnyGold, this.player.x, this.player.y);
       sounds.playCoin();
       this.log(TEXT.logs.bunnyCaught);
       this.updateHUD();
@@ -11459,8 +13123,12 @@ class GameController {
 
         if (this.inMerchantFloor) {
           this.floor++;
+          this.inMerchantFloor = false;
+          this.savePlayerProgressCheckpoint({ forceNewFloorDungeon: true });
           setTimeout(() => this.initDungeonFloor(false), 500);
         } else {
+          this.inMerchantFloor = true;
+          this.savePlayerProgressCheckpoint({ forceNewFloorDungeon: true });
           setTimeout(() => this.initDungeonFloor(true), 500);
         }
         return;
@@ -11583,39 +13251,78 @@ class GameController {
     if (victoryRestartBtn) victoryRestartBtn.addEventListener("click", () => this.resetGame());
 
     window.addEventListener("keydown", (e) => {
+      // 1. Cinemática final (Piso 100)
       if (this.endingCinematic && this.endingCinematic.isActive) {
         if (e.key === "f" || e.key === "F") {
           if (!e.repeat) this.toggleFullscreen();
           e.preventDefault();
+        } else if (e.key === "b" || e.key === "B") {
+          if (!e.repeat) sounds.toggleMusicMute();
+          e.preventDefault();
         } else if (e.key === "Escape") {
           this.endingCinematic.finish(true);
           e.preventDefault();
-        } else if (["Enter", " ", "ArrowRight"].includes(e.key)) {
+        } else if (["Enter", " ", "ArrowRight", "d", "D", "k", "K"].includes(e.key)) {
           if (!e.repeat) this.endingCinematic.advanceOrReveal();
           e.preventDefault();
         }
         return;
       }
 
-      if (this.isVictory) return;
-
-      if (this.isIntroActive()) {
-        if (e.key === "f" || e.key === "F") {
-          if (!e.repeat) this.toggleFullscreen();
+      // 2. Pantalla de Victoria (Piso 100)
+      if (this.isVictory) {
+        if (["Enter", " ", "k", "K", "Escape"].includes(e.key)) {
+          if (!e.repeat) this.resetGame();
           e.preventDefault();
-        } else if (e.key === "Escape") {
-          this.narrativeIntro.finish(true);
-          e.preventDefault();
-        } else if (["Enter", " ", "ArrowRight"].includes(e.key)) {
-          this.narrativeIntro.advanceOrReveal();
+        } else if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen(true);
           e.preventDefault();
         }
         return;
       }
 
+      // 3. Pantalla de Muerte / Derrota
+      if (this.isGameOverTriggered || (this.deathScreen && !this.deathScreen.classList.contains("hidden"))) {
+        if (["Enter", " ", "k", "K", "Escape", "r", "R"].includes(e.key)) {
+          if (!e.repeat && this.deathScreen && !this.deathScreen.classList.contains("hidden")) {
+            this.resetGame();
+          }
+          e.preventDefault();
+        } else if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen(true);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // 4. Introducción narrativa
+      if (this.isIntroActive()) {
+        if (e.key === "f" || e.key === "F") {
+          if (!e.repeat) this.toggleFullscreen();
+          e.preventDefault();
+        } else if (e.key === "b" || e.key === "B") {
+          if (!e.repeat) sounds.toggleMusicMute();
+          e.preventDefault();
+        } else if (e.key === "Escape") {
+          this.narrativeIntro.finish(true);
+          e.preventDefault();
+        } else if (["Enter", " ", "ArrowRight", "d", "D", "k", "K"].includes(e.key)) {
+          if (!e.repeat) this.narrativeIntro.advanceOrReveal();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // 5. Modal de Partida Guardada / Suspendida
       if (this.isResumeModalOpen()) {
-        if (["Enter", " "].includes(e.key)) {
-          if (!e.repeat) this.resumeFromSavedGame();
+        if (["ArrowLeft", "ArrowUp", "a", "A", "w", "W"].includes(e.key)) {
+          if (!e.repeat) this.moveResumeModalSelection(-1);
+          e.preventDefault();
+        } else if (["ArrowRight", "ArrowDown", "d", "D", "s", "S", "Tab"].includes(e.key)) {
+          if (!e.repeat) this.moveResumeModalSelection(1);
+          e.preventDefault();
+        } else if (["Enter", " ", "k", "K"].includes(e.key)) {
+          if (!e.repeat) this.activateSelectedResumeModalOption();
           e.preventDefault();
         } else if (e.key === "Escape" && this.resumeModalMode === "suspend") {
           if (!e.repeat) this.resumeFromSavedGame();
@@ -11627,17 +13334,33 @@ class GameController {
         return;
       }
 
+      // 7. Menú del Juego / Pausa (#tutorial-help-modal)
       if (this.tutorial?.isHelpModalOpen()) {
-        if (["Escape", "Enter", " ", "m", "M"].includes(e.key)) {
-          this.tutorial.closeHelpModal();
+        if (["ArrowLeft", "ArrowUp", "a", "A", "w", "W"].includes(e.key)) {
+          if (!e.repeat) this.tutorial.moveHelpMenuSelection(-1);
+          e.preventDefault();
+        } else if (["ArrowRight", "ArrowDown", "d", "D", "s", "S", "Tab"].includes(e.key)) {
+          if (!e.repeat) this.tutorial.moveHelpMenuSelection(1);
+          e.preventDefault();
+        } else if (["Enter", " ", "k", "K"].includes(e.key)) {
+          if (!e.repeat) this.tutorial.activateSelectedHelpMenuButton();
+          e.preventDefault();
+        } else if (["Escape", "m", "M", "Backspace"].includes(e.key)) {
+          if (!e.repeat) this.tutorial.closeHelpModal();
           e.preventDefault();
         } else if (e.key === "f" || e.key === "F") {
           if (!e.repeat) this.toggleFullscreen(true);
+          e.preventDefault();
+        } else if (e.key === "b" || e.key === "B") {
+          if (!e.repeat) sounds.toggleMusicMute();
           e.preventDefault();
         }
         return;
       }
 
+      // 8. Tienda del Mercader (#shop-modal)
+      // En la tienda, Escape conserva su función relacionada con salir de pantalla completa;
+      // para salir de la tienda con teclado se selecciona la opción visible "CERRAR TIENDA" y se confirma con Enter.
       if (this.isShopOpen()) {
         switch (e.key) {
           case "ArrowUp":
@@ -11654,34 +13377,56 @@ class GameController {
             break;
           case "ArrowLeft":
           case "ArrowRight":
+          case "a":
+          case "A":
+          case "d":
+          case "D":
             if (!e.repeat) {
               const nextView = this.activeShopView === "supplies" ? "upgrades" : "supplies";
-              this.setShopView(nextView, true);
+              this.setShopView(nextView, false);
             }
             e.preventDefault();
             break;
           case "Enter":
           case " ":
+          case "k":
+          case "K":
             if (!e.repeat) {
-              const focusedTab = e.target.closest?.("[data-shop-view]");
+              const focusedTab = e.target?.closest?.("[data-shop-view]");
               if (focusedTab) focusedTab.click();
               else this.purchaseSelectedShopItem();
             }
             e.preventDefault();
             break;
-          case "Escape":
-            this.closeShop();
+          case "f":
+          case "F":
+            if (!e.repeat) this.toggleFullscreen(true);
             e.preventDefault();
+            break;
+          case "Escape":
+            if (!e.repeat && this.isFullscreenActive()) {
+              this.toggleFullscreen(true);
+            }
             break;
         }
         return;
       }
 
+      // 9. Diálogo del Mercader / Lior (#merchant-dialog-modal)
       if (this.isPausedForDialog) {
-        if (["Enter", " ", "Escape"].includes(e.key)) {
-          this.dismissMerchantDialog();
+        if (["Enter", " ", "Escape", "k", "K", "e", "E"].includes(e.key)) {
+          if (!e.repeat) {
+            this.shopClosingCooldown = performance.now() + 180;
+            this.dismissMerchantDialog();
+          }
           e.preventDefault();
         }
+        return;
+      }
+
+      // Guard contra pulsaciones residuales justo al cerrar un menú o tienda
+      if (performance.now() < this.shopClosingCooldown) {
+        e.preventDefault();
         return;
       }
 
@@ -11761,8 +13506,13 @@ class GameController {
           if (!e.repeat) this.tutorial?.openHelpModal();
           break;
         case "Escape":
-          if (this.isShopOpen()) this.closeShop();
-          else this.tutorial?.openHelpModal();
+          if (this.isFullscreenActive()) {
+            if (!e.repeat) this.toggleFullscreen(true);
+          } else if (this.tutorial?.isActive) {
+            if (!e.repeat) this.tutorial.skipTutorial();
+          } else {
+            if (!e.repeat) this.tutorial?.openHelpModal();
+          }
           break;
       }
     });
@@ -11776,23 +13526,30 @@ class GameController {
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
       let gp = null;
       for (let i = 0; i < gamepads.length; i++) {
-        if (gamepads[i]) { gp = gamepads[i]; break; }
+        if (gamepads[i] && gamepads[i].connected !== false) { gp = gamepads[i]; break; }
       }
 
-      if (gp && !this.isVictory) {
-        const mapping = gp.mapping || "";
+      if (gp) {
+        const mapping = gp.mapping || "standard";
         if (mapping !== this.gamepadMapping) {
           this.gamepadMapping = mapping;
           if (this.controlDevice === "gamepad") this.updateButtonLabels();
         }
-        const threshold = 0.25;
+        // Zona muerta de 0.35 para navegación y movimiento, y 0.45 para cambio automático de dispositivo
+        // (evita que un leve drift del stick cambie las indicaciones constantemente mientras se usa el teclado)
+        const threshold = 0.35;
+        const switchThreshold = 0.45;
         const rawAxisX = gp.axes[0] || 0;
         const rawAxisY = gp.axes[1] || 0;
         const axisX = Math.abs(rawAxisX) >= threshold ? Math.sign(rawAxisX) : 0;
         const axisY = Math.abs(rawAxisY) >= threshold ? Math.sign(rawAxisY) : 0;
-        const btnStates = gp.buttons.map(button => button.pressed);
-        if ((axisX || axisY || btnStates.some(Boolean)) && this.controlDevice !== "gamepad") {
-          this.setControlDevice("gamepad");
+        const strongAxisActivity = Math.abs(rawAxisX) >= switchThreshold || Math.abs(rawAxisY) >= switchThreshold;
+        const btnStates = gp.buttons.map(button => !!button?.pressed);
+        if (strongAxisActivity || btnStates.some(Boolean)) {
+          this.userExplicitlyUsedKeyboard = false;
+          if (this.controlDevice !== "gamepad") {
+            this.setControlDevice("gamepad");
+          }
         }
         const pressedThisFrame = index => !!btnStates[index] && !this.lastGamepadButtons[index];
         const dpadUp = !!gp.buttons[12]?.pressed;
@@ -11804,28 +13561,60 @@ class GameController {
         const movedX = inputX !== 0 && inputX !== this.lastGamepadAxes.x;
         const movedY = inputY !== 0 && inputY !== this.lastGamepadAxes.y;
         const gamepadActions = ACTION_BINDINGS.gamepad;
-        const shopOpen = this.isShopOpen();
+        const pressedA = pressedThisFrame(gamepadActions.attack.index);
+        const pressedB = pressedThisFrame(gamepadActions.mist.index);
+        const pressedX = pressedThisFrame(gamepadActions.blast.index);
+        const pressedY = pressedThisFrame(gamepadActions.weapon.index);
+        const pressedLB = pressedThisFrame(4);
+        const pressedRB = pressedThisFrame(5);
+        const pressedView = pressedThisFrame(8);
+        const pressedStart = pressedThisFrame(9);
 
-        if (this.isIntroActive()) {
-          if (pressedThisFrame(gamepadActions.attack.index)) this.narrativeIntro.advanceOrReveal();
-          if (pressedThisFrame(gamepadActions.mist.index) || pressedThisFrame(9)) this.narrativeIntro.finish(true);
-        } else if (shopOpen) {
+        if (this.endingCinematic && this.endingCinematic.isActive) {
+          if (pressedA || movedX) this.endingCinematic.advanceOrReveal();
+          if (pressedB || pressedStart) this.endingCinematic.finish(true);
+        } else if (this.isVictory) {
+          if (pressedA || pressedStart) this.resetGame();
+        } else if (this.isGameOverTriggered || (this.deathScreen && !this.deathScreen.classList.contains("hidden"))) {
+          if ((pressedA || pressedStart) && this.deathScreen && !this.deathScreen.classList.contains("hidden")) {
+            this.resetGame();
+          }
+        } else if (this.isIntroActive()) {
+          if (pressedA || (movedX && inputX > 0)) this.narrativeIntro.advanceOrReveal();
+          if (pressedB || pressedStart) this.narrativeIntro.finish(true);
+        } else if (this.isResumeModalOpen()) {
+          if (movedX || movedY) this.moveResumeModalSelection((inputX < 0 || inputY < 0) ? -1 : 1);
+          if (pressedA || pressedStart) this.activateSelectedResumeModalOption();
+          if (pressedB && this.resumeModalMode === "suspend") this.resumeFromSavedGame();
+        } else if (this.tutorial?.isHelpModalOpen()) {
+          if (movedX || movedY) this.tutorial.moveHelpMenuSelection((inputX < 0 || inputY < 0) ? -1 : 1);
+          if (pressedA) this.tutorial.activateSelectedHelpMenuButton();
+          if (pressedB || pressedStart) this.tutorial.closeHelpModal();
+        } else if (this.isShopOpen()) {
           if (movedY) this.moveShopSelection(inputY < 0 ? -1 : 1);
-          if (movedX) this.setShopView(this.activeShopView === "supplies" ? "upgrades" : "supplies");
-          if (pressedThisFrame(gamepadActions.attack.index)) this.purchaseSelectedShopItem();
-          if (pressedThisFrame(gamepadActions.mist.index)) this.closeShop();
+          if (movedX || pressedLB || pressedRB) {
+            this.setShopView(this.activeShopView === "supplies" ? "upgrades" : "supplies", false);
+          }
+          if (pressedA) this.purchaseSelectedShopItem();
+          if (pressedB || pressedStart) this.closeShop();
         } else if (this.isPausedForDialog) {
-          if (pressedThisFrame(gamepadActions.attack.index)
-            || pressedThisFrame(gamepadActions.mist.index)
-            || pressedThisFrame(9)) this.dismissMerchantDialog();
+          if (pressedA || pressedB || pressedStart) {
+            this.shopClosingCooldown = performance.now() + 180;
+            this.dismissMerchantDialog();
+          }
+        } else if (performance.now() < this.shopClosingCooldown) {
+          // Cooldown breve tras cerrar menús para evitar disparos o pasos accidentales
+        } else if (pressedStart) {
+          this.tutorial?.openHelpModal();
         } else if (this.isAnimatingTurn) {
           // Espera a que terminen los proyectiles en vuelo
         } else if (this.player.stunned && (movedY || movedX
-          || pressedThisFrame(gamepadActions.attack.index)
-          || pressedThisFrame(gamepadActions.mist.index)
-          || pressedThisFrame(gamepadActions.blast.index)
-          || pressedThisFrame(gamepadActions.weapon.index)
-          || gamepadActions.weaponAlt.some(pressedThisFrame))) {
+          || pressedA
+          || pressedB
+          || pressedX
+          || pressedY
+          || pressedLB
+          || pressedRB)) {
           this.consumeStunnedTurn();
         } else {
           if (movedY || movedX) {
@@ -11838,11 +13627,10 @@ class GameController {
             }
           }
 
-          if (pressedThisFrame(gamepadActions.attack.index)) CombatSystem.executeAttack(this);
-          if (pressedThisFrame(gamepadActions.mist.index)) this.castMistyStep(8);
-          if (pressedThisFrame(gamepadActions.blast.index)) this.castEldritchBlast();
-          if (pressedThisFrame(gamepadActions.weapon.index)
-            || gamepadActions.weaponAlt.some(pressedThisFrame)) this.cycleWeapon();
+          if (pressedA) CombatSystem.executeAttack(this);
+          if (pressedB) this.castMistyStep(8);
+          if (pressedX) this.castEldritchBlast();
+          if (pressedY || pressedLB || pressedRB) this.cycleWeapon();
         }
 
         this.lastGamepadAxes.x = inputX;
@@ -11901,4 +13689,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   splashScreen.addEventListener("click", () => startGame(true));
   splashScreen.addEventListener("touchstart", () => startGame(true), { passive: true });
+  window.addEventListener("keydown", (e) => {
+    if (["Enter", " ", "Escape", "k", "K"].includes(e.key)) {
+      startGame(true);
+    }
+  }, { once: true });
 });

@@ -1563,22 +1563,7 @@ body.is-portrait #app-wrapper {
 }
 
 body.pad-hidden #pc-legend {
-  position: absolute;
-  top: calc(max(6px, var(--sat)) + 46px);
-  left: max(8px, var(--sal));
-  z-index: 25;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 176px;
-  padding: 8px 10px;
-  color: #e2e8f8;
-  background: linear-gradient(180deg, rgba(8, 10, 20, 0.9) 0%, rgba(4, 6, 13, 0.93) 100%);
-  border: 1.5px solid #737b9c;
-  box-shadow: inset 0 0 0 1px #1d2236, 0 4px 14px rgba(0, 0, 0, 0.75);
-  font-family: monospace;
-  font-size: 10px;
-  pointer-events: none;
+  display: none !important;
 }
 
 .pc-legend-title {
@@ -1988,5 +1973,414 @@ body.pseudo-fullscreen #app-wrapper {
 @media (max-width: 640px) {
   .tutorial-help-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   MEJORA DE UI GÓTICA, COMPATIBILIDAD CON MANDO XBOX Y NAVEGACIÓN POR TECLADO
+   ========================================================================== */
+
+/* Barra contextual de indicaciones de navegación por teclado / mando Xbox */
+.modal-control-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 10px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  background: linear-gradient(180deg, rgba(16, 20, 38, 0.92) 0%, rgba(10, 13, 25, 0.96) 100%);
+  border: 1px solid rgba(139, 149, 196, 0.45);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.65);
+  color: #cbd5e1;
+  font-family: monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.25px;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.inline-key-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  margin-left: 4px;
+  background: #131829;
+  border: 1px solid #9ba3c7;
+  border-bottom-width: 2px;
+  color: #ffd970;
+  font-family: monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+/* Insignias visuales de botones de mando Xbox */
+.xbox-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-family: monospace;
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.85);
+  vertical-align: middle;
+}
+
+.xbox-badge-a {
+  background: linear-gradient(180deg, #34d399 0%, #15803d 100%);
+  border-color: #bbf7d0;
+  color: #ffffff;
+}
+
+.xbox-badge-b {
+  background: linear-gradient(180deg, #f87171 0%, #b91c1c 100%);
+  border-color: #fecaca;
+  color: #ffffff;
+}
+
+.xbox-badge-x {
+  background: linear-gradient(180deg, #60a5fa 0%, #1d4ed8 100%);
+  border-color: #bfdbfe;
+  color: #ffffff;
+}
+
+.xbox-badge-y {
+  background: linear-gradient(180deg, #fbbf24 0%, #b45309 100%);
+  border-color: #fde68a;
+  color: #ffffff;
+}
+
+.xbox-badge-bumper,
+.xbox-badge-stick,
+.xbox-badge-menu {
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: linear-gradient(180deg, #334155 0%, #0f172a 100%);
+  border: 1px solid #cbd5e1;
+  color: #f8fafc;
+  font-size: 9px;
+}
+
+#pc-legend.is-gamepad-mode {
+  border-color: #7cf59a;
+  box-shadow: inset 0 0 0 1px #1d2236, 0 0 12px rgba(124, 245, 154, 0.2), 0 4px 14px rgba(0, 0, 0, 0.78);
+}
+
+#pc-legend.is-gamepad-mode .pc-legend-title {
+  color: #7cf59a;
+  border-bottom-color: rgba(124, 245, 154, 0.45);
+}
+
+/* Estados claros de foco, hover y selección que no dependen únicamente del color */
+.shop-item {
+  position: relative;
+  padding: 7px 10px 7px 18px;
+  border: 1px solid #353c59;
+  background: linear-gradient(180deg, rgba(16, 20, 34, 0.9) 0%, rgba(10, 14, 24, 0.94) 100%);
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.shop-item::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 900;
+  color: transparent;
+  pointer-events: none;
+}
+
+.shop-item:hover {
+  border-color: #9ba3c7;
+  background: rgba(24, 30, 50, 0.95);
+}
+
+.shop-item.is-selected,
+.shop-item:focus-visible {
+  outline: none;
+  border-color: #7cf59a;
+  background: linear-gradient(90deg, rgba(22, 54, 36, 0.95) 0%, rgba(16, 34, 24, 0.95) 100%);
+  box-shadow: inset 0 0 0 1.5px #7cf59a, 0 0 10px rgba(124, 245, 154, 0.25);
+  transform: translateX(2px);
+}
+
+.shop-item.is-selected::before,
+.shop-item:focus-visible::before {
+  content: "▸";
+  color: #7cf59a;
+}
+
+.shop-btn:hover:not(:disabled),
+.shop-btn:focus-visible:not(:disabled) {
+  background-color: #ffe875;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.65);
+  transform: translateY(-1px);
+}
+
+.shop-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Botón de salida de la tienda claramente diferenciable y seleccionable con teclado/mando */
+.close-shop-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+  background: linear-gradient(180deg, #232942 0%, #15192b 100%);
+  color: #f1f5f9;
+  border: 1.5px solid #8e96b8;
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.close-shop-btn:hover,
+.close-shop-btn.is-selected,
+.close-shop-btn:focus-visible {
+  outline: none;
+  background: linear-gradient(180deg, #3b1d2e 0%, #24111c 100%);
+  color: #ffd970;
+  border-color: #ffd970;
+  box-shadow: inset 0 0 0 1.5px #ffd970, 0 0 12px rgba(255, 217, 112, 0.35);
+}
+
+.close-shop-btn.is-selected::before,
+.close-shop-btn:focus-visible::before {
+  content: "▸ ";
+  color: #ffd970;
+  font-weight: 900;
+}
+
+/* Pestañas de tienda y botones de menú / modales con foco y selección claros */
+.shop-tab {
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.shop-tab:hover {
+  color: #f8fafc;
+  background: #232129;
+}
+
+.shop-tab:focus-visible {
+  outline: 2px solid #7cf59a;
+  outline-offset: -2px;
+}
+
+.tutorial-btn {
+  position: relative;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+}
+
+.tutorial-btn.is-selected,
+.tutorial-btn:focus-visible {
+  outline: none;
+  border-color: #7cf59a !important;
+  box-shadow: inset 0 0 0 1.5px #7cf59a, 0 0 12px rgba(124, 245, 154, 0.45);
+  transform: translateY(-1px);
+}
+
+.tutorial-btn.is-selected::before,
+.tutorial-btn:focus-visible::before {
+  content: "▸ ";
+  color: #7cf59a;
+  font-weight: 900;
+}
+
+.tutorial-btn-primary.is-selected::before,
+.tutorial-btn-primary:focus-visible::before {
+  color: #090b14;
+}
+
+.death-restart-btn.is-selected,
+.death-restart-btn:focus-visible,
+.death-restart-btn:hover {
+  outline: none;
+  background: #ff4444;
+  box-shadow: 0 0 0 2px #ffd970, 0 0 18px rgba(255, 68, 68, 0.85);
+  transform: scale(1.03);
+}
+
+/* Respeto por preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ==========================================================================
+   OPTIMIZACIÓN DE TIENDA MÓVIL (5 COMPRAS / 4 MEJORAS SIN DESBORDAMIENTO)
+   Y OCULTACIÓN DE INDICACIONES INNECESARIAS FUERA DEL TUTORIAL
+   ========================================================================== */
+#pc-legend,
+.modal-control-hint {
+  display: none !important;
+}
+
+#shop-modal {
+  overflow: hidden;
+}
+
+.shop-content {
+  width: min(440px, 100%);
+  max-width: min(96vw, 440px);
+  max-height: calc(var(--app-height, 100dvh) - max(10px, var(--sat) + var(--sab) + 8px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.shop-item {
+  min-height: 34px;
+  overflow: hidden;
+}
+
+.shop-item > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-btn {
+  min-height: 28px;
+  min-width: 58px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.close-shop-btn {
+  min-height: 34px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* Pantallas móviles horizontales (ej. 667x375, 740x360, 844x390) */
+@media (max-width: 960px) and (orientation: landscape), (max-height: 500px) and (orientation: landscape) {
+  #shop-modal {
+    padding:
+      max(4px, var(--sat))
+      max(8px, var(--sar))
+      max(4px, var(--sab))
+      max(8px, var(--sal));
+  }
+
+  .shop-content {
+    width: min(460px, 96vw);
+    max-height: calc(var(--app-height, 100dvh) - max(8px, var(--sat) + var(--sab) + 6px));
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .shop-content h3 {
+    font-size: 12px;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .shop-desc {
+    font-size: 10px;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .shop-tabs {
+    gap: 4px;
+  }
+
+  .shop-tab {
+    min-height: 27px;
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  .shop-view {
+    gap: 3px;
+  }
+
+  .shop-tuneup-line {
+    font-size: 8.5px;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .shop-item {
+    min-height: 29px;
+    padding: 3px 7px 3px 15px;
+    gap: 6px;
+  }
+
+  .shop-item > span,
+  .upgrade-label {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .upgrade-requirement {
+    font-size: 8px;
+    line-height: 1.1;
+  }
+
+  .shop-btn {
+    min-height: 25px;
+    min-width: 54px;
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .close-shop-btn {
+    min-height: 29px;
+    padding: 4px 10px;
+    font-size: 10.5px;
+    margin-top: 1px;
+  }
+}
+
+/* Pantallas verticales extremadamente compactas (<= 340px de alto) */
+@media (max-height: 340px) and (orientation: landscape) {
+  .shop-content {
+    padding: 4px 8px;
+    gap: 2px;
+  }
+  .shop-tab {
+    min-height: 23px;
+  }
+  .shop-item {
+    min-height: 25px;
+    padding: 2px 6px 2px 14px;
+  }
+  .shop-btn {
+    min-height: 22px;
+    padding: 2px 7px;
+  }
+  .close-shop-btn {
+    min-height: 25px;
+    padding: 3px 8px;
   }
 }

@@ -26,8 +26,8 @@
     <div class="intro-top-bar">
       <div id="intro-progress" class="intro-progress" aria-hidden="true"></div>
       <div class="intro-top-actions">
-        <button id="btn-intro-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música (B)" aria-label="Alternar música">♪ MÚSICA</button>
-        <button id="btn-intro-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
+        <button id="btn-intro-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música" aria-label="Alternar música">♪ MÚSICA</button>
+        <button id="btn-intro-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
         <button id="btn-skip-intro" class="intro-skip-btn" type="button">OMITIR INTRO ⏭</button>
       </div>
     </div>
@@ -42,8 +42,8 @@
     <div class="intro-top-bar">
       <div id="ending-progress" class="intro-progress" aria-hidden="true"></div>
       <div class="intro-top-actions">
-        <button id="btn-ending-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música (B)" aria-label="Alternar música">♪ MÚSICA</button>
-        <button id="btn-ending-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
+        <button id="btn-ending-music" class="intro-skip-btn intro-music-btn" type="button" title="Alternar música" aria-label="Alternar música">♪ MÚSICA</button>
+        <button id="btn-ending-fullscreen" class="intro-skip-btn intro-fs-btn" type="button" title="Pantalla completa" aria-label="Alternar pantalla completa">⛶ PANTALLA COMPLETA</button>
         <button id="btn-skip-ending" class="intro-skip-btn" type="button">OMITIR ⏭</button>
       </div>
     </div>
@@ -128,9 +128,9 @@
         <span id="hud-dir-arrow" class="direction-arrow" aria-hidden="true">↑</span>
         <span id="hud-dir">Norte</span>
       </div>
-      <button id="btn-music-toggle" class="hud-help-btn hud-music-btn" type="button" title="Silenciar música (B)" aria-label="Alternar música">♪</button>
-      <button id="btn-fullscreen" class="hud-help-btn hud-fullscreen-btn" type="button" title="Pantalla completa (F)" aria-label="Alternar pantalla completa">⛶</button>
-      <button id="btn-tutorial-help" class="hud-menu-btn" type="button" title="Abrir Menú del Juego (M)" aria-label="Abrir Menú del Juego"><span class="hud-menu-icon" aria-hidden="true">☰</span><span class="hud-menu-label">MENÚ</span></button>
+      <button id="btn-music-toggle" class="hud-help-btn hud-music-btn" type="button" title="Alternar música" aria-label="Alternar música">♪</button>
+      <button id="btn-fullscreen" class="hud-help-btn hud-fullscreen-btn" type="button" title="Pantalla completa" aria-label="Alternar pantalla completa">⛶</button>
+      <button id="btn-tutorial-help" class="hud-menu-btn" type="button" title="Abrir Menú del Juego" aria-label="Abrir Menú del Juego"><span class="hud-menu-icon" aria-hidden="true">☰</span><span class="hud-menu-label">MENÚ</span></button>
     </header>
 
     <!-- ÁREA CENTRAL DE JUEGO A PANTALLA COMPLETA Y MODALES -->
@@ -151,19 +151,7 @@
       </aside>
 
       <!-- PANEL LATERAL DE TECLAS PARA LA VERSIÓN DE TECLADO / PC -->
-      <aside id="pc-legend" class="pc-side-legend" aria-label="Controles de teclado">
-        <div class="pc-legend-title">CONTROLES TECLADO</div>
-        <div class="pc-legend-row"><kbd>W A S D</kbd><span>Mover / Mirar</span></div>
-        <div class="pc-legend-row"><kbd>↑ ← ↓ →</kbd><span>Mover / Mirar</span></div>
-        <div class="pc-legend-row"><kbd>Q E Z C</kbd><span>Diagonal</span></div>
-        <div class="pc-legend-row"><kbd>K</kbd> / <kbd>Espacio</kbd><span>Atacar</span></div>
-        <div class="pc-legend-row"><kbd>J</kbd><span>Eldritch Blast</span></div>
-        <div class="pc-legend-row"><kbd>L</kbd><span>Bruma (Misty)</span></div>
-        <div class="pc-legend-row"><kbd>I</kbd><span>Cambiar Arma</span></div>
-        <div class="pc-legend-row"><kbd>F</kbd><span>Pantalla Completa</span></div>
-        <div class="pc-legend-row"><kbd>B</kbd><span>Música</span></div>
-        <div class="pc-legend-row"><kbd>M</kbd><span>Menú del Juego</span></div>
-      </aside>
+      <aside id="pc-legend" class="pc-side-legend hidden" aria-hidden="true"></aside>
 
       <!-- INDICADOR TEMPORAL DE CAMBIO DE ARMA / ACCIÓN -->
       <div id="weapon-toast" class="weapon-toast hidden" role="status" aria-live="polite"></div>
@@ -210,11 +198,11 @@
               <button id="btn-menu-suspend-game" class="tutorial-btn" type="button">⏸ Suspender Partida</button>
               <button id="btn-menu-music" class="tutorial-btn" type="button">♪ Silenciar Música</button>
               <button id="btn-menu-fullscreen" class="tutorial-btn" type="button">⛶ Pantalla Completa</button>
-              <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial Táctil</button>
+              <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial de Controles</button>
               <button id="btn-menu-restart-game" class="tutorial-btn tutorial-btn-danger" type="button">↻ Reiniciar Partida</button>
             </div>
           </div>
-          <div class="tutorial-help-grid">
+          <div id="tutorial-manual-grid" class="tutorial-help-grid" aria-live="polite">
             <div class="tutorial-help-item">
               <strong>1. Lado Izquierdo — Moverse (Deslizar)</strong>
               <p>Desliza el dedo hacia cualquier dirección en la <em>mitad izquierda</em> para mover a Lior en los 8 puntos cardinales.</p>
@@ -257,7 +245,7 @@
           </div>
           <p class="save-resume-note">☠ Si Lior cae en combate, el guardado se borra y la travesía se reinicia desde el Piso 1.</p>
           <div class="save-resume-actions">
-            <button id="btn-resume-saved-game" class="tutorial-btn tutorial-btn-primary save-resume-btn" type="button">▶ CONTINUAR EN PISO 01</button>
+            <button id="btn-resume-saved-game" class="tutorial-btn tutorial-btn-primary save-resume-btn is-selected" type="button">▶ CONTINUAR EN PISO 01</button>
             <button id="btn-discard-saved-game" class="tutorial-btn tutorial-btn-danger save-discard-btn" type="button">↻ NUEVA PARTIDA (DESDE PISO 1)</button>
           </div>
         </div>
@@ -363,9 +351,13 @@
               <span id="potion-shop-label">Poción Roja</span>
               <button id="buy-potion" class="shop-btn">2 PO</button>
             </div>
-            <div class="shop-item" id="shop-shield-item" tabindex="0">
+            <div class="shop-item hidden" id="shop-shield-item" tabindex="-1" aria-hidden="true">
               <span id="shield-shop-label">Escudo (0/10)</span>
               <button id="buy-shield-segments" class="shop-btn" type="button">1 PO</button>
+            </div>
+            <div class="shop-item" id="shop-blessed-item" tabindex="0">
+              <span id="blessed-shop-label">Pólvora Maldita (+1d6 🔮 ×5 disp.)</span>
+              <button id="buy-blessed-ammo" class="shop-btn" type="button">10 PO</button>
             </div>
           </section>
 
@@ -389,7 +381,7 @@
             </div>
           </section>
 
-          <button id="close-shop" class="close-shop-btn">CERRAR TIENDA</button>
+          <button id="close-shop" class="close-shop-btn" type="button" tabindex="0">CERRAR TIENDA</button>
         </div>
       </div>
     </main>
