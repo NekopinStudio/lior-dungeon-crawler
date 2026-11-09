@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lior · Herramienta externa</title>
+<style>
+:root {color-scheme:dark;font:16px system-ui,sans-serif}
+body {margin:0;background:#10101b;color:#eee9f4}
+main {max-width:58rem;margin:2rem auto;padding:0 1rem}
+h1 {font-size:1.6rem} h2 {font-size:1.1rem}
+p {line-height:1.5;color:#c8bfd3}
+form,section {background:#191727;border:1px solid #625372;border-radius:.6rem;padding:1.2rem;margin:1rem 0}
+.fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:1rem}
+label {display:grid;gap:.4rem}
+input,select,button,a.action {font:inherit;padding:.65rem;border:1px solid #88779a;border-radius:.35rem}
+input,select {width:100%;box-sizing:border-box;background:#11101a;color:inherit}
+button,a.action {cursor:pointer;background:#cbb4ed;color:#171020;text-decoration:none}
+button.secondary {background:#292137;color:#eee9f4}
+button:disabled {opacity:.45;cursor:default}
+.actions {display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+#connection {padding:.8rem;border:1px solid #625372;border-radius:.4rem}
+#feedback {min-height:1.5rem;color:#f4d899}
+.small {font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Herramienta externa de Lior</h1>
+<p>Abre primero <strong>Abrir-Lior.cmd</strong> y mantén su ventana abierta. Desde aquí puedes preparar una partida de prueba y cambiar sus recursos mientras juegas en otra pestaña.</p>
+<p class="small">Las partidas de prueba usan recursos propios. El guardado de la campaña y sus logros se gestionan por separado.</p>
+<p id="connection" role="status">Todavía no hay una partida de prueba conectada.</p>
+<form id="settings">
+<h2>Preparar el escenario</h2>
+<div class="fields">
+<label>Piso <input id="floor" name="floor" type="number" min="1" max="100" value="100" required></label>
+<label>Monedas <input id="gold" name="gold" type="number" min="0" max="999999" value="100" required></label>
+<label>Munición por arma <input id="ammo" name="ammo" type="number" min="0" max="999" value="100" required></label>
+</div>
+<h2>Mejoras de las armas</h2>
+<div class="fields">
+<label>Espada <select id="sword" name="sword"><option value="0">Base</option><option value="1">I</option><option value="2">II</option><option value="3" selected>III</option></select></label>
+<label>Pistola <select id="pistol" name="pistol"><option value="0">Base</option><option value="1">I</option><option value="2">II</option><option value="3" selected>III</option></select></label>
+<label>Mosquete <select id="musket" name="musket"><option value="0">Base</option><option value="1">I</option><option value="2">II</option><option value="3" selected>III</option></select></label>
+<label>Trabuco <select id="blunderbuss" name="blunderbuss"><option value="0">Base</option><option value="1">I</option><option value="2">II</option><option value="3" selected>III</option></select></label>
+</div>
+<div class="actions">
+<button type="submit">Abrir piso seleccionado</button>
+<button type="button" id="apply" class="secondary" disabled>Aplicar recursos a la partida abierta</button>
+</div>
+<p class="small">Abrir un piso crea un escenario nuevo. Aplicar recursos modifica monedas, munición y mejoras en la partida de prueba que ya está abierta.</p>
+</form>
+<section>
+<h2>Acciones durante la prueba</h2>
+<div class="actions">
+<button type="button" id="refill" class="secondary" disabled>Restaurar vida y hechizos</button>
+<button type="button" id="shop" class="secondary" disabled>Abrir tienda</button>
+</div>
+<p id="feedback" role="status" aria-live="polite"></p>
+</section>
+<p class="small">Para revisar jefes, usa los pisos 10, 20, 30… 100. El piso 100 contiene al Dragón solar. Vuelve a abrir el mismo piso para repetir el encuentro.</p>
+</main>
+<script src="./desarrollo.js"></script>
+</body>
+</html>

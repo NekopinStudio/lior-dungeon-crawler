@@ -10,9 +10,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pwa-icon-192.png">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body class="mode-landscape">
+  <section id="descent-transition" class="descent-transition" role="status" aria-live="polite" hidden>
+    <div class="descent-card">
+      <canvas width="128" height="128" aria-hidden="true"></canvas>
+      <div><p class="descent-label">LIOR KUROGANE · EL DESCENSO</p>
+        <strong class="descent-floor"></strong>
+        <p class="descent-boss"></p><p class="descent-label">Preparando el siguiente piso…</p></div>
+    </div>
+  </section>
 
   <!-- SPLASH LOGO (EL PRIMER TOQUE ACTIVA PANTALLA COMPLETA AUTOMÁTICAMENTE) -->
   <div id="splash-screen">
@@ -168,14 +176,10 @@
 
       <!-- TUTORIAL INTERACTIVO INTEGRADO EN EL NIVEL 1 (VERSIÓN MÓVIL) -->
       <section id="tutorial-overlay" class="tutorial-overlay hidden" aria-live="polite">
-        <div class="tutorial-bar gothic-dialog-box">
+        <div class="tutorial-bar gothic-dialog-box" role="dialog" aria-modal="true" aria-labelledby="tutorial-step-title">
           <div class="tutorial-header">
             <span id="tutorial-step-badge" class="tutorial-step-badge">TUTORIAL · PASO 1/5</span>
             <strong id="tutorial-step-title" class="tutorial-step-title">Movimiento continuo</strong>
-            <div class="tutorial-actions">
-              <button id="btn-tutorial-pause" class="tutorial-btn" type="button">☰ Menú</button>
-              <button id="btn-tutorial-skip" class="tutorial-btn tutorial-btn-skip" type="button">Omitir ⏭</button>
-            </div>
           </div>
           <div class="tutorial-body">
             <div id="tutorial-gesture-diagram" class="tutorial-gesture-diagram" aria-hidden="true"></div>
@@ -183,6 +187,13 @@
               <p id="tutorial-step-desc" class="tutorial-step-desc"></p>
               <div id="tutorial-step-progress" class="tutorial-step-progress"></div>
             </div>
+          </div>
+          <div class="tutorial-controls">
+            <div class="tutorial-actions">
+              <button id="btn-tutorial-pause" class="tutorial-btn" type="button">☰ Menú</button>
+              <button id="btn-tutorial-skip" class="tutorial-btn tutorial-btn-skip" type="button">Omitir ⏭</button>
+            </div>
+            <button id="btn-tutorial-practice" class="tutorial-btn tutorial-btn-primary" type="button">Continuar</button>
           </div>
         </div>
       </section>
@@ -199,9 +210,15 @@
               <button id="btn-menu-music" class="tutorial-btn" type="button">♪ Silenciar Música</button>
               <button id="btn-menu-fullscreen" class="tutorial-btn" type="button">⛶ Pantalla Completa</button>
               <button id="btn-tutorial-restart" class="tutorial-btn" type="button">🎓 Tutorial de Controles</button>
+              <button id="btn-menu-achievements" class="tutorial-btn" type="button" aria-controls="menu-achievements" aria-expanded="false">✦ Logros</button>
               <button id="btn-menu-restart-game" class="tutorial-btn tutorial-btn-danger" type="button">↻ Reiniciar Partida</button>
             </div>
           </div>
+          <section id="menu-achievements" class="menu-achievements hidden" tabindex="0" aria-labelledby="achievement-title">
+            <h4 id="achievement-title">Logros del descenso</h4>
+            <p id="achievement-summary"></p>
+            <ul id="achievement-list" class="achievement-list"></ul>
+          </section>
           <div id="tutorial-manual-grid" class="tutorial-help-grid" aria-live="polite">
             <div class="tutorial-help-item">
               <strong>1. Lado Izquierdo — Moverse (Deslizar)</strong>
@@ -332,6 +349,7 @@
           <div class="shop-tabs" role="tablist" aria-label="Secciones de la tienda">
             <button class="shop-tab is-active" id="shop-tab-supplies" type="button" role="tab" aria-selected="true" aria-controls="shop-view-supplies" data-shop-view="supplies">SUMINISTROS</button>
             <button class="shop-tab" id="shop-tab-upgrades" type="button" role="tab" aria-selected="false" aria-controls="shop-view-upgrades" data-shop-view="upgrades">TALLER</button>
+            <button class="shop-tab" id="shop-tab-shortcuts" type="button" role="tab" aria-selected="false" aria-controls="shop-view-shortcuts" data-shop-view="shortcuts">MAPAS DE ATAJO</button>
           </div>
 
           <section id="shop-view-supplies" class="shop-view" role="tabpanel" aria-labelledby="shop-tab-supplies" data-shop-panel="supplies">
@@ -379,8 +397,14 @@
               <span class="upgrade-details"><span class="upgrade-label">Trabuco: Mejora I</span><small class="upgrade-requirement">Desbloquea el arma</small></span>
               <button class="shop-btn">25 PO</button>
             </div>
+            <p id="shop-upgrade-description" class="shop-upgrade-description" aria-live="polite">Selecciona una mejora para conocer sus efectos antes de comprar.</p>
           </section>
 
+          <section id="shop-view-shortcuts" class="shop-view hidden" role="tabpanel" aria-labelledby="shop-tab-shortcuts" data-shop-panel="shortcuts">
+            <p>Comprar el mapa activa el atajo al salir de esta tienda. Omite hasta tres pisos normales y su botín. Los jefes 4×4 siguen en tu ruta.</p>
+            <p id="shortcut-map-info" aria-live="polite"></p>
+            <div class="shop-item" tabindex="0"><span>Mapa de atajo</span><button id="buy-shortcut-map" class="shop-btn" type="button">Comprar · 10 PO</button></div>
+          </section>
           <button id="close-shop" class="close-shop-btn" type="button" tabindex="0">CERRAR TIENDA</button>
         </div>
       </div>
@@ -415,9 +439,16 @@
     </div>
   </section>
 
-  <script src="game.js"></script>
+  <script src="./src/core.js"></script>
+  <script src="./src/renderer.js"></script>
+  <script src="./src/systems.js"></script>
+  <div id="achievement-toast" class="achievement-toast" role="status" aria-live="polite" hidden></div>
+  <script src="./src/achievements.js"></script>
+  <script src="./src/easter-egg.js"></script>
+  <script src="./src/development.js"></script>
+  <script src="./src/game.js"></script>
   <script>
-    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    if ("serviceWorker" in navigator && location.protocol !== "file:" && !(location.hostname === "127.0.0.1" && location.port === "8418")) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js", { scope: "./" })
           .catch(error => console.error("No se pudo registrar el Service Worker:", error));
